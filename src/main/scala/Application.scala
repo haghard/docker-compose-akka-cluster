@@ -12,6 +12,7 @@ object Application extends App {
 
   val host = system.settings.config.getString("akka.remote.netty.tcp.hostname")
 
+  println(s"HOST: $host")
   Http().bindAndHandle(new SimpleRoute(host).route, interface = host, port = 9000).onComplete {
     case Success(r) =>
     case Failure(ex) =>
