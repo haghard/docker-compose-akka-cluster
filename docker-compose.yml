@@ -1,5 +1,3 @@
-version: '1'
-
 seed:
   image: "docker-compose-akka-cluster:0.1-SNAPSHOT"
   hostname: "akka-seed0"
