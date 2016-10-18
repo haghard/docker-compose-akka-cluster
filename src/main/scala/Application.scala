@@ -7,7 +7,7 @@ import akka.stream.ActorMaterializer
 import scala.util.{Failure, Success}
 
 object Application extends App {
-  implicit val system = ActorSystem("ElasticCluster")
+  implicit val system = ActorSystem("elastic-cluster")
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
