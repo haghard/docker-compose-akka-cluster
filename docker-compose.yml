@@ -12,6 +12,4 @@ services:
   node:
     image: "docker-compose-akka-cluster:0.1-SNAPSHOT"
     links: ["seed:akka-seed0"]
-    ports:
-      - "9000:9000"
 
