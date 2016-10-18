@@ -7,7 +7,7 @@ import akka.stream.ActorMaterializer
 import scala.util.{Failure, Success}
 
 object Application extends App {
-  implicit val system = ActorSystem()
+  implicit val system = ActorSystem("MySystem")
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
