@@ -18,8 +18,7 @@ class SimpleRoute(cluster: ActorRef, host: String)(implicit ex: ExecutionContext
   val route: Route =
     (get & path("members")) {
       complete {
-        query()
-
+        query
       }
     }
 
