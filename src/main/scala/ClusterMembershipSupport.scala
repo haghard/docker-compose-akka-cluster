@@ -1,4 +1,5 @@
 package main
+
 import akka.actor.{ActorLogging, Actor}
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent.{MemberUp, ClusterDomainEvent}

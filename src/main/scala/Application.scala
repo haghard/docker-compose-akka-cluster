@@ -10,11 +10,14 @@ object Application extends App {
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
+
   val host = system.settings.config.getString("akka.remote.netty.tcp.hostname")
 
   println(s"HOST: $host")
+
   Http().bindAndHandle(new SimpleRoute(host).route, interface = host, port = 9000).onComplete {
     case Success(r) =>
+      println("http server available on " + r.localAddress)
     case Failure(ex) =>
       println(ex.getMessage)
       System.exit(-1)
