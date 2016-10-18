@@ -9,7 +9,7 @@ import scala.util.{Failure, Success}
 object Application extends App {
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
-
+  implicit val _ = mat.executionContext
   val host = system.settings.config.getString("akka.remote.netty.tcp.hostname")
 
   println(s"HOST: $host")
