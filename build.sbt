@@ -13,3 +13,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster" % Akka,
   "com.typesafe.akka" %% "akka-http-experimental" % Akka
 )
+
+
+//docker rm $(docker ps -a -q)
