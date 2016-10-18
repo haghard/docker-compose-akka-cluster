@@ -1,4 +1,4 @@
-version: '2'
+version: '1'
 
 seed:
   image: "docker-compose-akka-cluster:0.1-SNAPSHOT"
