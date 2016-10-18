@@ -19,7 +19,7 @@ class ClusterMembershipSupport extends Actor with ActorLogging {
       cluster = cluster - member.address
       log.debug("unreachableMember = {}", member.address)
     case 'Members =>
-      log.info("Members", cluster.mkString(","))
+      log.info("Members {}", cluster.mkString(","))
       sender() ! "done"
     case event =>
       log.debug("event = {}", event.toString)
