@@ -1,12 +1,13 @@
 package main
 
+import akka.actor.ActorRef
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server._
 import akka.util.ByteString
 
 import akka.http.scaladsl.server.Route
 
-class SimpleRoute(host: String) extends Directives {
+class SimpleRoute(cluster: ActorRef, host: String) extends Directives {
 
   val route: Route =
     (get & path("intro")) {

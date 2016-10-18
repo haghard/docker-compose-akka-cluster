@@ -7,7 +7,7 @@ import akka.stream.ActorMaterializer
 import scala.util.{Failure, Success}
 
 object Application extends App {
-  implicit val system = ActorSystem("MySystem")
+  implicit val system = ActorSystem("HCluster")
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
@@ -15,13 +15,15 @@ object Application extends App {
 
   println(s"HOST: $host")
 
-  Http().bindAndHandle(new SimpleRoute(host).route, interface = host, port = 9000).onComplete {
+  val cluster = system.actorOf(Props[ClusterMembershipSupport])
+
+  Http().bindAndHandle(new SimpleRoute(cluster, host).route, interface = host, port = 9000).onComplete {
     case Success(r) =>
       println("http server available on " + r.localAddress)
     case Failure(ex) =>
       println(ex.getMessage)
       System.exit(-1)
   }
-  system.actorOf(Props[ClusterMembershipSupport])
+
   sys.addShutdownHook(system.terminate())
 }

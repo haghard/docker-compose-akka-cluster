@@ -4,12 +4,12 @@ services:
 
   seed:
     image: "docker-compose-akka-cluster:0.1-SNAPSHOT"
-    hostname: "akka-seed0"
-    command: "-Dakka.remote.netty.tcp.hostname=akka-seed0"
+    hostname: "seed-node"
+    command: "-Dakka.remote.netty.tcp.hostname=seed-node"
     ports:
       - "9000:9000"
 
   node:
     image: "docker-compose-akka-cluster:0.1-SNAPSHOT"
-    links: ["seed:akka-seed0"]
+    links: ["seed:seed-node"]
 
