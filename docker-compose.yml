@@ -3,7 +3,7 @@ version: '2'
 seed:
   image: "docker-compose-akka-cluster:0.1-SNAPSHOT"
   hostname: "akka-seed0"
-  command: "-Dakka.remote.netty.tcp.hostname=akkaseed"
+  command: "-Dakka.remote.netty.tcp.hostname=akka-seed0"
 
 node:
   image: "docker-compose-akka-cluster:0.1-SNAPSHOT"
