@@ -12,6 +12,9 @@ import scala.concurrent.ExecutionContext
 class SimpleRoute(cluster: ActorRef, host: String)(implicit ex: ExecutionContext) extends Directives {
 
   import akka.pattern.ask
+  import scala.concurrent.duration._
+
+  implicit val _ = akka.util.Timeout(5 seconds)
 
   val route: Route =
     (get & path("members")) {
