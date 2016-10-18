@@ -1,7 +1,7 @@
 package main
 
-import akka.actor.{Actor, ActorLogging, Address}
 import akka.cluster.Cluster
+import akka.actor.{Actor, ActorLogging, Address}
 import akka.cluster.ClusterEvent.{MemberEvent, MemberUp, UnreachableMember}
 
 class ClusterMembershipSupport extends Actor with ActorLogging {
@@ -18,6 +18,9 @@ class ClusterMembershipSupport extends Actor with ActorLogging {
     case UnreachableMember(member) =>
       cluster = cluster - member.address
       log.debug("unreachableMember = {}", member.address)
+    case 'Members =>
+      log.info("Members", cluster.mkString(","))
+      sender() ! "done"
     case event =>
       log.debug("event = {}", event.toString)
   }

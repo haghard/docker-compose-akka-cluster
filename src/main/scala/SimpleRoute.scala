@@ -7,12 +7,18 @@ import akka.util.ByteString
 
 import akka.http.scaladsl.server.Route
 
-class SimpleRoute(cluster: ActorRef, host: String) extends Directives {
+import scala.concurrent.ExecutionContext
+
+class SimpleRoute(cluster: ActorRef, host: String)(implicit ex: ExecutionContext) extends Directives {
+
+  import akka.pattern.ask
 
   val route: Route =
-    (get & path("intro")) {
+    (get & path("members")) {
       complete {
-        HttpResponse(status =StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(host)))
+        (cluster ? 'Members).mapTo[String] { _ =>
+          HttpResponse(status = StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(host)))
+        }
       }
     }
 

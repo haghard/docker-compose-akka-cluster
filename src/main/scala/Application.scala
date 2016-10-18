@@ -19,7 +19,7 @@ object Application extends App {
 
   Http().bindAndHandle(new SimpleRoute(cluster, host).route, interface = host, port = 9000).onComplete {
     case Success(r) =>
-      println("http server available on " + r.localAddress)
+      println(s"http server available on ${r.localAddress}")
     case Failure(ex) =>
       println(ex.getMessage)
       System.exit(-1)
