@@ -19,7 +19,7 @@ class SimpleRoute(cluster: ActorRef, host: String)(implicit ex: ExecutionContext
   val route: Route =
     (get & path("members")) {
       complete {
-        (cluster ? 'Members).mapTo[String] { _ =>
+        (cluster ? 'Members).mapTo[String] { resp: String =>
           HttpResponse(status = StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(host)))
         }
       }
