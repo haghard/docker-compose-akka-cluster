@@ -10,16 +10,17 @@ import scala.util.{Failure, Success}
 object Application extends App {
   println("Args:" + args.mkString(","))
 
+  /*
   import scala.collection.JavaConverters._
-  //val env = System.getenv().asScala
+  val env = System.getenv().asScala
+  */
 
-  val external = "192.168.0.3"
+  //val external = "192.168.0.3"
 
-  val hostName0 = Option(System.getenv().get("akka.remote.netty.tcp.hostname")).getOrElse("0.0.0.0")
+  val SystemName = "elastic-cluster"
+
   val port0 = System.getenv().get("akka.remote.netty.tcp.port")
-
-  val Sys = "elastic-cluster"
-
+  val hostName0 = Option(System.getenv().get("akka.remote.netty.tcp.hostname")).getOrElse("0.0.0.0")
 
   val cfg = if(hostName0 == "seed-node") {
     ConfigFactory.empty()
@@ -32,14 +33,11 @@ object Application extends App {
   } else ConfigFactory.load()
 
 
-  //println("Remote: \n" + cfg.getConfig("akka.remote.netty.tcp").root().render)
-  //println("Cluster: \n" + cfg.getConfig("akka.cluster").root().render)
-
-  implicit val system = ActorSystem("elastic-cluster", cfg)
+  implicit val system = ActorSystem("docker-cluster", cfg)
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
-  val cluster = system.actorOf(Props[ClusterMembershipSupport])
+  val cluster = system.actorOf(Props[ClusterMembershipSupport], "cluster-support")
 
   Http().bindAndHandle(new SimpleRoute(cluster, hostName0).route, interface = hostName0, port = 9000).onComplete {
     case Success(r) =>
