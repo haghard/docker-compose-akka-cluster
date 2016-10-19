@@ -26,7 +26,7 @@ object Application extends App {
 
   val cfg = ConfigFactory.load()
 
-  println("remote CONFIG: \n" + cfg.getConfig("akka.remote").toString))
+  println("remote CONFIG: \n" + cfg.getConfig("akka.remote").toString)
 
   implicit val system = ActorSystem("elastic-cluster", cfg)
   implicit val mat = ActorMaterializer()
