@@ -13,20 +13,28 @@ object Application extends App {
   import scala.collection.JavaConverters._
   //val env = System.getenv().asScala
 
-  val hostName = System.getenv().get("akka.remote.netty.tcp.hostname")
   val external = "192.168.0.3"
-  val port = System.getenv().get("akka.remote.netty.tcp.port")
-  println(s"ENV $hostName:$port")
 
+  val hostName0 = System.getenv().get("akka.remote.netty.tcp.hostname")
+  val port0 = System.getenv().get("akka.remote.netty.tcp.port")
 
-  val seedNodesString = s"""akka.cluster.seed-nodes += "akka.tcp://elastic-cluster@$hostName:$port"""
+  println(s"ENV $hostName0:$port0")
+
+  val Sys = "elastic-cluster"
+
+  val seedNodesString = List(hostName0 + ":" + port0).map { node =>
+    val ap = node.split(":")
+    s"""akka.cluster.seed-nodes += "akka.tcp://$Sys@${ap(0)}:${ap(1)}"""
+  }.mkString("\n")
+
 
   val seeds = (ConfigFactory parseString seedNodesString).resolve()
+
   val cfg = ConfigFactory.empty().withFallback(seeds)
-    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$port"))
-    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-hostname=$external"))
-    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port"))
-    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname=$hostName"))
+    //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$port"))
+    //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-hostname=$external"))
+    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port0"))
+    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname=$hostName0"))
     .withFallback(ConfigFactory.load())
 
 
@@ -44,7 +52,7 @@ object Application extends App {
 
   val cluster = system.actorOf(Props[ClusterMembershipSupport])
 
-  Http().bindAndHandle(new SimpleRoute(cluster, hostName).route, interface = hostName, port = 9000).onComplete {
+  Http().bindAndHandle(new SimpleRoute(cluster, hostName0).route, interface = hostName0, port = 9000).onComplete {
     case Success(r) =>
       println(s"http server available on ${r.localAddress}")
     case Failure(ex) =>

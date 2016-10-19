@@ -7,6 +7,7 @@ services:
     command: "-Dakka.remote.netty.tcp.hostname=seed-node"
     ports:
       - "9000:9000"
+      - "2551:2551"
     environment:
       akka.remote.netty.tcp.hostname: seed-node
       akka.remote.netty.tcp.port: 2551
