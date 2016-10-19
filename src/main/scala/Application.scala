@@ -14,6 +14,7 @@ object Application extends App {
   val host = system.settings.config.getString("akka.remote.netty.tcp.hostname")
   val port = system.settings.config.getInt("akka.remote.netty.tcp.port")
 
+  println("Args:" + args.mkString(","))
   println(s"HOST:PORT - $host:$port")
 
   val cluster = system.actorOf(Props[ClusterMembershipSupport])
