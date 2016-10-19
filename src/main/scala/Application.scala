@@ -3,19 +3,35 @@ package main
 import akka.actor._
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
+import com.typesafe.config.ConfigFactory
 
 import scala.util.{Failure, Success}
 
 object Application extends App {
-  implicit val system = ActorSystem("elastic-cluster")
+
+  println("Args:" + args.mkString(","))
+  println(s"HOST:PORT - $host:$port")
+
+  import scala.collection.JavaConverters._
+
+  val env = System.getenv().asScala
+
+  println(env.mkString("\n"))
+
+  /*
+   -Dakka.remote.netty.tcp.hostname=seed-node
+   -Dakka.remote.netty.tcp.port=2551"
+   -Dakka.remote.netty.tcp.bind-hostname=seed-node
+   */
+
+  val cfg = ConfigFactory.load()
+  implicit val system = ActorSystem("elastic-cluster", cfg)
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
   val host = system.settings.config.getString("akka.remote.netty.tcp.hostname")
+  val bindHostname = system.settings.config.getString("akka.remote.netty.tcp.bind-hostname")
   val port = system.settings.config.getInt("akka.remote.netty.tcp.port")
-
-  println("Args:" + args.mkString(","))
-  println(s"HOST:PORT - $host:$port")
 
   val cluster = system.actorOf(Props[ClusterMembershipSupport])
 
