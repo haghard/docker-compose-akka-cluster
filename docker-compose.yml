@@ -8,9 +8,9 @@ services:
     ports:
       - "9000:9000"
     environment:
-      akka.remote.netty.tcp.hostname:seed-node
-      akka.remote.netty.tcp.port:2551
-      akka.remote.netty.tcp.bind-hostname:seed-node
+      akka.remote.netty.tcp.hostname: seed-node
+      akka.remote.netty.tcp.port: 2551
+      akka.remote.netty.tcp.bind-hostname: seed-node
   node:
     image: "docker-compose-akka-cluster:0.1-SNAPSHOT"
     command: "-Dakka.remote.netty.tcp.port=2551"
