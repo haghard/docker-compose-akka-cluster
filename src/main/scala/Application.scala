@@ -22,16 +22,17 @@ object Application extends App {
 
   val Sys = "elastic-cluster"
 
-  val seedNodesString = List(hostName0 + ":" + port0).map { node =>
+  /*val seedNodesString = List(hostName0 + ":" + port0).map { node =>
     println("Seed :" + node)
     val ap = node.split(":")
     s"""akka.cluster.seed-nodes += "akka.tcp://$Sys@${ap(0)}:${ap(1)}"""
-  }.mkString("\n")
+  }.mkString("\n")*/
 
 
-  val seeds = (ConfigFactory parseString seedNodesString).resolve()
+  //val seeds = (ConfigFactory parseString seedNodesString).resolve()
 
-  val cfg = ConfigFactory.empty().withFallback(seeds)
+  val cfg = ConfigFactory.empty()
+    //.withFallback(seeds)
     //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$port"))
     //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-hostname=$external"))
     .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port0"))
