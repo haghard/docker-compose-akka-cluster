@@ -6,20 +6,24 @@ import akka.cluster.ClusterEvent.{MemberEvent, MemberUp, UnreachableMember}
 
 class ClusterMembershipSupport extends Actor with ActorLogging {
 
-  override def preStart =
-    Cluster(context.system).subscribe(self, classOf[MemberEvent], classOf[UnreachableMember])
+  val cluster = Cluster(context.system)
 
-  var cluster = Set[Address]()
+  var clusterMembers = Set[Address]()
 
-  def receive = {
+  override def preStart = {
+    cluster.subscribe(self, classOf[MemberEvent], classOf[UnreachableMember])
+    clusterMembers = clusterMembers + cluster.selfAddress
+  }
+
+  override def receive = {
     case MemberUp(member) =>
-      cluster = cluster + member.address
+      clusterMembers = clusterMembers + member.address
       log.info("memberUp = {}", member.address)
     case UnreachableMember(member) =>
-      cluster = cluster - member.address
+      clusterMembers = clusterMembers - member.address
       log.debug("unreachableMember = {}", member.address)
     case 'Members =>
-      log.info("Members {}", cluster.mkString(","))
+      log.info("Members {}", clusterMembers.mkString(","))
       sender() ! "done"
     case event =>
       log.debug("event = {}", event.toString)
