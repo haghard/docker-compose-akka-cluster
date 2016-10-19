@@ -18,8 +18,11 @@ object Application extends App {
   println(s"ENV $hostName:$port")
 
   val cfg = ConfigFactory.load()
-    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port = $port"))
-    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname = $hostName"))
+    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$port"))
+    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-hostname=$hostName"))
+    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port"))
+    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname=$hostName"))
+
 
   //println("akka.remote: \n" + cfg.getConfig("akka.remote").root().render)
   //println("akka.cluster: \n" + cfg.getConfig("akka.cluster").root().render)
