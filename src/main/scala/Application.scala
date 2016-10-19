@@ -25,6 +25,9 @@ object Application extends App {
    */
 
   val cfg = ConfigFactory.load()
+
+  println("CONFIG: \n" + cfg.root().render())
+
   implicit val system = ActorSystem("elastic-cluster", cfg)
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
