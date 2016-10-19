@@ -16,3 +16,7 @@ libraryDependencies ++= Seq(
 
 
 //docker rm $(docker ps -a -q)
+//docker-compose up -d
+//sbt docker:publishLocal     # to create the Docker images
+//docker-compose up -d        # to start the seed and the first node
+//docker-compose scale node=5 # to scale up the number of nodes

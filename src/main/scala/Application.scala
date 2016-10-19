@@ -12,8 +12,9 @@ object Application extends App {
   implicit val _ = mat.executionContext
 
   val host = system.settings.config.getString("akka.remote.netty.tcp.hostname")
+  val port = system.settings.config.getInt("akka.remote.netty.tcp.port")
 
-  println(s"HOST: $host")
+  println(s"HOST:PORT $host $port")
 
   val cluster = system.actorOf(Props[ClusterMembershipSupport])
 
