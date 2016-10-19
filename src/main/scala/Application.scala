@@ -17,7 +17,7 @@ object Application extends App {
 
   //val external = "192.168.0.3"
 
-  val SystemName = "elastic-cluster"
+  val SystemName = "docker-cluster"
 
   val port0 = System.getenv().get("akka.remote.netty.tcp.port")
   val hostName0 = Option(System.getenv().get("akka.remote.netty.tcp.hostname")).getOrElse("0.0.0.0")
@@ -33,18 +33,20 @@ object Application extends App {
   } else ConfigFactory.load()
 
 
-  implicit val system = ActorSystem("docker-cluster", cfg)
+  implicit val system = ActorSystem(SystemName, cfg)
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
-  val cluster = system.actorOf(Props[ClusterMembershipSupport], "cluster-support")
+  val members = system.actorOf(Props[ClusterMembershipSupport], "cluster-support")
 
-  Http().bindAndHandle(new SimpleRoute(cluster, hostName0).route, interface = hostName0, port = 9000).onComplete {
-    case Success(r) =>
-      println(s"http server available on ${r.localAddress}")
-    case Failure(ex) =>
-      println(ex.getMessage)
-      System.exit(-1)
+  if(hostName0 == "seed-node") {
+    Http().bindAndHandle(new SimpleRoute(members, hostName0).route, interface = hostName0, port = 9000).onComplete {
+      case Success(r) =>
+        println(s"http server available on ${r.localAddress}")
+      case Failure(ex) =>
+        println(ex.getMessage)
+        System.exit(-1)
+    }
   }
 
   sys.addShutdownHook(system.terminate())

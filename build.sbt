@@ -22,3 +22,5 @@ libraryDependencies ++= Seq(
 //docker-compose scale node=5 # to scale up the number of nodes
 //docker inspect -f '{{.Name}} - {{.NetworkSettings.IPAddress }}' $(docker ps -aq)
 //docker inspect -f '{{.Name}} - {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps -aq)
+
+//https://github.com/muller/docker-compose-akka-cluster
