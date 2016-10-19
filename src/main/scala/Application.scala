@@ -18,15 +18,21 @@ object Application extends App {
   val port = System.getenv().get("akka.remote.netty.tcp.port")
   println(s"ENV $hostName:$port")
 
-  val cfg = ConfigFactory.load()
+
+  val seedNodesString = s"""akka.cluster.seed-nodes += "akka.tcp://elastic-cluster@$hostName:$port"""
+
+  val seeds = (ConfigFactory parseString seedNodesString).resolve()
+  val cfg = ConfigFactory.empty().withFallback(seeds)
     .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$port"))
     .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-hostname=$external"))
     .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port"))
     .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname=$hostName"))
+    .withFallback(ConfigFactory.load())
 
 
-  //println("akka.remote: \n" + cfg.getConfig("akka.remote").root().render)
-  //println("akka.cluster: \n" + cfg.getConfig("akka.cluster").root().render)
+  println("Remote: \n" + cfg.getConfig("akka.remote.netty.tcp").root().render)
+
+  println("Cluster: \n" + cfg.getConfig("akka.cluster").root().render)
 
   implicit val system = ActorSystem("elastic-cluster", cfg)
   implicit val mat = ActorMaterializer()
