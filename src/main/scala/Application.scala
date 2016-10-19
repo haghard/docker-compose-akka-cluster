@@ -18,11 +18,12 @@ object Application extends App {
   val hostName0 = System.getenv().get("akka.remote.netty.tcp.hostname")
   val port0 = System.getenv().get("akka.remote.netty.tcp.port")
 
-  println(s"ENV $hostName0:$port0")
+  //println(s"ENV $hostName0:$port0")
 
   val Sys = "elastic-cluster"
 
   val seedNodesString = List(hostName0 + ":" + port0).map { node =>
+    println("Seed :" + node)
     val ap = node.split(":")
     s"""akka.cluster.seed-nodes += "akka.tcp://$Sys@${ap(0)}:${ap(1)}"""
   }.mkString("\n")
@@ -38,9 +39,8 @@ object Application extends App {
     .withFallback(ConfigFactory.load())
 
 
-  println("Remote: \n" + cfg.getConfig("akka.remote.netty.tcp").root().render)
-
-  println("Cluster: \n" + cfg.getConfig("akka.cluster").root().render)
+  //println("Remote: \n" + cfg.getConfig("akka.remote.netty.tcp").root().render)
+  //println("Cluster: \n" + cfg.getConfig("akka.cluster").root().render)
 
   implicit val system = ActorSystem("elastic-cluster", cfg)
   implicit val mat = ActorMaterializer()
