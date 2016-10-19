@@ -18,15 +18,9 @@ object Application extends App {
 
   println("ENV \n" + env.mkString("\n"))
 
-  /*
-   -Dakka.remote.netty.tcp.hostname=seed-node
-   -Dakka.remote.netty.tcp.port=2551"
-   -Dakka.remote.netty.tcp.bind-hostname=seed-node
-   */
-
   val cfg = ConfigFactory.load()
-
-  println("remote CONFIG: \n" + cfg.getConfig("akka.remote").toString)
+  println("akka.remote: \n" + cfg.getConfig("akka.remote").root().render)
+  println("akka.cluster: \n" + cfg.getConfig("akka.cluster").root().render)
 
   implicit val system = ActorSystem("elastic-cluster", cfg)
   implicit val mat = ActorMaterializer()
