@@ -31,13 +31,15 @@ object Application extends App {
 
   //val seeds = (ConfigFactory parseString seedNodesString).resolve()
 
-  val cfg = ConfigFactory.empty()
-    //.withFallback(seeds)
-    //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$port"))
-    //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-hostname=$external"))
-    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port0"))
-    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname=$hostName0"))
-    .withFallback(ConfigFactory.load())
+  val cfg = if(hostName0 != null) {
+    ConfigFactory.empty()
+      //.withFallback(seeds)
+      //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$port"))
+      //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-hostname=$external"))
+      .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port0"))
+      .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname=$hostName0"))
+      .withFallback(ConfigFactory.load())
+  } else ConfigFactory.load()
 
 
   //println("Remote: \n" + cfg.getConfig("akka.remote.netty.tcp").root().render)
