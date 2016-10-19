@@ -13,13 +13,13 @@ object Application extends App {
   import scala.collection.JavaConverters._
   //val env = System.getenv().asScala
 
-  val hostName = System.getenv().get("akka.remote.netty.tcp.hostName")
+  val hostName = System.getenv().get("akka.remote.netty.tcp.hostname")
   val port = System.getenv().get("akka.remote.netty.tcp.port")
-  //println("ENV \n" + env.mkString("\n"))
+  println(s"ENV $hostName:$port")
 
   val cfg = ConfigFactory.load()
     .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port = $port"))
-    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname = $port"))
+    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname = $hostName"))
 
   //println("akka.remote: \n" + cfg.getConfig("akka.remote").root().render)
   //println("akka.cluster: \n" + cfg.getConfig("akka.cluster").root().render)
