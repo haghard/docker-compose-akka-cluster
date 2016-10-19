@@ -20,3 +20,5 @@ libraryDependencies ++= Seq(
 //sbt docker:publishLocal     # to create the Docker images
 //docker-compose up -d        # to start the seed and the first node
 //docker-compose scale node=5 # to scale up the number of nodes
+//docker inspect -f '{{.Name}} - {{.NetworkSettings.IPAddress }}' $(docker ps -aq)
+//docker inspect -f '{{.Name}} - {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps -aq)
