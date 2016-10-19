@@ -14,12 +14,13 @@ object Application extends App {
   //val env = System.getenv().asScala
 
   val hostName = System.getenv().get("akka.remote.netty.tcp.hostname")
+  val external = "192.168.0.3"
   val port = System.getenv().get("akka.remote.netty.tcp.port")
   println(s"ENV $hostName:$port")
 
   val cfg = ConfigFactory.load()
     .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$port"))
-    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-hostname=$hostName"))
+    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-hostname=$external"))
     .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port"))
     .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname=$hostName"))
 
