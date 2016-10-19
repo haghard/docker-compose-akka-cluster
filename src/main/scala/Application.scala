@@ -16,7 +16,7 @@ object Application extends App {
 
   val env = System.getenv().asScala
 
-  println(env.mkString("\n"))
+  println("ENV \n" + env.mkString("\n"))
 
   /*
    -Dakka.remote.netty.tcp.hostname=seed-node
