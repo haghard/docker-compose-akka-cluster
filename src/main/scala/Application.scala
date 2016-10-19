@@ -8,31 +8,33 @@ import com.typesafe.config.ConfigFactory
 import scala.util.{Failure, Success}
 
 object Application extends App {
-
   println("Args:" + args.mkString(","))
-  println(s"HOST:PORT - $host:$port")
 
   import scala.collection.JavaConverters._
+  //val env = System.getenv().asScala
 
-  val env = System.getenv().asScala
-
-  println("ENV \n" + env.mkString("\n"))
+  val hostName = System.getenv().get("akka.remote.netty.tcp.hostName")
+  val port = System.getenv().get("akka.remote.netty.tcp.port")
+  //println("ENV \n" + env.mkString("\n"))
 
   val cfg = ConfigFactory.load()
-  println("akka.remote: \n" + cfg.getConfig("akka.remote").root().render)
-  println("akka.cluster: \n" + cfg.getConfig("akka.cluster").root().render)
+    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port = $port"))
+    .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname = $port"))
+
+  //println("akka.remote: \n" + cfg.getConfig("akka.remote").root().render)
+  //println("akka.cluster: \n" + cfg.getConfig("akka.cluster").root().render)
 
   implicit val system = ActorSystem("elastic-cluster", cfg)
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
-  val host = system.settings.config.getString("akka.remote.netty.tcp.hostname")
-  val bindHostname = system.settings.config.getString("akka.remote.netty.tcp.bind-hostname")
-  val port = system.settings.config.getInt("akka.remote.netty.tcp.port")
+  //val host = system.settings.config.getString("akka.remote.netty.tcp.hostname")
+  //val bindHostname = system.settings.config.getString("akka.remote.netty.tcp.bind-hostname")
+  //val port = system.settings.config.getInt("akka.remote.netty.tcp.port")
 
   val cluster = system.actorOf(Props[ClusterMembershipSupport])
 
-  Http().bindAndHandle(new SimpleRoute(cluster, host).route, interface = host, port = 9000).onComplete {
+  Http().bindAndHandle(new SimpleRoute(cluster, hostName).route, interface = hostName, port = 9000).onComplete {
     case Success(r) =>
       println(s"http server available on ${r.localAddress}")
     case Failure(ex) =>
