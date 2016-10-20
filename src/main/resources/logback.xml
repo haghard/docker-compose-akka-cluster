@@ -1,0 +1,37 @@
+<configuration>
+
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <!--<filter class="ch.qos.logback.classic.filter.ThresholdFilter">-->
+        <!--<level>warn</level>-->
+        <!--</filter>-->
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%X{sourceThread}] %-5level %logger{36} %X{akkaSource} – %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="file" class="ch.qos.logback.core.FileAppender">
+        <file>${log-file:-application.log}</file>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%X{sourceThread}] %-5level %logger{36} %X{akkaSource} – %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
+    <appender name="asyncFile" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="file" />
+    </appender>
+
+
+    <appender name="asyncConsole" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="console" />
+    </appender>
+
+    <logger name="Remoting" level="off" additivity="false"></logger>
+
+    <!--info-->
+    <root level="INFO">
+        <appender-ref ref="asyncConsole"/>
+        <appender-ref ref="asyncFile"/>
+    </root>
+
+</configuration>
