@@ -18,13 +18,14 @@ object Application extends App {
 
   val SystemName = "docker-cluster"
 
-  val seedHostPort = Option(System.getenv().get("akka.remote.netty.tcp.port"))
+  val hostPort = Option(System.getenv().get("akka.remote.netty.tcp.port"))
     .fold(throw new Exception("Couldn't find seedHostPort"))(identity)
 
-  val seedHostName = Option(System.getenv().get("akka.remote.netty.tcp.hostname"))
-    .fold(throw new Exception("Couldn't find seedHostName"))(identity)
 
-  val isSeed = Option(System.getenv().get("isSeed")).map(_ => true).getOrElse(false)
+  val hostName = Option(System.getenv().get("akka.remote.netty.tcp.hostname")).filter(_.length>0)
+
+  val seedHost = Option(System.getenv().get("seed.tcp.hostname")).filter(_.length>0)
+  //val isSeed = Option(System.getenv().get("isSeed")).map(_ => true).getOrElse(false)
 
   val cfg = ConfigFactory.load()
 
@@ -43,16 +44,22 @@ object Application extends App {
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
-  val seed = Address("akka.tcp", SystemName, seedHostName, seedHostPort.toInt)
+  val seed = if(hostName.isDefined)
+    Address("akka.tcp", SystemName, hostName.get, hostPort.toInt)
+  else
+    Address("akka.tcp", SystemName, seedHost.get, hostPort.toInt)
 
   val cluster = Cluster(system)
 
-  println(s"$seedHostPort - $seedHostName - $isSeed")
+  println(s"$hostPort - $hostName - $isSeed")
   println("Join seed node: " + seed)
-  cluster.join(seed)
+  cluster.joinSeedNodes(immutable.Seq(seed))
 
-  if (isSeed) {
-    Http().bindAndHandle(new HttpRoutes(seedHostName, cluster).route, interface = seedHostName, port = 9000).onComplete {
+
+  val host = if(hostName.isDefined) hostName.get else "0.0.0.0"
+
+  if (seedHost.isEmpty) {
+    Http().bindAndHandle(new HttpRoutes(host, cluster).route, interface = host, port = 9000).onComplete {
       case Success(r) =>
         println(s"http server available on ${r.localAddress}")
       case Failure(ex) =>

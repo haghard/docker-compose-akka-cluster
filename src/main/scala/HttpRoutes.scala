@@ -36,16 +36,13 @@ class HttpRoutes(host: String, cluster: Cluster)
   //Ensure that the Broadcast output is dropped if there are no listening parties.
   metricsSource.runWith(Sink.ignore)
 
-  val route = route1 ~ route2
 
-  val route1: Route =
+  val route: Route =
     path("members") {
       get {
         complete(queryForMembers)
       }
-    }
-
-  val route2: Route =
+    } ~
     path("metrics") {
       get {
         complete {
