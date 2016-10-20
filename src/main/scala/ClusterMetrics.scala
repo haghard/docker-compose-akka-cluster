@@ -45,7 +45,6 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
         val metrics = m.getMetrics.asScala.foldLeft(Map("node" -> m.address.toString, "ts" -> m.timestamp.toString)) { (acc, m) =>
           acc + (m.name -> m.value.toString)
         }
-        log.info("{}", metrics.size)
         queue.enqueue(ByteString(metrics.toJson.prettyPrint))
 
         /*m match {
@@ -64,6 +63,7 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
             log.info("metric name: {}", other.getClass.getName)
         }*/
       }
+      tryToReply
 
     case req @ Request(n) ⇒
       log.info("req: {}", n)
