@@ -24,7 +24,7 @@ object Application extends App {
 
   val cfg = ConfigFactory.empty()
     .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port0"))
-      .withFallback(ConfigFactory.load())
+    .withFallback(ConfigFactory.load())
 /*
 
     if(hostName0 == "seed-node") {
