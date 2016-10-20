@@ -23,10 +23,16 @@ object Application extends App {
   val hostName = Option(System.getenv().get(AKKA_HOST)).getOrElse(default)
   val isSeed = !hostName.startsWith("0")
 
-
-  val cfg = ConfigFactory.empty()
-      .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port"))
+  val cfg = if(isSeed) {
+    ConfigFactory.empty()
+      .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$hostName"))
+      .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
       .withFallback(ConfigFactory.load())
+  } else {
+    ConfigFactory.empty()
+      .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
+      .withFallback(ConfigFactory.load())
+  }
 
   implicit val system = ActorSystem(SystemName, cfg)
   implicit val mat = ActorMaterializer()
