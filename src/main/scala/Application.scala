@@ -9,75 +9,59 @@ import com.typesafe.config.ConfigFactory
 import scala.collection.immutable
 import scala.concurrent.Await
 import scala.util.{Failure, Success}
+import scala.collection.JavaConverters._
 
 object Application extends App {
-  /*
-  import scala.collection.JavaConverters._
-  val env = System.getenv().asScala
-  */
-
   val SystemName = "docker-cluster"
+  val default = "0.0.0.0"
+  val AKKA_PORT = "akka.remote.netty.tcp.port"
+  val AKKA_HOST = "akka.remote.netty.tcp.hostname"
 
-  //val hostPort = Option(System.getenv().get("akka.remote.netty.tcp.port")).fold(throw new Exception("Couldn't find seedHostPort"))(identity)
+  val port = Option(System.getenv().get(AKKA_PORT))
+      .fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
+
+  val hostName = Option(System.getenv().get(AKKA_HOST)).getOrElse(default)
+  val isSeed = !hostName.startsWith("0")
 
 
-  val hostName = Option(System.getenv().get("akka.remote.netty.tcp.hostname")).filter(_.length>0)
-
-  val seedHost = Option(System.getenv().get("seed.tcp.hostname")).filter(_.length>0)
-
-  val cfg = ConfigFactory.load()
-
-  /*if (isSeed) {
-    ConfigFactory.empty()
-      //.withFallback(seeds)
-      //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$port0"))
-      //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-hostname=$external"))
-      .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$seedHostPort"))
-      //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname=$hostName0"))
+  val cfg = ConfigFactory.empty()
+      .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port"))
       .withFallback(ConfigFactory.load())
-  } else ConfigFactory.load()*/
-
 
   implicit val system = ActorSystem(SystemName, cfg)
-
-  val hostPort = system.settings.config.getInt("akka.remote.netty.tcp.port")
-
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
-  /*val seed = if(hostName.isDefined) Address("akka.tcp", SystemName, hostName.get, hostPort.toInt)
-  else Address("akka.tcp", SystemName, seedHost.get, hostPort.toInt)*/
-
   val cluster = Cluster(system)
 
-  println(s"$hostPort - $hostName - ${seedHost}")
+  if(isSeed) {
+    val add = cluster.selfAddress
+    println(s"seed join to $add")
+    cluster.joinSeedNodes(immutable.Seq(add))
 
-  /*
-  if(seedHost.isEmpty) {
-    val seed = Address("akka.tcp", SystemName, hostName.get, hostPort.toInt)
-    println("****Join self seed node: " + seed) //cluster.selfAddress
-    cluster.joinSeedNodes(immutable.Seq(seed))
+    Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = 9000)
+      .onComplete {
+        case Success(r) =>
+          println(s"http server available on ${r.localAddress}")
+        case Failure(ex) =>
+          println(ex.getMessage)
+          System.exit(-1)
+      }
   } else {
-    val seed = Address("akka.tcp", SystemName, seedHost.get, hostPort.toInt)
-    println("****Join seed node: " + seed)
-    cluster.joinSeedNodes(immutable.Seq(seed))
+    val seed = System.getenv().get("akka.cluster.seed")
+    val add = Address("akka.tcp", SystemName, seed, port.toInt)
+    println(s"node join to $add")
+    cluster.joinSeedNodes(immutable.Seq(add))
   }
-  */
 
+  cfg.getStringList("akka.cluster.seed-nodes").asScala.foreach(println(_))
+  println(s"hostname: ${cfg.getString(AKKA_HOST)} port: ${cfg.getInt(AKKA_PORT)} ")
 
-  seedHost.fold(
-    Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = 9000).onComplete {
-      case Success(r) =>
-        println(s"http server available on ${r.localAddress}")
-      case Failure(ex) =>
-        println(ex.getMessage)
-        System.exit(-1)
-    }) { _ => () }
 
   sys.addShutdownHook {
     system.log.info("ShutdownHook")
     import scala.concurrent.duration._
     Await.ready(system.terminate, 5 seconds)
-    //cluster.leave(cluster.selfAddress)
+    cluster.leave(cluster.selfAddress)
   }
 }
