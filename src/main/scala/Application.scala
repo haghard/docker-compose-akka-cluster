@@ -10,6 +10,7 @@ import scala.collection.immutable
 import scala.concurrent.Await
 import scala.util.{Failure, Success}
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 object Application extends App {
   val SystemName = "docker-cluster"
@@ -21,9 +22,9 @@ object Application extends App {
       .fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
 
   val hostName = Option(System.getenv().get(AKKA_HOST)).getOrElse(default)
-  val isSeed = !hostName.startsWith("0")
+  val seedNode = !hostName.startsWith("0")
 
-  val cfg = if(isSeed) {
+  val cfg = if(seedNode) {
     ConfigFactory.empty()
       .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$hostName"))
       .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
@@ -40,35 +41,32 @@ object Application extends App {
 
   val cluster = Cluster(system)
 
-  if(isSeed) {
-    //val add = cluster.selfAddress
+  if(seedNode) {
     val add = Address("akka.tcp", SystemName, hostName, port.toInt)
-    println(s"seed node is joining to itself $add")
+    system.log.info("seed node is joining to itself {}", add)
     cluster.joinSeedNodes(immutable.Seq(add))
 
     Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = 9000)
       .onComplete {
         case Success(r) =>
-          println(s"http server available on ${r.localAddress}")
+          system.log.info("http server available on {}", r.localAddress)
         case Failure(ex) =>
-          println(ex.getMessage)
+          system.log.error(ex, "")
           System.exit(-1)
       }
   } else {
     val seed = System.getenv().get("akka.cluster.seed")
     val add = Address("akka.tcp", SystemName, seed, port.toInt)
-    println(s"regular node is joining to seed $add")
+    system.log.info(s"regular node is joining to seed {}", add)
     cluster.joinSeedNodes(immutable.Seq(add))
   }
 
-  cfg.getStringList("akka.cluster.seed-nodes").asScala.foreach(println(_))
-  println(s"hostname: ${cfg.getString(AKKA_HOST)} port: ${cfg.getInt(AKKA_PORT)} ")
+  system.log.info(s"hostname: ${cfg.getString(AKKA_HOST)} port: ${cfg.getInt(AKKA_PORT)} ")
 
 
   sys.addShutdownHook {
-    system.log.info("ShutdownHook")
-    import scala.concurrent.duration._
     Await.ready(system.terminate, 5 seconds)
+    system.log.info("Node {} has been removed the cluster", cluster.selfAddress)
     cluster.leave(cluster.selfAddress)
   }
 }

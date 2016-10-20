@@ -1,17 +1,17 @@
 package main
 
 import java.time.format.DateTimeFormatter
-import java.time.{ZoneOffset, Instant, Clock, ZonedDateTime}
-import java.util.Date
+import java.time.{Instant, ZoneOffset, ZonedDateTime}
 
 import akka.actor.{ActorLogging, Props}
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent.CurrentClusterState
-import akka.cluster.metrics.StandardMetrics.{Cpu, HeapMemory}
+import akka.cluster.metrics.StandardMetrics.HeapMemory
 import akka.cluster.metrics.{ClusterMetricsChanged, ClusterMetricsExtension}
 import akka.stream.actor.ActorPublisher
 import akka.stream.actor.ActorPublisherMessage.{Cancel, Request, SubscriptionTimeoutExceeded}
 import akka.util.ByteString
+import spray.json._
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -32,22 +32,17 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
 
   override def postStop() = extension.unsubscribe(self)
 
-  import spray.json._
-  import DefaultJsonProtocol._
-  import scala.collection.JavaConverters._
-
   override def receive = {
     case state: CurrentClusterState =>
       log.info(s"Leader Node: {}", state.getLeader)
     case ClusterMetricsChanged(clusterMetrics) =>
       clusterMetrics.foreach {
         case HeapMemory(address, timestamp, used, committed, max) =>
-          //JsNumber(timestamp),
           val json = JsObject(Map("node" -> JsString(address.toString),
-              "metric" -> JsString("heap"),
-              "when" -> JsString(formatter.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneOffset.UTC))),
-              "used" -> JsString((used.doubleValue / divider).toString + " mb"),
-              "max" -> JsString((max.getOrElse(0l) / divider).toString + " mb"))).prettyPrint
+            "metric" -> JsString("heap"),
+            "when" -> JsString(formatter.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneOffset.UTC))),
+            "used" -> JsString((used.doubleValue / divider).toString + " mb"),
+            "max" -> JsString((max.getOrElse(0l) / divider).toString + " mb"))).prettyPrint
           queue.enqueue(ByteString(json))
         case other =>
           log.info("metric name: {}", other.getClass.getName)
