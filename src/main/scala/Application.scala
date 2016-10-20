@@ -46,7 +46,7 @@ object Application extends App {
   /*val seed = if(hostName.isDefined) Address("akka.tcp", SystemName, hostName.get, hostPort.toInt)
   else Address("akka.tcp", SystemName, seedHost.get, hostPort.toInt)*/
 
-  val cluster = Cluster(system)
+  //val cluster = Cluster(system)
 
   println(s"$hostPort - $hostName - ${seedHost}")
 
@@ -64,7 +64,7 @@ object Application extends App {
 
 
   seedHost.fold(
-    Http().bindAndHandle(new HttpRoutes(hostName.get, cluster).route, interface = hostName.get, port = 9000).onComplete {
+    Http().bindAndHandle(new HttpRoutes(hostName.get).route, interface = hostName.get, port = 9000).onComplete {
       case Success(r) =>
         println(s"http server available on ${r.localAddress}")
       case Failure(ex) =>
@@ -76,14 +76,6 @@ object Application extends App {
     system.log.info("ShutdownHook")
     import scala.concurrent.duration._
     Await.ready(system.terminate, 5 seconds)
-    cluster.leave(cluster.selfAddress)
+    //cluster.leave(cluster.selfAddress)
   }
 }
-
-/**
- * seed-nodes = [
- *  akka.tcp://docker-cluster@seed-node:2551
- *  akka.tcp://docker-cluster@seed-node:2551
- *  akka.tcp://docker-cluster@seed-node:2551
- * ]
- */

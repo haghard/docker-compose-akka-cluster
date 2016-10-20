@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import akka.pattern.ask
 import scala.concurrent.duration._
 
-class HttpRoutes(host: String, cluster: Cluster)
+class HttpRoutes(host: String /*cluster: Cluster*/)
   (implicit ex: ExecutionContext, system: ActorSystem) extends Directives {
 
   val Dispatcher = "akka.metrics-dispatcher"
@@ -26,6 +26,7 @@ class HttpRoutes(host: String, cluster: Cluster)
         .withInputBuffer(1, 1))
 
 
+  val cluster = Cluster(system)
   val members = system.actorOf(ClusterMembershipSupport.props(cluster), "cluster-support")
 
   //This allows us to have just one source actor and many subscribers
