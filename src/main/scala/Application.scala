@@ -43,10 +43,8 @@ object Application extends App {
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
-  val seed = if(hostName.isDefined)
-    Address("akka.tcp", SystemName, hostName.get, hostPort.toInt)
-  else
-    Address("akka.tcp", SystemName, seedHost.get, hostPort.toInt)
+  val seed = if(hostName.isDefined) Address("akka.tcp", SystemName, hostName.get, hostPort.toInt)
+  else Address("akka.tcp", SystemName, seedHost.get, hostPort.toInt)
 
   val cluster = Cluster(system)
 
@@ -74,6 +72,8 @@ object Application extends App {
 
 /**
  * seed-nodes = [
- * "akka.tcp://docker-cluster@seed-node:2551"
+ *  akka.tcp://docker-cluster@seed-node:2551
+ *  akka.tcp://docker-cluster@seed-node:2551
+ *  akka.tcp://docker-cluster@seed-node:2551
  * ]
  */
