@@ -43,14 +43,21 @@ object Application extends App {
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
-  val seed = if(hostName.isDefined) Address("akka.tcp", SystemName, hostName.get, hostPort.toInt)
-  else Address("akka.tcp", SystemName, seedHost.get, hostPort.toInt)
+  /*val seed = if(hostName.isDefined) Address("akka.tcp", SystemName, hostName.get, hostPort.toInt)
+  else Address("akka.tcp", SystemName, seedHost.get, hostPort.toInt)*/
 
   val cluster = Cluster(system)
 
   println(s"$hostPort - $hostName - ${seedHost}")
-  println("Join seed node: " + seed)
-  cluster.joinSeedNodes(immutable.Seq(seed))
+
+  if(seedHost.isEmpty) {
+    println("****Join self seed node: " + cluster.selfAddress)
+    cluster.join(cluster.selfAddress)
+  } else {
+    val seed = Address("akka.tcp", SystemName, seedHost.get, hostPort.toInt)
+    println("****Join seed node: " + cluster.selfAddress)
+    cluster.join(seed)
+  }
 
 
   seedHost.fold(
