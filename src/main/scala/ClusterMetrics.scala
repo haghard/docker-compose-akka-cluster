@@ -1,6 +1,8 @@
 package main
 
-import java.time.{Instant, Clock, ZonedDateTime}
+import java.time.format.DateTimeFormatter
+import java.time.{ZoneOffset, Instant, Clock, ZonedDateTime}
+import java.util.Date
 
 import akka.actor.{ActorLogging, Props}
 import akka.cluster.Cluster
@@ -22,16 +24,16 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
   val divider = 1024 * 1024
   val extension = ClusterMetricsExtension(context.system)
 
+  val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
+
   private val queue = mutable.Queue[ByteString]()
 
   override def preStart() = extension.subscribe(self)
 
   override def postStop() = extension.unsubscribe(self)
 
-
   import spray.json._
   import DefaultJsonProtocol._
-
   import scala.collection.JavaConverters._
 
   override def receive = {
@@ -39,24 +41,14 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
       log.info(s"Leader Node: {}", state.getLeader)
     case ClusterMetricsChanged(clusterMetrics) =>
       clusterMetrics.foreach {
-        /*val metrics = m.getMetrics.asScala.foldLeft(Map("node" -> m.address.toString, "ts" -> m.timestamp.toString)) { (acc, m) =>
-          acc + (m.name -> m.value.toString)
-        }
-        queue.enqueue(ByteString(metrics.toJson.prettyPrint))*/
         case HeapMemory(address, timestamp, used, committed, max) =>
-          //log.info("Used heap: {} mb", used.doubleValue / divider)
-          //Timestamp
-          //Instant.ofEpochMilli()
-          //ZonedDateTime
-          val metrics = Map("node" -> address.toString, "metric" -> "heap", "when" -> timestamp.toString,
-            "used" -> (used.doubleValue / divider).toString, "committed" -> committed.toString, "max" -> max.toString)
-          queue.enqueue(ByteString(metrics.toJson.prettyPrint))
-        case Cpu(address, timestamp, Some(systemLoadAverage), cpuCombined, cpuStolen, processors) =>
-          log.info("Load: {} ({} processors)", systemLoadAverage, processors)
-          val metrics = Map("node" -> address.toString, "metric" -> "cpu",
-            "when" -> timestamp.toString, "avr" -> systemLoadAverage.toString,
-            "cpuCombined" -> cpuCombined.toString, "cpu-stolen" -> cpuStolen.toString, "processors" -> processors.toString)
-          queue.enqueue(ByteString(metrics.toJson.prettyPrint))
+          //JsNumber(timestamp),
+          val json = JsObject(Map("node" -> JsString(address.toString),
+              "metric" -> JsString("heap"),
+              "when" -> JsString(formatter.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneOffset.UTC))),
+              "used" -> JsString((used.doubleValue / divider).toString + " mb"),
+              "max" -> JsString((max.getOrElse(0l) / divider).toString + " mb"))).prettyPrint
+          queue.enqueue(ByteString(json))
         case other =>
           log.info("metric name: {}", other.getClass.getName)
       }
