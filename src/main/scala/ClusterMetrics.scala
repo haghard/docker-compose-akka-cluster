@@ -39,7 +39,7 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
     case state: CurrentClusterState =>
       log.info(s"Leader Node: {}", state.getLeader)
     case ClusterMetricsChanged(clusterMetrics) =>
-      log.info("ClusterMetricsChanged")
+      log.info("cluster-metrics-changed: {}", clusterMetrics.seq.size)
       clusterMetrics.foreach {
         case HeapMemory(address, timestamp, used, committed, max) =>
           //log.info("Used heap: {} mb", used.doubleValue / divider)
@@ -52,7 +52,8 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
             "when" -> timestamp.toString, "avr" -> systemLoadAverage.toString,
             "cpuCombined" -> cpuCombined.toString, "cpu-stolen" -> cpuStolen.toString, "processors" -> processors.toString)
           queue.enqueue(ByteString(metrics.toJson.prettyPrint))
-        case _ =>
+        case other =>
+          log.info("metric name: {}", other.getClass.getName)
       }
 
     case req @ Request(n) ⇒

@@ -23,7 +23,7 @@ class HttpRoutes(cluster: Cluster)
   implicit val mat = ActorMaterializer(
       ActorMaterializerSettings(system)
         .withDispatcher(Dispatcher)
-        .withInputBuffer(8, 8))
+        .withInputBuffer(1, 1))
 
   //val members = system.actorOf(ClusterMembershipSupport.props(cluster), "cluster-support")
 
