@@ -51,8 +51,9 @@ object Application extends App {
   println(s"$hostPort - $hostName - ${seedHost}")
 
   if(seedHost.isEmpty) {
-    println("****Join self seed node: " + cluster.selfAddress)
-    cluster.join(cluster.selfAddress)
+    val seed = Address("akka.tcp", SystemName, hostName.get, hostPort.toInt)
+    println("****Join self seed node: " + seed) //cluster.selfAddress
+    cluster.join(seed)
   } else {
     val seed = Address("akka.tcp", SystemName, seedHost.get, hostPort.toInt)
     println("****Join seed node: " + seed)
