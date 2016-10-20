@@ -50,6 +50,7 @@ object Application extends App {
 
   println(s"$hostPort - $hostName - ${seedHost}")
 
+  /*
   if(seedHost.isEmpty) {
     val seed = Address("akka.tcp", SystemName, hostName.get, hostPort.toInt)
     //****Join self seed node: akka.tcp://docker-cluster@seed-node:2551
@@ -60,6 +61,7 @@ object Application extends App {
     println("****Join seed node: " + seed)
     cluster.joinSeedNodes(immutable.Seq(seed))
   }
+  */
 
 
   seedHost.fold(
