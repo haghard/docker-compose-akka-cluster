@@ -39,7 +39,7 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
     case state: CurrentClusterState =>
       log.info(s"Leader Node: {}", state.getLeader)
     case ClusterMetricsChanged(clusterMetrics) =>
-      log.info("cluster-metrics-changed: {}", clusterMetrics.seq.size)
+      log.info("cluster-metrics-changed: {}", clusterMetrics.size)
       clusterMetrics.foreach {
         case HeapMemory(address, timestamp, used, committed, max) =>
           //log.info("Used heap: {} mb", used.doubleValue / divider)
