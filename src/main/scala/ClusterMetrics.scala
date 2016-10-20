@@ -41,7 +41,7 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
             "used" -> (used.doubleValue / divider).toString, "committed" -> committed.toString, "max" -> max.toString)
           queue.enqueue(ByteString(metrics.toJson.prettyPrint))
         case Cpu(address, timestamp, Some(systemLoadAverage), cpuCombined, cpuStolen, processors) =>
-          //log.info("Load: {} ({} processors)", systemLoadAverage, processors)
+          log.info("Load: {} ({} processors)", systemLoadAverage, processors)
           val metrics = Map("node" -> address.toString, "metric" -> "cpu",
             "when" -> timestamp.toString, "avr" -> systemLoadAverage.toString,
             "cpuCombined" -> cpuCombined.toString, "cpu-stolen" -> cpuStolen.toString, "processors" -> processors.toString)
