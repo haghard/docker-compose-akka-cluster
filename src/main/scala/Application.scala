@@ -22,8 +22,9 @@ object Application extends App {
   val port0 = System.getenv().get("akka.remote.netty.tcp.port")
   val hostName0 = Option(System.getenv().get("akka.remote.netty.tcp.hostname")).getOrElse("0.0.0.0")
 
-  val cfg = ConfigFactory.load("application.conf")
+  val cfg = ConfigFactory.empty()
     .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port0"))
+      .withFallback(ConfigFactory.load())
 /*
 
     if(hostName0 == "seed-node") {
