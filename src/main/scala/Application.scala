@@ -25,7 +25,6 @@ object Application extends App {
   val hostName = Option(System.getenv().get("akka.remote.netty.tcp.hostname")).filter(_.length>0)
 
   val seedHost = Option(System.getenv().get("seed.tcp.hostname")).filter(_.length>0)
-  //val isSeed = Option(System.getenv().get("isSeed")).map(_ => true).getOrElse(false)
 
   val cfg = ConfigFactory.load()
 
@@ -51,22 +50,19 @@ object Application extends App {
 
   val cluster = Cluster(system)
 
-  println(s"$hostPort - $hostName - $isSeed")
+  println(s"$hostPort - $hostName - ${seedHost}")
   println("Join seed node: " + seed)
   cluster.joinSeedNodes(immutable.Seq(seed))
 
 
-  val host = if(hostName.isDefined) hostName.get else "0.0.0.0"
-
-  if (seedHost.isEmpty) {
-    Http().bindAndHandle(new HttpRoutes(host, cluster).route, interface = host, port = 9000).onComplete {
+  seedHost.fold(
+    Http().bindAndHandle(new HttpRoutes(hostName.get, cluster).route, interface = hostName.get, port = 9000).onComplete {
       case Success(r) =>
         println(s"http server available on ${r.localAddress}")
       case Failure(ex) =>
         println(ex.getMessage)
         System.exit(-1)
-    }
-  }
+    }) { _ => () }
 
   sys.addShutdownHook {
     system.log.info("ShutdownHook")
