@@ -52,7 +52,7 @@ object Application extends App {
   val seed = Address("tcp", SystemName, seedHostName, seedHostPort.toInt)
   cluster.joinSeedNodes(immutable.Seq(seed))
 
-  val metrics = system.actorOf(ClusterMetrics.props(cluster), "jvm-metrics")
+  //val metrics = system.actorOf(ClusterMetrics.props(cluster), "jvm-metrics")
   val members = system.actorOf(ClusterMembershipSupport.props(cluster), "cluster-support")
 
   if(isSeed) {

@@ -18,7 +18,7 @@ class HttpRoutes(listener: ActorRef, host: String, cluster: Cluster)
 
   implicit val _ = akka.util.Timeout(5 seconds)
 
-  implicit val _ = ActorMaterializer(
+  implicit val mat = ActorMaterializer(
       ActorMaterializerSettings(system)
         .withDispatcher("akka.metrics-dispatcher")
         .withInputBuffer(1, 1))
