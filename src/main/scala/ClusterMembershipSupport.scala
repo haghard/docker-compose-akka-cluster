@@ -1,31 +1,44 @@
 package main
 
-import akka.cluster.Cluster
-import akka.actor.{Actor, ActorLogging, Address}
-import akka.cluster.ClusterEvent.{MemberEvent, MemberUp, UnreachableMember}
+import akka.cluster.ClusterEvent._
+import akka.cluster.{Cluster, MemberStatus}
+import akka.actor.{Props, Actor, ActorLogging, Address}
 
-class ClusterMembershipSupport extends Actor with ActorLogging {
+object ClusterMembershipSupport {
+  def props(cluster: Cluster) = Props[ClusterMembershipSupport]
+}
 
-  val cluster = Cluster(context.system)
-
-  var clusterMembers = Set[Address]()
+class ClusterMembershipSupport(cluster: Cluster) extends Actor with ActorLogging {
 
   override def preStart = {
-    cluster.subscribe(self, classOf[MemberEvent], classOf[UnreachableMember])
-    clusterMembers = clusterMembers + cluster.selfAddress
+    cluster.subscribe(self, classOf[ClusterDomainEvent])
   }
 
-  override def receive = {
+  private def evolve(clusterMembers: Set[Address]): Receive = {
     case MemberUp(member) =>
-      clusterMembers = clusterMembers + member.address
-      log.info("memberUp = {}", member.address)
+      log.info("MemberUp = {}", member.address)
+      context become (evolve(clusterMembers + member.address))
+
+    case MemberExited(member) =>
+      log.info("MemberExited = {}", member.address)
+
+    case ReachableMember(member) =>
+      log.debug("ReachableMember = {}", member.address)
+
     case UnreachableMember(member) =>
-      clusterMembers = clusterMembers - member.address
-      log.debug("unreachableMember = {}", member.address)
+      log.debug("UnreachableMember = {}", member.address)
+
+    case MemberRemoved(member, prev) =>
+      if (prev == MemberStatus.Exiting) log.debug("{} gracefully exited", member.address)
+      else log.debug("{} downed after Unreachable", member.address)
+      context become evolve(clusterMembers - member.address)
+
+    case state: CurrentClusterState =>
+      log.debug("Cluster state = {}", state)
+
     case 'Members =>
-      log.info("Members {}", clusterMembers.mkString(","))
-      sender() ! "done"
-    case event =>
-      log.debug("event = {}", event.toString)
+      sender() ! clusterMembers.mkString(",")
   }
+
+  override def receive = evolve(Set[Address]() + cluster.selfAddress)
 }

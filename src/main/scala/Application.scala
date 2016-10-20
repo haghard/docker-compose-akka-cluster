@@ -1,10 +1,13 @@
 package main
 
 import akka.actor._
+import akka.cluster.Cluster
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
 
+import scala.collection.immutable
+import scala.concurrent.Await
 import scala.util.{Failure, Success}
 
 object Application extends App {
@@ -15,14 +18,20 @@ object Application extends App {
   val env = System.getenv().asScala
   */
 
-  //val external = "192.168.0.3"
-
   val SystemName = "docker-cluster"
 
-  val port0 = System.getenv().get("akka.remote.netty.tcp.port")
-  val hostName0 = Option(System.getenv().get("akka.remote.netty.tcp.hostname")).getOrElse("0.0.0.0")
+  val seedHostPort = Option(System.getenv().get("akka.remote.netty.tcp.port"))
+    .fold(throw new Exception("Couldn't find seedHostPort"))(identity)
 
-  val cfg = if(hostName0 == "seed-node") {
+  val seedHostName = Option(System.getenv().get("akka.remote.netty.tcp.hostname"))
+    .fold(throw new Exception("Couldn't find seedHostName"))(identity)
+
+  val isSeed = Option(System.getenv().get("isSeed")).map(_=>true).getOrElse(false)
+
+  val cfg = ConfigFactory.load()
+
+/*
+    if(hostName0 == "seed-node") {
     ConfigFactory.empty()
       //.withFallback(seeds)
       //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$port0"))
@@ -31,16 +40,23 @@ object Application extends App {
       //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname=$hostName0"))
       .withFallback(ConfigFactory.load())
   } else ConfigFactory.load()
+*/
 
 
   implicit val system = ActorSystem(SystemName, cfg)
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
-  val members = system.actorOf(Props[ClusterMembershipSupport], "cluster-support")
+  val cluster = Cluster(system)
 
-  if(hostName0 == "seed-node") {
-    Http().bindAndHandle(new SimpleRoute(members, hostName0).route, interface = hostName0, port = 9000).onComplete {
+  val seed = Address("tcp", SystemName, seedHostName, seedHostPort.toInt)
+  cluster.joinSeedNodes(immutable.Seq(seed))
+
+  val metrics = system.actorOf(ClusterMetrics.props(cluster), "jvm-metrics")
+  val members = system.actorOf(ClusterMembershipSupport.props(cluster), "cluster-support")
+
+  if(isSeed) {
+    Http().bindAndHandle(new SimpleRoute(members, seedHostName, cluster).route, interface = seedHostName, port = 9000).onComplete {
       case Success(r) =>
         println(s"http server available on ${r.localAddress}")
       case Failure(ex) =>
@@ -49,5 +65,15 @@ object Application extends App {
     }
   }
 
-  sys.addShutdownHook(system.terminate())
+  sys.addShutdownHook {
+    import scala.concurrent.duration._
+    Await.ready(system.terminate, 5 seconds)
+    cluster.leave(cluster.selfAddress)
+  }
 }
+
+/**
+ * seed-nodes = [
+ * "akka.tcp://docker-cluster@seed-node:2551"
+ * ]
+ */

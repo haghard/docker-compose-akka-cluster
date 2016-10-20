@@ -3,17 +3,21 @@ version: '2'
 services:
 
   seed:
-    image: "docker-compose-akka-cluster:0.1-SNAPSHOT"
+    image: "docker-cluster:0.1-SNAPSHOT"
     hostname: "seed-node"
     command: "-Dakka.remote.netty.tcp.hostname=seed-node"
     ports:
       - "9000:9000"
       - "2551:2551"
     environment:
+      isSeed: 0
       akka.remote.netty.tcp.hostname: seed-node
       akka.remote.netty.tcp.port: 2551
 
   node:
-    image: "docker-compose-akka-cluster:0.1-SNAPSHOT"
+    image: "docker-cluster:0.1-SNAPSHOT"
     command: "-Dakka.remote.netty.tcp.port=2551"
+    environment:
+      akka.remote.netty.tcp.hostname: seed-node
+      akka.remote.netty.tcp.port: 2551
     links: ["seed:seed-node"]
