@@ -24,13 +24,12 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
   private val queue = mutable.Queue[ByteString]()
 
   override def preStart() = {
-    log.info("**************")
-    log.debug("*********************")
     extension.subscribe(self)
   }
 
   override def postStop() = {
     extension.unsubscribe(self)
+    log.info("")
   }
 
   import spray.json._
@@ -40,6 +39,7 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
     case state: CurrentClusterState =>
       log.info(s"Leader Node: {}", state.getLeader)
     case ClusterMetricsChanged(clusterMetrics) =>
+      log.info("ClusterMetricsChanged")
       clusterMetrics.foreach {
         case HeapMemory(address, timestamp, used, committed, max) =>
           //log.info("Used heap: {} mb", used.doubleValue / divider)
@@ -56,6 +56,7 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
       }
 
     case req @ Request(n) ⇒
+      log.info("req: {}", n)
       tryToReply
     case SubscriptionTimeoutExceeded ⇒
       log.info("canceled")
