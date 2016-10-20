@@ -43,9 +43,9 @@ object Application extends App {
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
-  val cluster = Cluster(system)
-
   val seed = Address("akka.tcp", SystemName, seedHostName, seedHostPort.toInt)
+
+  val cluster = Cluster(system)
 
   println(s"$seedHostPort - $seedHostName - $isSeed")
   println("Join seed node: " + seed)
