@@ -36,7 +36,7 @@ object Application extends App {
 
   if(isSeed) {
     val add = cluster.selfAddress
-    println(s"seed join to $add")
+    println(s"seed node is joining to itself $add")
     cluster.joinSeedNodes(immutable.Seq(add))
 
     Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = 9000)
@@ -50,7 +50,7 @@ object Application extends App {
   } else {
     val seed = System.getenv().get("akka.cluster.seed")
     val add = Address("akka.tcp", SystemName, seed, port.toInt)
-    println(s"node join to $add")
+    println(s"regular node is joining to seed $add")
     cluster.joinSeedNodes(immutable.Seq(add))
   }
 
