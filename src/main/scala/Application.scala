@@ -55,8 +55,8 @@ object Application extends App {
     cluster.join(cluster.selfAddress)
   } else {
     val seed = Address("akka.tcp", SystemName, seedHost.get, hostPort.toInt)
-    println("****Join seed node: " + cluster.selfAddress)
-    cluster.join(seed)
+    println("****Join seed node: " + seed)
+    cluster.joinSeedNodes(immutable.Seq(seed))
   }
 
 
