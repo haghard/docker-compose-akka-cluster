@@ -18,19 +18,14 @@ object ClusterMetrics {
 
 class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with ActorLogging {
   val divider = 1024 * 1024
-  //val selfAddress = cluster.selfAddress
   val extension = ClusterMetricsExtension(context.system)
 
   private val queue = mutable.Queue[ByteString]()
 
-  override def preStart() = {
-    extension.subscribe(self)
-  }
+  override def preStart() = extension.subscribe(self)
 
-  override def postStop() = {
-    extension.unsubscribe(self)
-    log.info("")
-  }
+  override def postStop() = extension.unsubscribe(self)
+
 
   import spray.json._
   import DefaultJsonProtocol._
@@ -41,32 +36,28 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
     case state: CurrentClusterState =>
       log.info(s"Leader Node: {}", state.getLeader)
     case ClusterMetricsChanged(clusterMetrics) =>
-      clusterMetrics.foreach { m =>
-        val metrics = m.getMetrics.asScala.foldLeft(Map("node" -> m.address.toString, "ts" -> m.timestamp.toString)) { (acc, m) =>
+      clusterMetrics.foreach {
+        /*val metrics = m.getMetrics.asScala.foldLeft(Map("node" -> m.address.toString, "ts" -> m.timestamp.toString)) { (acc, m) =>
           acc + (m.name -> m.value.toString)
         }
-        queue.enqueue(ByteString(metrics.toJson.prettyPrint))
-
-        /*m match {
-          case HeapMemory(address, timestamp, used, committed, max) =>
-            //log.info("Used heap: {} mb", used.doubleValue / divider)
-            val metrics = Map("node" -> address.toString, "metric" -> "heap", "when" -> timestamp.toString,
-              "used" -> (used.doubleValue / divider).toString, "committed" -> committed.toString, "max" -> max.toString)
-            queue.enqueue(ByteString(metrics.toJson.prettyPrint))
-          case Cpu(address, timestamp, Some(systemLoadAverage), cpuCombined, cpuStolen, processors) =>
-            log.info("Load: {} ({} processors)", systemLoadAverage, processors)
-            val metrics = Map("node" -> address.toString, "metric" -> "cpu",
-              "when" -> timestamp.toString, "avr" -> systemLoadAverage.toString,
-              "cpuCombined" -> cpuCombined.toString, "cpu-stolen" -> cpuStolen.toString, "processors" -> processors.toString)
-            queue.enqueue(ByteString(metrics.toJson.prettyPrint))
-          case other =>
-            log.info("metric name: {}", other.getClass.getName)
-        }*/
+        queue.enqueue(ByteString(metrics.toJson.prettyPrint))*/
+        case HeapMemory(address, timestamp, used, committed, max) =>
+          //log.info("Used heap: {} mb", used.doubleValue / divider)
+          val metrics = Map("node" -> address.toString, "metric" -> "heap", "when" -> timestamp.toString,
+            "used" -> (used.doubleValue / divider).toString, "committed" -> committed.toString, "max" -> max.toString)
+          queue.enqueue(ByteString(metrics.toJson.prettyPrint))
+        case Cpu(address, timestamp, Some(systemLoadAverage), cpuCombined, cpuStolen, processors) =>
+          log.info("Load: {} ({} processors)", systemLoadAverage, processors)
+          val metrics = Map("node" -> address.toString, "metric" -> "cpu",
+            "when" -> timestamp.toString, "avr" -> systemLoadAverage.toString,
+            "cpuCombined" -> cpuCombined.toString, "cpu-stolen" -> cpuStolen.toString, "processors" -> processors.toString)
+          queue.enqueue(ByteString(metrics.toJson.prettyPrint))
+        case other =>
+          log.info("metric name: {}", other.getClass.getName)
       }
       tryToReply
 
     case req @ Request(n) ⇒
-      log.info("req: {}", n)
       tryToReply
     case SubscriptionTimeoutExceeded ⇒
       log.info("canceled")
