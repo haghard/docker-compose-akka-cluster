@@ -30,6 +30,9 @@ object Application extends App {
 
   val cfg = ConfigFactory.load()
 
+  println(s"$seedHostPort - $seedHostName - $isSeed")
+
+
 /*
     if(hostName0 == "seed-node") {
     ConfigFactory.empty()
@@ -53,10 +56,9 @@ object Application extends App {
   cluster.joinSeedNodes(immutable.Seq(seed))
 
   //val metrics = system.actorOf(ClusterMetrics.props(cluster), "jvm-metrics")
-  val members = system.actorOf(ClusterMembershipSupport.props(cluster), "cluster-support")
 
   if(isSeed) {
-    Http().bindAndHandle(new HttpRoutes(members, seedHostName, cluster).route, interface = seedHostName, port = 9000).onComplete {
+    Http().bindAndHandle(new HttpRoutes(seedHostName, cluster).route, interface = seedHostName, port = 9000).onComplete {
       case Success(r) =>
         println(s"http server available on ${r.localAddress}")
       case Failure(ex) =>
@@ -66,6 +68,7 @@ object Application extends App {
   }
 
   sys.addShutdownHook {
+    system.log.info("ShutdownHook")
     import scala.concurrent.duration._
     Await.ready(system.terminate, 5 seconds)
     cluster.leave(cluster.selfAddress)

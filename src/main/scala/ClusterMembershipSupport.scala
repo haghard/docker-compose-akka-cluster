@@ -5,7 +5,7 @@ import akka.cluster.{Cluster, MemberStatus}
 import akka.actor.{Props, Actor, ActorLogging, Address}
 
 object ClusterMembershipSupport {
-  def props(cluster: Cluster) = Props[ClusterMembershipSupport]
+  def props(cluster: Cluster) = Props(new ClusterMembershipSupport(cluster))
 }
 
 class ClusterMembershipSupport(cluster: Cluster) extends Actor with ActorLogging {

@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import akka.pattern.ask
 import scala.concurrent.duration._
 
-class HttpRoutes(listener: ActorRef, host: String, cluster: Cluster)
+class HttpRoutes(host: String, cluster: Cluster)
   (implicit ex: ExecutionContext, system: ActorSystem) extends Directives {
 
   implicit val _ = akka.util.Timeout(5 seconds)
@@ -24,6 +24,8 @@ class HttpRoutes(listener: ActorRef, host: String, cluster: Cluster)
         .withInputBuffer(1, 1))
 
   val route = route1 ~ route2
+
+  val members = system.actorOf(ClusterMembershipSupport.props(cluster), "cluster-support")
 
   //This allows us to have just one source actor and many subscribers
   val metricsSource =
@@ -50,7 +52,7 @@ class HttpRoutes(listener: ActorRef, host: String, cluster: Cluster)
     }
 
   private def queryForMembers: Future[HttpResponse] = {
-    (listener ask 'Members).mapTo[String].map { line: String =>
+    (members ask 'Members).mapTo[String].map { line: String =>
       HttpResponse(status = StatusCodes.OK,
         entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(line)))
     }
