@@ -11,8 +11,6 @@ import scala.concurrent.Await
 import scala.util.{Failure, Success}
 
 object Application extends App {
-  println("Args:" + args.mkString(","))
-
   /*
   import scala.collection.JavaConverters._
   val env = System.getenv().asScala
@@ -50,6 +48,7 @@ object Application extends App {
   val cluster = Cluster(system)
 
   val seed = Address("akka.tcp", SystemName, seedHostName, seedHostPort.toInt)
+  println("Join seed node: " + seed)
   cluster.joinSeedNodes(immutable.Seq(seed))
 
   if (isSeed) {

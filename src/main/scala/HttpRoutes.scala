@@ -16,7 +16,6 @@ import scala.concurrent.duration._
 class HttpRoutes(host: String, cluster: Cluster)
   (implicit ex: ExecutionContext, system: ActorSystem) extends Directives {
 
-
   val Dispatcher = "akka.metrics-dispatcher"
 
   implicit val _ = akka.util.Timeout(5 seconds)
@@ -26,7 +25,6 @@ class HttpRoutes(host: String, cluster: Cluster)
         .withDispatcher(Dispatcher)
         .withInputBuffer(1, 1))
 
-  val route = route1 ~ route2
 
   val members = system.actorOf(ClusterMembershipSupport.props(cluster), "cluster-support")
 
@@ -37,6 +35,8 @@ class HttpRoutes(host: String, cluster: Cluster)
 
   //Ensure that the Broadcast output is dropped if there are no listening parties.
   metricsSource.runWith(Sink.ignore)
+
+  val route = route1 ~ route2
 
   val route1: Route =
     path("members") {
