@@ -52,7 +52,7 @@ object Application extends App {
 
   if(seedHost.isEmpty) {
     println("****Join self seed node: " + cluster.selfAddress)
-    cluster.join(cluster.selfAddress)
+    cluster.joinSeedNodes(immutable.Seq(cluster.selfAddress))
   } else {
     val seed = Address("akka.tcp", SystemName, seedHost.get, hostPort.toInt)
     println("****Join seed node: " + seed)
