@@ -49,7 +49,7 @@ object Application extends App {
 
   val cluster = Cluster(system)
 
-  val seed = Address("tcp", SystemName, seedHostName, seedHostPort.toInt)
+  val seed = Address("akka.tcp", SystemName, seedHostName, seedHostPort.toInt)
   cluster.joinSeedNodes(immutable.Seq(seed))
 
   //val metrics = system.actorOf(ClusterMetrics.props(cluster), "jvm-metrics")
