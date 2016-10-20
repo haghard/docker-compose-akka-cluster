@@ -16,11 +16,14 @@ import scala.concurrent.duration._
 class HttpRoutes(host: String, cluster: Cluster)
   (implicit ex: ExecutionContext, system: ActorSystem) extends Directives {
 
+
+  val Dispatcher = "akka.metrics-dispatcher"
+
   implicit val _ = akka.util.Timeout(5 seconds)
 
   implicit val mat = ActorMaterializer(
       ActorMaterializerSettings(system)
-        .withDispatcher("akka.metrics-dispatcher")
+        .withDispatcher(Dispatcher)
         .withInputBuffer(1, 1))
 
   val route = route1 ~ route2
@@ -29,7 +32,7 @@ class HttpRoutes(host: String, cluster: Cluster)
 
   //This allows us to have just one source actor and many subscribers
   val metricsSource =
-    Source.actorPublisher[ByteString](ClusterMetrics.props(cluster).withDispatcher("akka.metrics-dispatcher"))
+    Source.actorPublisher[ByteString](ClusterMetrics.props(cluster).withDispatcher(Dispatcher))
       .toMat(BroadcastHub.sink(bufferSize = 32))(Keep.right).run()
 
   //Ensure that the Broadcast output is dropped if there are no listening parties.

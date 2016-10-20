@@ -26,24 +26,21 @@ object Application extends App {
   val seedHostName = Option(System.getenv().get("akka.remote.netty.tcp.hostname"))
     .fold(throw new Exception("Couldn't find seedHostName"))(identity)
 
-  val isSeed = Option(System.getenv().get("isSeed")).map(_=>true).getOrElse(false)
-
-  val cfg = ConfigFactory.load()
+  val isSeed = Option(System.getenv().get("isSeed")).map(_ => true).getOrElse(false)
 
   println(s"$seedHostPort - $seedHostName - $isSeed")
 
+  val cfg = ConfigFactory.load()
 
-/*
-    if(hostName0 == "seed-node") {
+  /*if (isSeed) {
     ConfigFactory.empty()
       //.withFallback(seeds)
       //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$port0"))
       //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-hostname=$external"))
-      .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$port0"))
+      .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port=$seedHostPort"))
       //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname=$hostName0"))
       .withFallback(ConfigFactory.load())
-  } else ConfigFactory.load()
-*/
+  } else ConfigFactory.load()*/
 
 
   implicit val system = ActorSystem(SystemName, cfg)
@@ -55,9 +52,7 @@ object Application extends App {
   val seed = Address("akka.tcp", SystemName, seedHostName, seedHostPort.toInt)
   cluster.joinSeedNodes(immutable.Seq(seed))
 
-  //val metrics = system.actorOf(ClusterMetrics.props(cluster), "jvm-metrics")
-
-  if(isSeed) {
+  if (isSeed) {
     Http().bindAndHandle(new HttpRoutes(seedHostName, cluster).route, interface = seedHostName, port = 9000).onComplete {
       case Success(r) =>
         println(s"http server available on ${r.localAddress}")
