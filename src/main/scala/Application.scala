@@ -40,7 +40,7 @@ object Application extends App {
 
   implicit val system = ActorSystem(SystemName, cfg)
 
-  val hostPort  = system.settings.config.getInt("akka.remote.netty.tcp.port")
+  val hostPort = system.settings.config.getInt("akka.remote.netty.tcp.port")
 
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
