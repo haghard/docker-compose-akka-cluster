@@ -1,5 +1,7 @@
 package main
 
+import java.time.{Instant, Clock, ZonedDateTime}
+
 import akka.actor.{ActorLogging, Props}
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent.CurrentClusterState
@@ -43,6 +45,9 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
         queue.enqueue(ByteString(metrics.toJson.prettyPrint))*/
         case HeapMemory(address, timestamp, used, committed, max) =>
           //log.info("Used heap: {} mb", used.doubleValue / divider)
+          //Timestamp
+          //Instant.ofEpochMilli()
+          //ZonedDateTime
           val metrics = Map("node" -> address.toString, "metric" -> "heap", "when" -> timestamp.toString,
             "used" -> (used.doubleValue / divider).toString, "committed" -> committed.toString, "max" -> max.toString)
           queue.enqueue(ByteString(metrics.toJson.prettyPrint))
