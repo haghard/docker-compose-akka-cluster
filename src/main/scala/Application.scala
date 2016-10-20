@@ -26,8 +26,6 @@ object Application extends App {
 
   val isSeed = Option(System.getenv().get("isSeed")).map(_ => true).getOrElse(false)
 
-  println(s"$seedHostPort - $seedHostName - $isSeed")
-
   val cfg = ConfigFactory.load()
 
   /*if (isSeed) {
@@ -48,8 +46,10 @@ object Application extends App {
   val cluster = Cluster(system)
 
   val seed = Address("akka.tcp", SystemName, seedHostName, seedHostPort.toInt)
+
+  println(s"$seedHostPort - $seedHostName - $isSeed")
   println("Join seed node: " + seed)
-  cluster.joinSeedNodes(immutable.Seq(seed))
+  cluster.join(seed)
 
   if (isSeed) {
     Http().bindAndHandle(new HttpRoutes(seedHostName, cluster).route, interface = seedHostName, port = 9000).onComplete {
