@@ -12,12 +12,12 @@ services:
       - "2551:2551"
     environment:
       akka.remote.netty.tcp.hostname: seed-node
-      akka.remote.netty.tcp.port: 2551
+      #akka.remote.netty.tcp.port: 2551
 
   node:
     image: "docker-cluster:0.1-SNAPSHOT"
     command: "-Dakka.remote.netty.tcp.port=2551"
     environment:
       seed.tcp.hostname: seed-node
-      akka.remote.netty.tcp.port: 2551
+      #akka.remote.netty.tcp.port: 2551
     links: ["seed:seed-node"]

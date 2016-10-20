@@ -18,8 +18,7 @@ object Application extends App {
 
   val SystemName = "docker-cluster"
 
-  val hostPort = Option(System.getenv().get("akka.remote.netty.tcp.port"))
-    .fold(throw new Exception("Couldn't find seedHostPort"))(identity)
+  //val hostPort = Option(System.getenv().get("akka.remote.netty.tcp.port")).fold(throw new Exception("Couldn't find seedHostPort"))(identity)
 
 
   val hostName = Option(System.getenv().get("akka.remote.netty.tcp.hostname")).filter(_.length>0)
@@ -40,6 +39,9 @@ object Application extends App {
 
 
   implicit val system = ActorSystem(SystemName, cfg)
+
+  val hostPort  = system.settings.config.getInt("akka.remote.netty.tcp.port")
+
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
