@@ -35,13 +35,20 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
   import spray.json._
   import DefaultJsonProtocol._
 
+  import scala.collection.JavaConverters._
+
   override def receive = {
     case state: CurrentClusterState =>
       log.info(s"Leader Node: {}", state.getLeader)
     case ClusterMetricsChanged(clusterMetrics) =>
-      log.info("cluster-metrics-changed: {}", clusterMetrics.size)
-      clusterMetrics.foreach {
-        _ match {
+      clusterMetrics.foreach { m =>
+        val metrics = m.getMetrics.asScala.foldLeft(Map("node" -> m.address.toString, "ts" -> m.timestamp.toString)) { (acc, m) =>
+          acc + (m.name -> m.value.toString)
+        }
+        log.info("{}", metrics.size)
+        queue.enqueue(ByteString(metrics.toJson.prettyPrint))
+
+        /*m match {
           case HeapMemory(address, timestamp, used, committed, max) =>
             //log.info("Used heap: {} mb", used.doubleValue / divider)
             val metrics = Map("node" -> address.toString, "metric" -> "heap", "when" -> timestamp.toString,
@@ -55,7 +62,7 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
             queue.enqueue(ByteString(metrics.toJson.prettyPrint))
           case other =>
             log.info("metric name: {}", other.getClass.getName)
-        }
+        }*/
       }
 
     case req @ Request(n) ⇒
