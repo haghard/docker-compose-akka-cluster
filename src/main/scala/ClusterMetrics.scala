@@ -18,14 +18,20 @@ object ClusterMetrics {
 
 class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with ActorLogging {
   val divider = 1024 * 1024
-  val selfAddress = cluster.selfAddress
+  //val selfAddress = cluster.selfAddress
   val extension = ClusterMetricsExtension(context.system)
 
   private val queue = mutable.Queue[ByteString]()
 
-  override def preStart() = extension.subscribe(self)
+  override def preStart() = {
+    log.info("**************")
+    log.debug("*********************")
+    extension.subscribe(self)
+  }
 
-  override def postStop() = extension.unsubscribe(self)
+  override def postStop() = {
+    extension.unsubscribe(self)
+  }
 
   import spray.json._
   import DefaultJsonProtocol._

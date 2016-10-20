@@ -25,7 +25,7 @@ class HttpRoutes(cluster: Cluster)
         .withDispatcher(Dispatcher)
         .withInputBuffer(1, 1))
 
-  val members = system.actorOf(ClusterMembershipSupport.props(cluster), "cluster-support")
+  //val members = system.actorOf(ClusterMembershipSupport.props(cluster), "cluster-support")
 
   //This allows us to have just one source actor and many subscribers
   val metricsSource =
@@ -37,11 +37,11 @@ class HttpRoutes(cluster: Cluster)
 
 
   val route: Route =
-    path("members") {
+    /*path("members") {
       get {
         complete(queryForMembers)
       }
-    } ~
+    } ~*/
     path("metrics") {
       get {
         complete {
@@ -50,10 +50,10 @@ class HttpRoutes(cluster: Cluster)
       }
     }
 
-  private def queryForMembers: Future[HttpResponse] = {
+  /*private def queryForMembers: Future[HttpResponse] = {
     (members ask 'Members).mapTo[String].map { line: String =>
       HttpResponse(status = StatusCodes.OK,
         entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(line)))
     }
-  }
+  }*/
 }
