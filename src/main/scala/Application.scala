@@ -42,6 +42,9 @@ object Application extends App {
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
 
+  import scala.collection.JavaConverters._
+  cfg.getStringList("akka.cluster.seed-nodes").asScala.foreach(println(_))
+
   val members = system.actorOf(Props[ClusterMembershipSupport], "cluster-support")
 
   if(hostName0 == "seed-node") {
