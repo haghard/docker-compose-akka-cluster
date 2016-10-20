@@ -45,7 +45,9 @@ object Application extends App {
   import scala.collection.JavaConverters._
   cfg.getStringList("akka.cluster.seed-nodes").asScala.foreach(println(_))
 
-  val members = system.actorOf(Props[ClusterMembershipSupport], "cluster-support")
+  println("port" + cfg.getInt("akka.remote.netty.tcp.port") + "hostname " + cfg.getString("akka.remote.netty.tcp.hostname"))
+
+  /*val members = system.actorOf(Props[ClusterMembershipSupport], "cluster-support")
 
   if(hostName0 == "seed-node") {
     Http().bindAndHandle(new SimpleRoute(members, hostName0).route, interface = hostName0, port = 9000).onComplete {
@@ -55,7 +57,7 @@ object Application extends App {
         println(ex.getMessage)
         System.exit(-1)
     }
-  }
+  }*/
 
   sys.addShutdownHook(system.terminate())
 }
