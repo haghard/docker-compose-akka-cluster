@@ -35,7 +35,8 @@ object Application extends App {
   val cluster = Cluster(system)
 
   if(isSeed) {
-    val add = cluster.selfAddress
+    //val add = cluster.selfAddress
+    val add = Address("akka.tcp", SystemName, hostName, port.toInt)
     println(s"seed node is joining to itself $add")
     cluster.joinSeedNodes(immutable.Seq(add))
 
