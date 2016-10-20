@@ -6,6 +6,8 @@ enablePlugins(JavaAppPackaging)
 
 scalaVersion := "2.11.8"
 
+name := "docker-cluster"
+
 val Akka = "2.4.11"
 
 libraryDependencies ++= Seq(
@@ -23,4 +25,6 @@ libraryDependencies ++= Seq(
 //docker inspect -f '{{.Name}} - {{.NetworkSettings.IPAddress }}' $(docker ps -aq)
 //docker inspect -f '{{.Name}} - {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps -aq)
 
+
+//docker-machine restart
 //https://github.com/muller/docker-compose-akka-cluster
