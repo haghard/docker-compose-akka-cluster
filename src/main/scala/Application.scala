@@ -22,7 +22,10 @@ object Application extends App {
   val port0 = System.getenv().get("akka.remote.netty.tcp.port")
   val hostName0 = Option(System.getenv().get("akka.remote.netty.tcp.hostname")).getOrElse("0.0.0.0")
 
-  val cfg = if(hostName0 == "seed-node") {
+  val cfg = ConfigFactory.load()
+/*
+
+    if(hostName0 == "seed-node") {
     ConfigFactory.empty()
       //.withFallback(seeds)
       //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.bind-port=$port0"))
@@ -31,7 +34,7 @@ object Application extends App {
       //.withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.hostname=$hostName0"))
       .withFallback(ConfigFactory.load())
   } else ConfigFactory.load()
-
+*/
 
   implicit val system = ActorSystem(SystemName, cfg)
   implicit val mat = ActorMaterializer()
