@@ -56,7 +56,7 @@ object Application extends App {
   val members = system.actorOf(ClusterMembershipSupport.props(cluster), "cluster-support")
 
   if(isSeed) {
-    Http().bindAndHandle(new SimpleRoute(members, seedHostName, cluster).route, interface = seedHostName, port = 9000).onComplete {
+    Http().bindAndHandle(new HttpRoutes(members, seedHostName, cluster).route, interface = seedHostName, port = 9000).onComplete {
       case Success(r) =>
         println(s"http server available on ${r.localAddress}")
       case Failure(ex) =>
