@@ -36,12 +36,12 @@ class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with A
     case ClusterMetricsChanged(clusterMetrics) =>
       clusterMetrics.foreach {
         case HeapMemory(address, timestamp, used, committed, max) =>
-          log.info("Used heap: {} mb", used.doubleValue / divider)
+          //log.info("Used heap: {} mb", used.doubleValue / divider)
           val metrics = Map("node" -> address.toString, "metric" -> "heap", "when" -> timestamp.toString,
             "used" -> (used.doubleValue / divider).toString, "committed" -> committed.toString, "max" -> max.toString)
           queue.enqueue(ByteString(metrics.toJson.prettyPrint))
         case Cpu(address, timestamp, Some(systemLoadAverage), cpuCombined, cpuStolen, processors) =>
-          log.info("Load: {} ({} processors)", systemLoadAverage, processors)
+          //log.info("Load: {} ({} processors)", systemLoadAverage, processors)
           val metrics = Map("node" -> address.toString, "metric" -> "cpu",
             "when" -> timestamp.toString, "avr" -> systemLoadAverage.toString,
             "cpuCombined" -> cpuCombined.toString, "cpu-stolen" -> cpuStolen.toString, "processors" -> processors.toString)
