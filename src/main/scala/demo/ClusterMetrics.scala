@@ -1,4 +1,4 @@
-package main
+package demo
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneOffset, ZonedDateTime}

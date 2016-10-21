@@ -1,8 +1,8 @@
-package main
+package demo
 
+import akka.actor.{Actor, ActorLogging, Address, Props}
 import akka.cluster.ClusterEvent._
 import akka.cluster.{Cluster, MemberStatus}
-import akka.actor.{Props, Actor, ActorLogging, Address}
 
 object ClusterMembershipSupport {
   def props(cluster: Cluster) = Props(new ClusterMembershipSupport(cluster))

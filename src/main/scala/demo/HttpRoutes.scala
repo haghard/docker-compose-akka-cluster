@@ -1,17 +1,16 @@
-package main
+package demo
 
-import akka.actor.{ActorSystem, ActorRef}
+import akka.actor.ActorSystem
 import akka.cluster.Cluster
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.{Route, _}
-import akka.stream.{ActorMaterializerSettings, ActorMaterializer}
+import akka.pattern.ask
 import akka.stream.scaladsl.{BroadcastHub, Keep, Sink, Source}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.util.ByteString
 
-import scala.concurrent.{ExecutionContext, Future}
-
-import akka.pattern.ask
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 class HttpRoutes(cluster: Cluster)
   (implicit ex: ExecutionContext, system: ActorSystem) extends Directives {

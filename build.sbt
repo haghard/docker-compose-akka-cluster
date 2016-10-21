@@ -36,3 +36,7 @@ libraryDependencies ++= Seq(
 
 //docker-compose up -d
 //docker-compose scale node=2
+
+
+//http GET 192.168.0.146:9000/members
+//curl --no-buffer 192.168.0.146:9000/metrics

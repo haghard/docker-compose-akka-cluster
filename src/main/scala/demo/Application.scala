@@ -1,4 +1,4 @@
-package main
+package demo
 
 import akka.actor._
 import akka.cluster.Cluster
@@ -8,20 +8,19 @@ import com.typesafe.config.ConfigFactory
 
 import scala.collection.immutable
 import scala.concurrent.Await
-import scala.util.{Failure, Success}
-import scala.collection.JavaConverters._
 import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 object Application extends App {
   val SystemName = "docker-cluster"
-  val default = "0.0.0.0"
+  val defaultNetwork = "0.0.0.0"
   val AKKA_PORT = "akka.remote.netty.tcp.port"
   val AKKA_HOST = "akka.remote.netty.tcp.hostname"
 
   val port = Option(System.getenv().get(AKKA_PORT))
       .fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
 
-  val hostName = Option(System.getenv().get(AKKA_HOST)).getOrElse(default)
+  val hostName = Option(System.getenv().get(AKKA_HOST)).getOrElse(defaultNetwork)
   val seedNode = !hostName.startsWith("0")
 
   val cfg = if(seedNode) {
@@ -61,12 +60,11 @@ object Application extends App {
     cluster.joinSeedNodes(immutable.Seq(add))
   }
 
-  system.log.info(s"hostname: ${cfg.getString(AKKA_HOST)} port: ${cfg.getInt(AKKA_PORT)} ")
-
+  system.log.info(s"* * * * hostname: ${cfg.getString(AKKA_HOST)} port: ${cfg.getInt(AKKA_PORT)} * * * *")
 
   sys.addShutdownHook {
     Await.ready(system.terminate, 5 seconds)
-    system.log.info("Node {} has been removed the cluster", cluster.selfAddress)
+    system.log.info("Node {} has been removed from the cluster", cluster.selfAddress)
     cluster.leave(cluster.selfAddress)
   }
 }
