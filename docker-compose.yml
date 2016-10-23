@@ -16,4 +16,5 @@ services:
     environment:
       akka.cluster.seed: "seed-node"
       akka.remote.netty.tcp.port: 2551
-    links: ["seed:seed-node"]
+    links:
+      - seed
