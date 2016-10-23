@@ -17,5 +17,3 @@ services:
       akka.cluster.seed: ${SEED_NAME}
       akka.remote.netty.tcp.port: 2551
     links: ["seed:${SEED_NAME}"]
-    depends_on:
-      - seed
