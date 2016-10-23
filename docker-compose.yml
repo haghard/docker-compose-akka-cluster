@@ -14,7 +14,6 @@ services:
   node:
     image: "docker-cluster:0.1-SNAPSHOT"
     environment:
-      akka.cluster.seed: "seed-node"
+      akka.cluster.seed: "seed:hostname"
       akka.remote.netty.tcp.port: 2551
-    links:
-      - seed
+    links: ["seed:seed-node"]
