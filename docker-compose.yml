@@ -9,11 +9,13 @@ services:
       - "9000:9000"
     environment:
       akka.remote.netty.tcp.hostname: ${SEED_NAME}
-      akka.remote.netty.tcp.port: 2551
+      akka.remote.netty.tcp.port: ${AKKA_PORT}
 
   node:
     image: "docker-cluster:0.1-SNAPSHOT"
     environment:
       akka.cluster.seed: ${SEED_NAME}
-      akka.remote.netty.tcp.port: 2551
+      akka.remote.netty.tcp.port: ${AKKA_PORT}
     links: ["seed:${SEED_NAME}"]
+    depends_on:
+      - seed

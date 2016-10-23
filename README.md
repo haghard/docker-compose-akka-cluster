@@ -3,7 +3,13 @@
 ### The project shows you how to scale the number of workers on one machine using `docker-compose`. ###
 
 #### A sequence of docker commands ####
-
+  
+  * To set env vars we need
+    
+    `export SEED_NAME=akka-seed0`
+    
+    `export AKKA-PORT=2551`
+  
   * To build and publish the image `sbt docker:publishLocal`
 
   * To start one seed node and one worker node `docker-compose up -d`
