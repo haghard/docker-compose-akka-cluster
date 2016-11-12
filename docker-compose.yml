@@ -2,6 +2,7 @@ version: '2'
 
 services:
 
+
   seed:
     image: "docker-cluster:0.1-SNAPSHOT"
     hostname: ${SEED_NAME}
