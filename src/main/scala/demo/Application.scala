@@ -28,6 +28,8 @@ object Application extends App {
       akka.remote.netty.tcp.port: ${AKKA_PORT}
    */
 
+  println("*********")
+
   args.toSeq.foreach {
     println(_)
   }
