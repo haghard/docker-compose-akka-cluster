@@ -8,13 +8,13 @@ services:
     ports:
       - "9000:9000"
     environment:
-      JVM_OPTS: "-Xmx1g"
+      JVM_OPTS: "-Xmx1g -XX:+UseG1GC -XX:ConcGCThreads=4 -XX:ParallelGCThreads=4"
       akka.remote.netty.tcp.hostname: ${SEED_NAME}
       akka.remote.netty.tcp.port: ${AKKA_PORT}
   node:
     image: "docker-cluster:0.1-SNAPSHOT"
     environment:
-      JVM_OPTS: "-Xmx1g"
+      JVM_OPTS: "-Xmx1g -XX:+UseG1GC -XX:ConcGCThreads=4 -XX:ParallelGCThreads=4"
       akka.cluster.seed: ${SEED_NAME}
       akka.remote.netty.tcp.port: ${AKKA_PORT}
     links: ["seed:${SEED_NAME}"]
