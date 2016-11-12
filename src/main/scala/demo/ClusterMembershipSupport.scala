@@ -31,8 +31,8 @@ class ClusterMembershipSupport(cluster: Cluster) extends Actor with ActorLogging
       log.info("UnreachableMember = {}", member.address)
 
     case MemberRemoved(member, prev) =>
-      if (prev == MemberStatus.Exiting) log.debug("{} gracefully exited", member.address)
-      else log.info("{} downed after Unreachable", member.address)
+      if (prev == MemberStatus.Exiting) log.info("{} gracefully exited", member.address)
+      else log.info("{} downed after being Unreachable", member.address)
       context become evolve(clusterMembers - member)
 
     case state: CurrentClusterState =>

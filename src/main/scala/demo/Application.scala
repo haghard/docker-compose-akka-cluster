@@ -4,7 +4,7 @@ import akka.actor._
 import akka.cluster.Cluster
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ConfigValueFactory, ConfigFactory}
 
 import scala.collection.immutable
 import scala.concurrent.Await
@@ -17,21 +17,25 @@ object Application extends App {
   val AKKA_PORT = "akka.remote.netty.tcp.port"
   val AKKA_HOST = "akka.remote.netty.tcp.hostname"
 
-  val port = Option(System.getenv().get(AKKA_PORT))
-      .fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
+  val port = sys.props.get(AKKA_PORT).fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
+  val hostName = sys.props.get(AKKA_HOST).getOrElse(defaultNetwork)
 
-  val hostName = Option(System.getenv().get(AKKA_HOST)).getOrElse(defaultNetwork)
   val seedNode = !hostName.startsWith("0")
 
-  val cfg = if(seedNode) {
-    ConfigFactory.empty()
-      .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$hostName"))
-      .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
-      .withFallback(ConfigFactory.load())
-  } else {
-    ConfigFactory.empty()
-      .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
-      .withFallback(ConfigFactory.load())
+  val cfg = {
+    val overrideConfig = if (seedNode) {
+      ConfigFactory.empty()
+        .withValue(AKKA_HOST, ConfigValueFactory.fromAnyRef(hostName))
+        .withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
+        //.withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$hostName"))
+        //.withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
+        .withFallback(ConfigFactory.load())
+    } else {
+      ConfigFactory.empty().withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
+        //.withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
+        //.withFallback(ConfigFactory.load())
+    }
+    overrideConfig.withFallback(ConfigFactory.load())
   }
 
   implicit val system = ActorSystem(SystemName, cfg)

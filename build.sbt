@@ -19,5 +19,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream"            %   Akka,
   "com.typesafe.akka" %% "akka-slf4j"             %   Akka,
   "io.spray"          %% "spray-json"             %   "1.3.2",
-  "ch.qos.logback"    %  "logback-classic"        %   "1.1.2"
+  "ch.qos.logback"    %  "logback-classic"        %   "1.1.2",
+  "com.typesafe.akka" %% "akka-stream-kafka"      %   "0.13"
 )

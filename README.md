@@ -35,3 +35,9 @@
   Req/Resp `http GET 192.168.0.146:9000/members`
 
   Chunked resp `curl --no-buffer 192.168.0.146:9000/metrics`
+  
+  
+### Kafka ###
+
+Kafka does so distributing consumers across topic partitions, so each partition has exactly one consumer assigned. 
+If the number number of consumers > the number number of partitions, the remaining consumers won't fetch messages.
