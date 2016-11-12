@@ -18,7 +18,7 @@ object Application extends App {
   val AKKA_PORT = "akka.remote.netty.tcp.port"
   val AKKA_HOST = "akka.remote.netty.tcp.hostname"
 
-  val port = sys.env.get(AKKA_PORT).fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
+  val port = sys.env.get(AKKA_PORT).fold(throw new Exception(s"Couldn't find $AKKA_PORT system property"))(identity)
   val hostName = sys.env.get(AKKA_HOST).getOrElse(defaultNetwork)
   val seedNode = hostName ne (defaultNetwork)
 
@@ -56,7 +56,7 @@ object Application extends App {
           System.exit(-1)
       }
   } else {
-    val seed = sys.env.get("akka.cluster.seed").fold(throw new Exception(""))(identity)
+    val seed = sys.env.get("akka.cluster.seed").fold(throw new Exception("Couldn't find akka.cluster.seed system property"))(identity)
     val add = Address("akka.tcp", SystemName, seed, port.toInt)
     system.log.info(s"regular node is joining to seed {}", add)
     cluster.joinSeedNodes(immutable.Seq(add))
