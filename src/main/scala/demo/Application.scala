@@ -17,8 +17,11 @@ object Application extends App {
   val AKKA_PORT = "akka.remote.netty.tcp.port"
   val AKKA_HOST = "akka.remote.netty.tcp.hostname"
 
-  val port = sys.props.get(AKKA_PORT).fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
-  val hostName = sys.props.get(AKKA_HOST).getOrElse(defaultNetwork)
+
+
+  //sys.props.get(AKKA_PORT)
+  val port = Option(System.getenv(AKKA_PORT)).fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
+  val hostName = Option(System.getenv(AKKA_HOST)).getOrElse(defaultNetwork)
 
   val seedNode = !hostName.startsWith("0")
 
