@@ -8,7 +8,7 @@
     
     `export SEED_NAME=akka-seed0`
     
-    `export AKKA-PORT=2551`
+    `export AKKA_PORT=2551`
   
   * To build and publish the image `sbt docker:publishLocal`
 

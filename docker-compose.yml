@@ -18,7 +18,6 @@ services:
       -Dcom.sun.management.jmxremote.rmi.port=1089 \
       -Dcom.sun.management.jmxremote=true \
       -Djava.rmi.server.hostname="${SEED_NAME}
-      "
       akka.remote.netty.tcp.hostname: ${SEED_NAME}
       akka.remote.netty.tcp.port: ${AKKA_PORT}
 
