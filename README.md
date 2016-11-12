@@ -30,6 +30,10 @@
   
   For docker-compose to show all ips `docker inspect -f '{{.Name}} - {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps -aq)`
 
+
+  docker-compose rm seed
+  docker-compose rm node
+
 #### Available urls ####
 
   Req/Resp `http GET 192.168.0.146:9000/members`
