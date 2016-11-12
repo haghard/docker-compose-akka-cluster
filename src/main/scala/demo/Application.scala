@@ -18,12 +18,13 @@ object Application extends App {
   val AKKA_PORT = "akka.remote.netty.tcp.port"
   val AKKA_HOST = "akka.remote.netty.tcp.hostname"
 
-  //val port = sys.env.get(AKKA_PORT).fold(throw new Exception(s"Couldn't find $AKKA_PORT system property"))(identity)
-  //val hostName = sys.env.get(AKKA_HOST).getOrElse(defaultNetwork)
-  //val seedNode = hostName ne (defaultNetwork)
+  val sysPropSeedPort = "seedPort"
+  val sysPropsSeedHost = "seedHost"
+  val sysPropsHttpPort = "httpPort"
+  val sysPropsSeedHostForWorker = "seedHostToConnect"
 
-  val port = sys.props.get("port").fold(throw new Exception(s"Couldn't find $AKKA_PORT system property"))(identity)
-  val hostName = sys.props.get("seedHost").getOrElse(workerNetwork)
+  val port = sys.props.get(sysPropSeedPort).fold(throw new Exception(s"Couldn't find $AKKA_PORT system property"))(identity)
+  val hostName = sys.props.get(sysPropsSeedHost).getOrElse(workerNetwork)
   val seedNode = hostName ne (workerNetwork)
 
   val cfg = {
@@ -49,24 +50,18 @@ object Application extends App {
     val add = Address("akka.tcp", SystemName, hostName, port.toInt)
     log.info("seed node is joining to itself {}", add)
     cluster.joinSeedNodes(immutable.Seq(add))
-
-    //println(System.getProperty("java.rmi.server.hostname"))
-    //println(sys.props.get("seedHost"))
-    //println(System.getProperty("seedHost"))
-    val httpPort = sys.props.get("httpPort").fold(throw new Exception("Couldn't find httpPort system property"))(identity)
+    val httpPort = sys.props.get("httpPort").fold(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))(identity)
 
     Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = httpPort.toInt)
       .onComplete {
         case Success(r) =>
-          log.info("http server available on {}", r.localAddress)
-          log.info(s"* * * host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} JMX-port: ${System.getProperty("com.sun.management.jmxremote.port")} * * *")
+          log.info(s"* * * http-server available ${r.localAddress} host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} JMX-port: ${sys.props.get("com.sun.management.jmxremote.port")} * * *")
         case Failure(ex) =>
           system.log.error(ex, "Couldn't bind http server")
           System.exit(-1)
       }
   } else {
-    //val seed = sys.env.get("akka.cluster.seed").fold(throw new Exception("Couldn't find akka.cluster.seed system property"))(identity)
-    val seed = sys.props.get("clusterSeed").fold(throw new Exception("Couldn't find clusterSeed system property"))(identity)
+    val seed = sys.props.get(sysPropsSeedHostForWorker).fold(throw new Exception(s"Couldn't find $sysPropsSeedHostForWorker system property"))(identity)
     val seedAddress = Address("akka.tcp", SystemName, seed, port.toInt)
     log.info(s"worker node joined seed {}", seedAddress)
     cluster.joinSeedNodes(immutable.Seq(seedAddress))
