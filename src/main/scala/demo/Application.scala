@@ -15,30 +15,17 @@ object Application /*extends App*/ {
   val SystemName = "docker-cluster"
   val defaultNetwork = "0.0.0.0"
 
-  //val AKKA_PORT = "akka.remote.netty.tcp.port"
-  //val AKKA_HOST = "akka.remote.netty.tcp.hostname"
+  val AKKA_PORT = "akka.remote.netty.tcp.port"
+  val AKKA_HOST = "akka.remote.netty.tcp.hostname"
   //System.getenv(AKKA_PORT)
 
-  val AKKA_PORT = "-Dakka.remote.netty.tcp.port"
-  val AKKA_HOST = "-Dakka.remote.netty.tcp.hostname"
-
-  /**
-   * akka.remote.netty.tcp.hostname: ${SEED_NAME}
-   * akka.remote.netty.tcp.port: ${AKKA_PORT}
-
-   * akka.cluster.seed: ${SEED_NAME}
-   * akka.remote.netty.tcp.port: ${AKKA_PORT}
-   */
+  //val AKKA_PORT = "-Dakka.remote.netty.tcp.port"
+  //val AKKA_HOST = "-Dakka.remote.netty.tcp.hostname"
 
   def main(args: Array[String]) = {
-    println("*********")
-    println(args.mkString(","))
-
-
-
     //sys.props.get(AKKA_PORT)
-    val port = sys.props.get(AKKA_PORT).fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
-    val hostName = sys.props.get(AKKA_HOST).getOrElse(defaultNetwork)
+    val port = Option(System.getenv(AKKA_PORT)).fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
+    val hostName = Option(System.getenv(AKKA_HOST)).getOrElse(defaultNetwork)
 
     val seedNode = !hostName.startsWith("0")
 
