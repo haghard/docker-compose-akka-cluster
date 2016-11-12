@@ -7,14 +7,15 @@ services:
     hostname: ${SEED_NAME}
     ports:
       - "9000:9000"
+      - "1089:1089"
     environment:
-      JVM_OPTS: "-Xmx1g -XX:+UseG1GC -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote=true -Djava.rmi.server.hostname="${HOST}
+      JVM_OPTS: "-Xmx1g -XX:+UseG1GC -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote=true -Djava.rmi.server.hostname=${HOST}"
       akka.remote.netty.tcp.hostname: ${SEED_NAME}
       akka.remote.netty.tcp.port: ${AKKA_PORT}
   node:
     image: "docker-cluster:0.1-SNAPSHOT"
     environment:
-      JVM_OPTS: "-Xmx1g -XX:+UseG1GC -XX:ConcGCThreads=4 -XX:ParallelGCThreads=4"
+      JVM_OPTS: "-Xmx1g -XX:+UseG1GC"
       akka.cluster.seed: ${SEED_NAME}
       akka.remote.netty.tcp.port: ${AKKA_PORT}
     links: ["seed:${SEED_NAME}"]
