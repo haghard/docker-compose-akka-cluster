@@ -10,6 +10,7 @@ services:
     environment:
       akka.remote.netty.tcp.hostname: ${SEED_NAME}
       akka.remote.netty.tcp.port: ${AKKA_PORT}
+
   node:
     image: "docker-cluster:0.1-SNAPSHOT"
     environment:
