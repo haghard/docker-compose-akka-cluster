@@ -23,9 +23,8 @@ object Application extends App {
   val seedNode = !hostName.startsWith("0")
 
   println(System.getProperty("java.rmi.server.hostname"))
-  println(System.getProperty("database.url"))
+  println(System.getProperty("com.sun.management.jmxremote.port"))
 
-  //sys.props
 
   //println(sys.env.get("java.rmi.server.hostname") + " - " + sys.env.get("-Djava.rmi.server.hostname"))
   //System.getenv("java.rmi.server.hostname")
