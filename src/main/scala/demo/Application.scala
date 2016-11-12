@@ -46,11 +46,14 @@ object Application extends App {
     cluster.joinSeedNodes(immutable.Seq(add))
     //println(System.getProperty("java.rmi.server.hostname"))
 
+    println(sys.props.get("seedHost"))
+    println(System.getProperty("seedHost"))
+
     Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = 9000)
       .onComplete {
         case Success(r) =>
           system.log.info("http server available on {}", r.localAddress)
-          system.log.info(s"* * * Hostname: ${cfg.getString(AKKA_HOST)} akka-port: ${cfg.getInt(AKKA_PORT)} JMX port: ${System.getProperty("com.sun.management.jmxremote.port")} * * * *")
+          system.log.info(s"* * * host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} JMX port: ${System.getProperty("com.sun.management.jmxremote.port")} * * * *")
         case Failure(ex) =>
           system.log.error(ex, "")
           System.exit(-1)
@@ -60,7 +63,7 @@ object Application extends App {
     val seedAddress = Address("akka.tcp", SystemName, seed, port.toInt)
     system.log.info(s"worker node joined seed {}", seedAddress)
     cluster.joinSeedNodes(immutable.Seq(seedAddress))
-    system.log.info(s"* * * Hostname: ${cfg.getString(AKKA_HOST)} akka-port: ${cfg.getInt(AKKA_PORT)} * * * *")
+    system.log.info(s"* * * host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} * * * *")
   }
 
 
