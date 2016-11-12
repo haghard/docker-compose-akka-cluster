@@ -22,6 +22,11 @@ object Application extends App {
   val hostName = Option(System.getenv(AKKA_HOST)).getOrElse(defaultNetwork)
   val seedNode = !hostName.startsWith("0")
 
+  println(sys.env.get("java.rmi.server.hostname") + " - " + sys.env.get("-Djava.rmi.server.hostname"))
+
+  //System.getenv("java.rmi.server.hostname")
+  //System.getenv("-Djava.rmi.server.hostname")
+
   val cfg = {
     val overrideConfig = if (seedNode) {
       ConfigFactory.empty()
