@@ -28,6 +28,9 @@ object Application extends App {
       akka.remote.netty.tcp.port: ${AKKA_PORT}
    */
 
+  args.toSeq.foreach {
+    println(_)
+  }
 
   val AKKA_PORT = "-Dakka.remote.netty.tcp.port"
   val AKKA_HOST = "-Dakka.remote.netty.tcp.hostname"
