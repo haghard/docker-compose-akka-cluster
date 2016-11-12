@@ -32,12 +32,12 @@ object Application extends App {
         //.withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
         .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$hostName"))
         .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
-        .withFallback(ConfigFactory.load())
+        //.withFallback(ConfigFactory.load())
     } else {
       ConfigFactory.empty()
         //.withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
         .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
-        .withFallback(ConfigFactory.load())
+        //.withFallback(ConfigFactory.load())
     }
     overrideConfig.withFallback(ConfigFactory.load())
   }
