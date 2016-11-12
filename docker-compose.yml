@@ -8,16 +8,15 @@ services:
     ports:
       - "9000:9000"
     environment:
+      JVM_OPTS: "-Xmx1g"
       akka.remote.netty.tcp.hostname: ${SEED_NAME}
       akka.remote.netty.tcp.port: ${AKKA_PORT}
-        - "JVM_OPTS=-Xmx1g"
-
   node:
     image: "docker-cluster:0.1-SNAPSHOT"
     environment:
+      JVM_OPTS: "-Xmx1g"
       akka.cluster.seed: ${SEED_NAME}
       akka.remote.netty.tcp.port: ${AKKA_PORT}
-        - "JVM_OPTS=-Xmx1g"
     links: ["seed:${SEED_NAME}"]
     depends_on:
       - seed
