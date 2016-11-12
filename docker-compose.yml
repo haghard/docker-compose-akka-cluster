@@ -6,19 +6,19 @@ services:
     image: "docker-cluster:0.1-SNAPSHOT"
     hostname: ${SEED_NAME}
     ports:
-      - "9000:9000"
+      - "${HTTP_PORT}:${HTTP_PORT}"
       - "${SEED_JMX_PORT}:${SEED_JMX_PORT}"
     environment:
-      JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHost=${SEED_NAME} -Dport=${AKKA_PORT} -Djava.rmi.server.hostname=${HOST} -Dcom.sun.management.jmxremote.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote=true"
-      akka.remote.netty.tcp.hostname: ${SEED_NAME}
-      akka.remote.netty.tcp.port: ${AKKA_PORT}
+      JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHost=${SEED_NAME} -Dport=${AKKA_PORT} httpPort=${HTTP_PORT} -Djava.rmi.server.hostname=${HOST} -Dcom.sun.management.jmxremote.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote=true"
+      #akka.remote.netty.tcp.hostname: ${SEED_NAME}
+      #akka.remote.netty.tcp.port: ${AKKA_PORT}
 
   node:
     image: "docker-cluster:0.1-SNAPSHOT"
     environment:
-      JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC"
-      akka.cluster.seed: ${SEED_NAME}
-      akka.remote.netty.tcp.port: ${AKKA_PORT}
+      JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DclusterSeed:=${SEED_NAME} -Dport=${AKKA_PORT} "
+      #akka.cluster.seed: ${SEED_NAME}
+      #akka.remote.netty.tcp.port: ${AKKA_PORT}
     links: ["seed:${SEED_NAME}"]
     depends_on:
       - seed

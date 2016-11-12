@@ -7,6 +7,8 @@
   * To set env vars we need
     
     `export SEED_NAME=akka-seed0`
+
+    `export HTTP_PORT=9000`
     
     `export AKKA_PORT=2551`
     
