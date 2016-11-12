@@ -25,15 +25,16 @@ object Application extends App {
   val cfg = {
     val overrideConfig = if (seedNode) {
       ConfigFactory.empty()
-        .withValue(AKKA_HOST, ConfigValueFactory.fromAnyRef(hostName))
-        .withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
-        //.withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$hostName"))
-        //.withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
+        //.withValue(AKKA_HOST, ConfigValueFactory.fromAnyRef(hostName))
+        //.withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
+        .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$hostName"))
+        .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
         .withFallback(ConfigFactory.load())
     } else {
-      ConfigFactory.empty().withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
-        //.withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
-        //.withFallback(ConfigFactory.load())
+      ConfigFactory.empty()
+        //.withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
+        .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
+        .withFallback(ConfigFactory.load())
     }
     overrideConfig.withFallback(ConfigFactory.load())
   }
