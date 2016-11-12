@@ -20,26 +20,15 @@ object Application extends App {
 
   val port = sys.env.get(AKKA_PORT).fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
   val hostName = sys.env.get(AKKA_HOST).getOrElse(defaultNetwork)
-  val seedNode = !hostName.startsWith("0")
-
-  println(System.getProperty("java.rmi.server.hostname"))
-  println(System.getProperty("com.sun.management.jmxremote.port"))
-
-
-  //println(sys.env.get("java.rmi.server.hostname") + " - " + sys.env.get("-Djava.rmi.server.hostname"))
-  //System.getenv("java.rmi.server.hostname")
-  //System.getenv("-Djava.rmi.server.hostname")
+  val seedNode = hostName ne (defaultNetwork)
 
   val cfg = {
     val overrideConfig = if (seedNode) {
       ConfigFactory.empty()
-        //.withValue(AKKA_HOST, ConfigValueFactory.fromAnyRef(hostName))
-        //.withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
         .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$hostName"))
         .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
     } else {
       ConfigFactory.empty()
-        //.withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
         .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
     }
     overrideConfig.withFallback(ConfigFactory.load())
@@ -55,6 +44,8 @@ object Application extends App {
     val add = Address("akka.tcp", SystemName, hostName, port.toInt)
     system.log.info("seed node is joining to itself {}", add)
     cluster.joinSeedNodes(immutable.Seq(add))
+    //println(System.getProperty("java.rmi.server.hostname"))
+    system.log.info("JMX port {}", System.getProperty("com.sun.management.jmxremote.port"))
 
     Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = 9000)
       .onComplete {
@@ -65,7 +56,7 @@ object Application extends App {
           System.exit(-1)
       }
   } else {
-    val seed = System.getenv().get("akka.cluster.seed")
+    val seed = sys.env.get("akka.cluster.seed").fold(throw new Exception(""))(identity)
     val add = Address("akka.tcp", SystemName, seed, port.toInt)
     system.log.info(s"regular node is joining to seed {}", add)
     cluster.joinSeedNodes(immutable.Seq(add))
