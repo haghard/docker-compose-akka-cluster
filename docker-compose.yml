@@ -8,12 +8,13 @@ services:
     ports:
       - "9000:9000"
     environment:
-      - "JAVA_OPTS=-Dexample=Aaa -Dakka.remote.netty.tcp.hostname=${SEED_NAME} -Dakka.remote.netty.tcp.port=${AKKA_PORT}"
-
+      - "JAVA_OPTS= -Dakka.remote.netty.tcp.hostname=${SEED_NAME} -Dakka.remote.netty.tcp.port=${AKKA_PORT}"
+      - "JVM_OPTS=-Xmx1g"
   node:
     image: "docker-cluster:0.1-SNAPSHOT"
     environment:
       - "JAVA_OPTS=-Dakka.cluster.seed=${SEED_NAME} -Dakka.remote.netty.tcp.port=${AKKA_PORT}"
+      - "JVM_OPTS=-Xmx1g"
     links: ["seed:${SEED_NAME}"]
     depends_on:
       - seed

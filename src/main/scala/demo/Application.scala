@@ -11,7 +11,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
-object Application extends App {
+object Application /*extends App*/ {
   val SystemName = "docker-cluster"
   val defaultNetwork = "0.0.0.0"
 
@@ -19,76 +19,76 @@ object Application extends App {
   //val AKKA_HOST = "akka.remote.netty.tcp.hostname"
   //System.getenv(AKKA_PORT)
 
-
-  /**
-     akka.remote.netty.tcp.hostname: ${SEED_NAME}
-     akka.remote.netty.tcp.port: ${AKKA_PORT}
-
-      akka.cluster.seed: ${SEED_NAME}
-      akka.remote.netty.tcp.port: ${AKKA_PORT}
-   */
-
-  println("*********")
-
-  args.toSeq.foreach {
-    println(_)
-  }
-
   val AKKA_PORT = "-Dakka.remote.netty.tcp.port"
   val AKKA_HOST = "-Dakka.remote.netty.tcp.hostname"
 
-  //sys.props.get(AKKA_PORT)
-  val port = sys.props.get(AKKA_PORT).fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
-  val hostName = sys.props.get(AKKA_HOST).getOrElse(defaultNetwork)
+  /**
+   * akka.remote.netty.tcp.hostname: ${SEED_NAME}
+   * akka.remote.netty.tcp.port: ${AKKA_PORT}
 
-  val seedNode = !hostName.startsWith("0")
+   * akka.cluster.seed: ${SEED_NAME}
+   * akka.remote.netty.tcp.port: ${AKKA_PORT}
+   */
 
-  val cfg = {
-    val overrideConfig = if (seedNode) {
-      ConfigFactory.empty()
-        //.withValue(AKKA_HOST, ConfigValueFactory.fromAnyRef(hostName))
-        //.withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
-        .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$hostName"))
-        .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
-    } else {
-      ConfigFactory.empty()
-        //.withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
-        .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
-    }
-    overrideConfig.withFallback(ConfigFactory.load())
-  }
+  def main(args: Array[String]) = {
+    println("*********")
+    println(args.mkString(","))
 
-  implicit val system = ActorSystem(SystemName, cfg)
-  implicit val mat = ActorMaterializer()
-  implicit val _ = mat.executionContext
 
-  val cluster = Cluster(system)
 
-  if(seedNode) {
-    val add = Address("akka.tcp", SystemName, hostName, port.toInt)
-    system.log.info("seed node is joining to itself {}", add)
-    cluster.joinSeedNodes(immutable.Seq(add))
+    //sys.props.get(AKKA_PORT)
+    val port = sys.props.get(AKKA_PORT).fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
+    val hostName = sys.props.get(AKKA_HOST).getOrElse(defaultNetwork)
 
-    Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = 9000)
-      .onComplete {
-        case Success(r) =>
-          system.log.info("http server available on {}", r.localAddress)
-        case Failure(ex) =>
-          system.log.error(ex, "")
-          System.exit(-1)
+    val seedNode = !hostName.startsWith("0")
+
+    val cfg = {
+      val overrideConfig = if (seedNode) {
+        ConfigFactory.empty()
+          //.withValue(AKKA_HOST, ConfigValueFactory.fromAnyRef(hostName))
+          //.withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
+          .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$hostName"))
+          .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
+      } else {
+        ConfigFactory.empty()
+          //.withValue(AKKA_PORT, ConfigValueFactory.fromAnyRef(port))
+          .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
       }
-  } else {
-    val seed = System.getenv().get("akka.cluster.seed")
-    val add = Address("akka.tcp", SystemName, seed, port.toInt)
-    system.log.info(s"regular node is joining to seed {}", add)
-    cluster.joinSeedNodes(immutable.Seq(add))
-  }
+      overrideConfig.withFallback(ConfigFactory.load())
+    }
 
-  system.log.info(s"* * * * hostname: ${cfg.getString(AKKA_HOST)} port: ${cfg.getInt(AKKA_PORT)} * * * *")
+    implicit val system = ActorSystem(SystemName, cfg)
+    implicit val mat = ActorMaterializer()
+    implicit val _ = mat.executionContext
 
-  sys.addShutdownHook {
-    Await.ready(system.terminate, 5 seconds)
-    system.log.info("Node {} has been removed from the cluster", cluster.selfAddress)
-    cluster.leave(cluster.selfAddress)
+    val cluster = Cluster(system)
+
+    if (seedNode) {
+      val add = Address("akka.tcp", SystemName, hostName, port.toInt)
+      system.log.info("seed node is joining to itself {}", add)
+      cluster.joinSeedNodes(immutable.Seq(add))
+
+      Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = 9000)
+        .onComplete {
+          case Success(r) =>
+            system.log.info("http server available on {}", r.localAddress)
+          case Failure(ex) =>
+            system.log.error(ex, "")
+            System.exit(-1)
+        }
+    } else {
+      val seed = System.getenv().get("akka.cluster.seed")
+      val add = Address("akka.tcp", SystemName, seed, port.toInt)
+      system.log.info(s"regular node is joining to seed {}", add)
+      cluster.joinSeedNodes(immutable.Seq(add))
+    }
+
+    system.log.info(s"* * * * hostname: ${cfg.getString(AKKA_HOST)} port: ${cfg.getInt(AKKA_PORT)} * * * *")
+
+    sys.addShutdownHook {
+      Await.ready(system.terminate, 5 seconds)
+      system.log.info("Node {} has been removed from the cluster", cluster.selfAddress)
+      cluster.leave(cluster.selfAddress)
+    }
   }
 }
