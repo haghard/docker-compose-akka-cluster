@@ -18,12 +18,16 @@ object Application extends App {
   val AKKA_PORT = "akka.remote.netty.tcp.port"
   val AKKA_HOST = "akka.remote.netty.tcp.hostname"
 
-  val port = Option(System.getenv(AKKA_PORT)).fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
-  val hostName = Option(System.getenv(AKKA_HOST)).getOrElse(defaultNetwork)
+  val port = sys.env.get(AKKA_PORT).fold(throw new Exception(s"Couldn't lookup $AKKA_PORT from env"))(identity)
+  val hostName = sys.env.get(AKKA_HOST).getOrElse(defaultNetwork)
   val seedNode = !hostName.startsWith("0")
 
-  println(sys.env.get("java.rmi.server.hostname") + " - " + sys.env.get("-Djava.rmi.server.hostname"))
+  println(System.getProperty("-Djava.rmi.server.hostname"))
+  println(System.getProperty("-Ddatabase.url"))
 
+  //sys.props
+
+  //println(sys.env.get("java.rmi.server.hostname") + " - " + sys.env.get("-Djava.rmi.server.hostname"))
   //System.getenv("java.rmi.server.hostname")
   //System.getenv("-Djava.rmi.server.hostname")
 
