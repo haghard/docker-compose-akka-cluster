@@ -22,8 +22,8 @@ object Application extends App {
   val hostName = sys.env.get(AKKA_HOST).getOrElse(defaultNetwork)
   val seedNode = !hostName.startsWith("0")
 
-  println(System.getProperty("-Djava.rmi.server.hostname"))
-  println(System.getProperty("-Ddatabase.url"))
+  println(System.getProperty("java.rmi.server.hostname"))
+  println(System.getProperty("database.url"))
 
   //sys.props
 
