@@ -16,7 +16,7 @@ services:
   node:
     image: "docker-cluster:0.1-SNAPSHOT"
     environment:
-      JAVA_OPTS: "-Xmx1g -XX:+UseG1GC"
+      JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC"
       akka.cluster.seed: ${SEED_NAME}
       akka.remote.netty.tcp.port: ${AKKA_PORT}
     links: ["seed:${SEED_NAME}"]

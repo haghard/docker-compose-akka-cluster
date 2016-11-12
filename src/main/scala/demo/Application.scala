@@ -45,24 +45,24 @@ object Application extends App {
     system.log.info("seed node is joining to itself {}", add)
     cluster.joinSeedNodes(immutable.Seq(add))
     //println(System.getProperty("java.rmi.server.hostname"))
-    system.log.info("JMX port {}", System.getProperty("com.sun.management.jmxremote.port"))
 
     Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = 9000)
       .onComplete {
         case Success(r) =>
           system.log.info("http server available on {}", r.localAddress)
+          system.log.info(s"* * * Hostname: ${cfg.getString(AKKA_HOST)} akka-port: ${cfg.getInt(AKKA_PORT)} JMX port: ${System.getProperty("com.sun.management.jmxremote.port")} * * * *")
         case Failure(ex) =>
           system.log.error(ex, "")
           System.exit(-1)
       }
   } else {
     val seed = sys.env.get("akka.cluster.seed").fold(throw new Exception("Couldn't find akka.cluster.seed system property"))(identity)
-    val add = Address("akka.tcp", SystemName, seed, port.toInt)
-    system.log.info(s"regular node is joining to seed {}", add)
-    cluster.joinSeedNodes(immutable.Seq(add))
+    val seedAddress = Address("akka.tcp", SystemName, seed, port.toInt)
+    system.log.info(s"worker node joined seed {}", seedAddress)
+    cluster.joinSeedNodes(immutable.Seq(seedAddress))
+    system.log.info(s"* * * Hostname: ${cfg.getString(AKKA_HOST)} akka-port: ${cfg.getInt(AKKA_PORT)} * * * *")
   }
 
-  system.log.info(s"* * * * hostname: ${cfg.getString(AKKA_HOST)} port: ${cfg.getInt(AKKA_PORT)} * * * *")
 
   sys.addShutdownHook {
     Await.ready(system.terminate, 5 seconds)
