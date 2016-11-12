@@ -10,14 +10,7 @@ services:
     environment:
       akka.remote.netty.tcp.hostname: ${SEED_NAME}
       akka.remote.netty.tcp.port: ${AKKA_PORT}
-      - "JVM_OPTS=-Xmx1g \
-        -Dcom.sun.management.jmxremote.port=1089 \
-        -Dcom.sun.management.jmxremote.ssl=false \
-        -Dcom.sun.management.jmxremote.authenticate=false \
-        -Dcom.sun.management.jmxremote.local.only=false \
-        -Dcom.sun.management.jmxremote.rmi.port=1089 \
-        -Dcom.sun.management.jmxremote=true \
-        -Djava.rmi.server.hostname="${SEED_NAME}
+        - "JVM_OPTS=-Xmx1g -Dcom.sun.management.jmxremote.port=1089 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=1089 -Dcom.sun.management.jmxremote=true -Djava.rmi.server.hostname=${SEED_NAME}"
   node:
     image: "docker-cluster:0.1-SNAPSHOT"
     environment:
