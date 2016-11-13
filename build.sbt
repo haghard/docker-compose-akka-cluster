@@ -42,7 +42,7 @@ buildOptions in docker := BuildOptions(cache = false,
   pullBaseImage = BuildOptions.Pull.Always)
 
 dockerfile in docker := {
-  val baseDir = baseDirectory.value
+  val baseDir = new File(".")//.absolutePath //baseDirectory.value
   val artifact: File = assembly.value
 
   val imageAppBaseDir = "/app"
