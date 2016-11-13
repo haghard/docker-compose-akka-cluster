@@ -28,14 +28,14 @@ object Application extends App {
   val sysPropsSeedHost = "seedHost"
   val sysPropsHttpPort = "httpPort"
 
+
+  val isSeedNode = System.getenv("node.type") eq "seed"
   println("**** Node: " + System.getenv("node.type"))
+  println(if(isSeedNode) "run seed" else "run worker")
 
-  val seedNode = System.getenv("node.type") eq "seed"
-  val port = sys.props.get(sysPropSeedPort).fold(throw new Exception(s"Couldn't find $AKKA_PORT system property"))(identity)
-  val seedHostName = sys.props.get(sysPropsSeedHost).getOrElse(workerNetwork)
+  val port = sys.props.get(sysPropSeedPort).fold(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))(identity)
+  val seedHostName = sys.props.get(sysPropsSeedHost).fold(throw new Exception(s"Couldn't find $sysPropSeedPort system property"))(identity)
   val httpPort = sys.props.get(sysPropsHttpPort).fold(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))(identity)
-
-  //val seedNode = hostName ne (workerNetwork)
 
   private def createConfig(isSeed: Boolean) = {
     val overrideConfig = if (isSeed) {
@@ -44,12 +44,13 @@ object Application extends App {
         .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
     } else {
       ConfigFactory.empty()
+        .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$workerNetwork"))
         .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
     }
     overrideConfig.withFallback(ConfigFactory.load())
   }
 
-  val cfg = createConfig(seedNode)
+  val cfg = createConfig(isSeedNode)
   implicit val system = ActorSystem(SystemName, cfg)
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
@@ -57,7 +58,7 @@ object Application extends App {
   val cluster = Cluster(system)
   val log = system.log
 
-  if (seedNode) {
+  if (isSeedNode) {
     log.info("seed-node.conf exists:{}", new File("/app/config/seed-node.conf").exists)
     val address = Address("akka.tcp", SystemName, seedHostName, port.toInt)
     log.info("seed-node is being joined to itself {}", address)
