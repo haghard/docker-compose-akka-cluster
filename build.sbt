@@ -1,15 +1,25 @@
-import com.typesafe.sbt.packager.docker._
+import _root_.sbtdocker.DockerPlugin.autoImport._
+import sbt._
+import sbtdocker.ImageName
 
 
 scalaVersion := "2.11.8"
 
 name := "docker-cluster"
 
-enablePlugins(DockerPlugin)
+version := "0.1"
+
+val Akka = "2.4.11"
+
+
+enablePlugins(sbtdocker.DockerPlugin)
 enablePlugins(JavaAppPackaging)
 
 
-val Akka = "2.4.11"
+mainClass in assembly := Some("demo.Application")
+
+assemblyJarName in assembly := s"elastic-cluster-${version}.jar"
+
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % Akka,
