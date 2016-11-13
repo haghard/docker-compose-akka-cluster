@@ -70,11 +70,15 @@ dockerfile in docker := {
     runRaw("echo artifactTargetPath " + artifactTargetPath)
 
     runRaw(s"echo cp ${artifact.absolutePath} $artifactTargetPath")
-    copy(artifact, artifactTargetPath)
 
+    add(artifact, artifactTargetPath)
+    runRaw("echo artifact added")
+    //copy(artifact, artifactTargetPath)
 
-    copy(seedConfigSrc, artifactTargetPath)
-    copy(workerConfigSrc, workerConfigTarget)
+    add(seedConfigSrc, artifactTargetPath)
+    runRaw("echo seed config added")
+    add(workerConfigSrc, workerConfigTarget)
+    runRaw("echo worker config added")
 
     runRaw("ls -la")
 
