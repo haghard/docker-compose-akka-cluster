@@ -28,9 +28,8 @@ object Application extends App {
   val sysPropsSeedHost = "seedHost"
   val sysPropsHttpPort = "httpPort"
 
-
-  val isSeedNode = System.getenv("node.type").trim eq "seed"
-  println("**** Node: " + System.getenv("node.type"))
+  val nodeType = System.getenv("node.type").trim
+  val isSeedNode = nodeType eq "seed"
   println(if(isSeedNode) "run seed" else "run worker")
 
   val port = sys.props.get(sysPropSeedPort).fold(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))(identity)
