@@ -55,15 +55,15 @@ dockerfile in docker := {
   val workerConfigSrc = baseDir / "src" / "main" / "resources" / "worker.conf"
 
 
-  val seedConfigTarget = s"${imageAppBaseDir}/${configDir}/seed-node.conf"
-  val workerConfigTarget = s"${imageAppBaseDir}/${configDir}/worker-node.conf"
+  val seedConfigTarget = s"${imageAppBaseDir}/${configDir}/seed.conf"
+  val workerConfigTarget = s"${imageAppBaseDir}/${configDir}/worker.conf"
 
   new sbtdocker.mutable.Dockerfile {
     from("openjdk:8-jre")
     maintainer("haghard")
 
     env("VERSION", Version)
-    env("EXTRA_CONF_DIR", imageAppBaseDir +"/"+ configDir)
+    env("EXTRA_CONF_DIR", s"$imageAppBaseDir/$configDir")
 
     workDir(imageAppBaseDir)
     runRaw("ls -la")
@@ -84,8 +84,6 @@ dockerfile in docker := {
       s"-DseedPort=${System.getenv("AKKA_PORT")}",
       s"-DhttpPort=${System.getenv("HTTP_PORT")}",
       "-jar", artifactTargetPath)
-
-    //"-Xmx1256M", "-XX:MaxMetaspaceSize=512m", "-XX:+HeapDumpOnOutOfMemoryError",
   }
 }
 

@@ -2,7 +2,7 @@
 
 ### The project shows you how to scale the number of workers on one machine using `docker-compose`. ###
 
-#### A sequence of docker commands ####
+#### A sequence of docker commands 1 ####
   
   * To set env vars we need
     
@@ -18,7 +18,7 @@
   
   * To build and publish the image `sbt docker:publishLocal`
 
-  * To start one seed node and one worker node `docker-compose up -d`
+  * To start one seed node and one worker node `docker-compose -f docker-compose2.yml up -d`
      
   * To scale up the number of workers `docker-compose scale worker=3`
    
@@ -28,7 +28,35 @@
 
   * To clean images `docker rm $(docker ps -a -q)`
   
-  * Now you can build image again       
+  * Now you can build image again
+         
+#### A sequence of docker commands to run on static network ####
+  
+  * To set env vars we need
+    
+    `export SEED_NAME=172.16.2.2`
+
+    `export HTTP_PORT=9000`
+    
+    `export AKKA_PORT=2551`
+    
+    `export SEED_JMX_PORT=1089`
+    
+    `export HOST=192.168.0.146`
+  
+  * To build and publish the image `sbt docker:publishLocal`
+
+  * To start one seed node and one worker node `docker-compose -f docker-compose.yml up -d`
+     
+  * To scale up the number of workers `docker-compose scale worker=3`
+   
+  * To scale down the number of workers `docker-compose scale worker=2`
+  
+  * To stop all processes `docker-compose stop`
+
+  * To clean images `docker rm $(docker ps -a -q)`
+  
+  * Now you can build image again         
 
 #### Docker utils ####
   
