@@ -59,8 +59,6 @@ object Application extends App {
     .find(_.getHostAddress.matches(ipExpression))
      .fold(throw new Exception("Couldn't find docker address"))(identity)
 
-  log.info("Docker address {}", dockerInternalAddress.getHostAddress)
-
 
   val cfg = createConfig(isSeedNode, dockerInternalAddress.getHostAddress)
   implicit val system = ActorSystem(SystemName, cfg)
@@ -69,7 +67,7 @@ object Application extends App {
 
   val cluster = Cluster(system)
   val log = system.log
-
+  log.info("Docker address {}", dockerInternalAddress.getHostAddress)
 
   if (isSeedNode) {
     log.info("seed-node.conf exists:{}", new File(confDir + "/ " + nodeType + ".conf").exists)
