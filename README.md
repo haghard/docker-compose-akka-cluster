@@ -13,6 +13,8 @@
     `export AKKA_PORT=2551`
     
     `export SEED_JMX_PORT=1089`
+    
+    `export HOST`
   
   * To build and publish the image `sbt docker:publishLocal`
 

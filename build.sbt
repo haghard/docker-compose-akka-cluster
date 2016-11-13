@@ -66,22 +66,12 @@ dockerfile in docker := {
     workDir(imageAppBaseDir)
     runRaw("ls -la")
 
-    runRaw("echo artifact.Path " + artifact.absolutePath)
-    runRaw("echo " + artifact.exists)
-    runRaw("echo artifactTargetPath " + artifactTargetPath)
-
-    runRaw(s"echo cp ${artifact.absolutePath} $artifactTargetPath")
 
     copy(artifact, artifactTargetPath)
-    runRaw("echo artifact added")
-    //copy(artifact, artifactTargetPath)
-
     copy(seedConfigSrc, seedConfigTarget)
-    runRaw("echo seed config added")
     copy(workerConfigSrc, workerConfigTarget)
-    runRaw("echo worker config added")
 
-    runRaw("ls -la")
-
+    //"-Xmx1256M", "-XX:MaxMetaspaceSize=512m", "-XX:+HeapDumpOnOutOfMemoryError",
+    entryPoint("java", "-jar", artifactTargetPath)
   }
 }
