@@ -20,9 +20,9 @@
 
   * To start one seed node and one worker node `docker-compose up -d`
      
-  * To scale up the number of workers `docker-compose scale node=3`
+  * To scale up the number of workers `docker-compose scale worker=3`
    
-  * To scale down the number of workers `docker-compose scale node=2`
+  * To scale down the number of workers `docker-compose scale worker=2`
   
   * To stop all processes `docker-compose stop`
 
