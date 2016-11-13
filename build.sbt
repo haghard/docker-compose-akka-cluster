@@ -78,7 +78,7 @@ dockerfile in docker := {
     runRaw("echo artifact added")
     //copy(artifact, artifactTargetPath)
 
-    add(seedConfigSrc, artifactTargetPath)
+    add(seedConfigSrc, seedConfigTarget)
     runRaw("echo seed config added")
     add(workerConfigSrc, workerConfigTarget)
     runRaw("echo worker config added")
