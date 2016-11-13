@@ -51,10 +51,9 @@ dockerfile in docker := {
   val configDir = "conf"
 
   val artifactTargetPath = s"$imageAppBaseDir/${artifact.name}"
-  //val artifactTargetPath_ln = s"$imageAppBaseDir/${name.value}.jar"
 
-  val seedConfigSrc = baseDir / "src" / "resources" / "seed-node.conf"
-  val workerConfigSrc = baseDir / "src" / "resources" / "worker-node.conf"
+  val seedConfigSrc = baseDir / "src" / "main" / "resources" / "seed-node.conf"
+  val workerConfigSrc = baseDir / "src" / "main" / "resources" / "worker-node.conf"
 
 
   val seedConfigTarget = s"${imageAppBaseDir}/${configDir}/seed-node.conf"
