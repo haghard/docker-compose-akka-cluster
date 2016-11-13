@@ -70,7 +70,7 @@ dockerfile in docker := {
     copy(seedConfigSrc, seedConfigTarget)
     copy(workerConfigSrc, workerConfigTarget)
 
-    if (System.getenv("node.type") == "seed") {
+    if (System.getProperty("node.type") == "seed") {
       //val javaOpts = s"-Xmx1024m -XX:+UseG1GC -DseedHost=${System.getenv("SEED_NAME")} -DseedPort=${System.getenv("AKKA_PORT")} -DhttpPort=${System.getenv("HTTP_PORT")}"
       entryPoint("java", s"-DseedHost=${System.getenv("SEED_NAME")}", s"-DseedPort=${System.getenv("AKKA_PORT")}", s"-DhttpPort=${System.getenv("HTTP_PORT")}", "-jar", artifactTargetPath)
     } else {
