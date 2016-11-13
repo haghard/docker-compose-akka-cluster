@@ -63,7 +63,7 @@ dockerfile in docker := {
     maintainer("haghard")
 
     env("VERSION", Version)
-    env("CONF_DIR", imageAppBaseDir +"/"+ configDir)
+    env("EXTRA_CONF_DIR", imageAppBaseDir +"/"+ configDir)
 
     workDir(imageAppBaseDir)
     runRaw("ls -la")
@@ -72,7 +72,7 @@ dockerfile in docker := {
     copy(seedConfigSrc, seedConfigTarget)
     copy(workerConfigSrc, workerConfigTarget)
 
-    entryPoint("java", "-server", "-Xmx1024m", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=400", "-XX:+UseStringDeduplication", "-XX:ConcGCThreads=4", "-XX:ParallelGCThreads=4",
+    entryPoint("java", "-server", "-Xmx512m", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=400", "-XX:+UseStringDeduplication", "-XX:ConcGCThreads=4", "-XX:ParallelGCThreads=4",
       s"-Djava.rmi.server.hostname=${System.getenv("HOST")}",
       s"-Dcom.sun.management.jmxremote.port=${System.getenv("SEED_JMX_PORT")}",
       s"-Dcom.sun.management.jmxremote.ssl=false",
