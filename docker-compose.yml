@@ -3,7 +3,7 @@ version: '2'
 services:
 
   seed:
-    image: "docker-cluster:0.1-SNAPSHOT"
+    image: "docker-cluster:0.1"
     hostname: ${SEED_NAME}
     ports:
       - "${HTTP_PORT}:${HTTP_PORT}"
