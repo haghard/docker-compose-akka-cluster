@@ -25,9 +25,11 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-kafka" % "0.13"
 )
 
+enablePlugins(sbtdocker.DockerPlugin, JavaAppPackaging)
+
 mainClass in assembly := Some("demo.Application")
 
-assemblyJarName in assembly := s"${name}-${version}.jar"
+assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
 
 // Resolve duplicates for Sbt Assembly
 assemblyMergeStrategy in assembly := {
@@ -42,7 +44,7 @@ buildOptions in docker := BuildOptions(cache = false,
   pullBaseImage = BuildOptions.Pull.Always)
 
 dockerfile in docker := {
-  val baseDir = new File(".")//.absolutePath //baseDirectory.value
+  val baseDir = baseDirectory.value
   val artifact: File = assembly.value
 
   val imageAppBaseDir = "/app"
@@ -87,5 +89,3 @@ dockerfile in docker := {
 }
 
 //).enablePlugins(sbtdocker.DockerPlugin, JavaAppPackaging)
-
-enablePlugins(sbtdocker.DockerPlugin, JavaAppPackaging)
