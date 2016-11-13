@@ -37,8 +37,16 @@
   For docker-compose to show all ips `docker inspect -f '{{.Name}} - {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps -aq)`
 
 
+  https://docs.docker.com/compose/compose-file/#ipv4-address-ipv6-address
+
   docker-compose rm seed
   docker-compose rm node
+  
+  
+  docker network ls
+  docker network rm bfb14b518775 a671ca262355
+  
+  docker-compose -f docker-compose2.yml  up
 
 #### Available urls ####
 
