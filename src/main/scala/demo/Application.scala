@@ -29,7 +29,7 @@ object Application extends App {
   val sysPropsHttpPort = "httpPort"
 
 
-  val isSeedNode = System.getenv("node.type") eq "seed"
+  val isSeedNode = System.getenv("node.type").trim eq "seed"
   println("**** Node: " + System.getenv("node.type"))
   println(if(isSeedNode) "run seed" else "run worker")
 
