@@ -19,7 +19,6 @@ services:
       JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHostToConnect=${SEED_NAME} -DseedPort=${AKKA_PORT}"
     volumes:
       - ./src/main/resources/worker.conf:/opt/docker/worker-node.conf
-
     links: ["seed:${SEED_NAME}"]
     depends_on:
       - seed
