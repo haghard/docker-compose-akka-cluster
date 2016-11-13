@@ -38,29 +38,22 @@ object Application extends App {
   val seedHostName = sys.props.get(sysPropsSeedHost).fold(throw new Exception(s"Couldn't find $sysPropSeedPort system property"))(identity)
   val httpPort = sys.props.get(sysPropsHttpPort).fold(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))(identity)
 
-  private def createConfig(isSeed: Boolean, address: String) = {
-    val overrideConfig = if (isSeed) {
-      ConfigFactory.empty()
-        .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$seedHostName"))
-        .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
-    } else {
-      ConfigFactory.empty()
-        .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$address"))
-        .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
-    }
-    overrideConfig.withFallback(ConfigFactory.load())
+  private def createConfig(address: String) = {
+    ConfigFactory.empty()
+      .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$address"))
+      .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
+      .withFallback(ConfigFactory.load())
   }
-
 
   import scala.collection.JavaConverters._
   val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
 
   val dockerInternalAddress = NetworkInterface.getByName("eth0").getInetAddresses.asScala
     .find(_.getHostAddress.matches(ipExpression))
-     .fold(throw new Exception("Couldn't find docker address"))(identity)
+    .fold(throw new Exception("Couldn't find docker address"))(identity)
 
+  val cfg = if (isSeedNode) createConfig(seedHostName) else createConfig(dockerInternalAddress.getHostAddress)
 
-  val cfg = createConfig(isSeedNode, dockerInternalAddress.getHostAddress)
   implicit val system = ActorSystem(SystemName, cfg)
   implicit val mat = ActorMaterializer()
   implicit val _ = mat.executionContext
