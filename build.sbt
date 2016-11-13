@@ -5,9 +5,11 @@ import sbtdocker.ImageName
 val scalaV = "2.11.8"
 val Akka = "2.4.11"
 
+val Version = "0.2"
+
 lazy val root = project.in(file(".")).settings(
   name := "docker-cluster",
-  version := "0.2",
+  version := Version,
   scalacOptions in(Compile, console) := Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked"),
   scalaVersion := scalaV,
 
@@ -60,7 +62,7 @@ lazy val root = project.in(file(".")).settings(
       from("openjdk:8-jre")
       maintainer("haghard")
 
-      env("VERSION", version)
+      env("VERSION", Version)
 
       copy(artifact, artifactTargetPath)
 
