@@ -10,13 +10,25 @@ services:
       - "${SEED_JMX_PORT}:${SEED_JMX_PORT}"
     environment:
       node.type: seed
+    networks:
+      akka-cluster:
+        ipv4_address: 172.16.2.1
 
   worker:
     image: "haghard/docker-cluster:0.2"
     environment:
       node.type: worker
-    links:
-      - "seed:${SEED_NAME}"
+    #links: - "seed:${SEED_NAME}"
     depends_on:
       - seed
+    networks:
+      - akka-cluster
 
+ networks:
+   akka-cluster:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.16.2.0/24
+        gateway: 172.16.2.1
