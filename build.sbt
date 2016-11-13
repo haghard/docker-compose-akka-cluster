@@ -7,7 +7,7 @@ scalaVersion := "2.11.8"
 
 name := "docker-cluster"
 
-version := "0.1"
+version := "0.2"
 
 val Akka = "2.4.11"
 
