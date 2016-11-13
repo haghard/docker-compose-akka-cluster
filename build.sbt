@@ -45,15 +45,33 @@ lazy val root = project.in(file(".")).settings(
 
     val imageAppBaseDir = "/app"
     val configDir = "conf"
+
     val artifactTargetPath = s"$imageAppBaseDir/${artifact.name}"
     val artifactTargetPath_ln = s"$imageAppBaseDir/${name.value}.jar"
+
+    val seedConfigSrc = baseDir / "src" / "resources" / "seed-node.conf"
+    val workerConfigSrc = baseDir / "src" / "resources" / "worker-node.conf"
+
+
+    val seedConfigTarget = s"${imageAppBaseDir}/${configDir}/seed-node.conf"
+    val workerConfigTarget = s"${imageAppBaseDir}/${configDir}/worker-node.conf"
 
     new sbtdocker.mutable.Dockerfile {
       from("openjdk:8-jre")
       maintainer("haghard")
 
+      env("VERSION", version)
+
+      copy(artifact, artifactTargetPath)
+
+      copy(seedConfigSrc, artifactTargetPath)
+      copy(workerConfigSrc, workerConfigTarget)
+
+      workDir(imageAppBaseDir)
+      copy(artifact, artifactTargetPath)
+
       runRaw("ls -la")
-      runRaw("echo $JAVA_OPTS")
+
     }
   }
 
