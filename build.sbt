@@ -65,11 +65,11 @@ lazy val root = project.in(file(".")).settings(
       env("VERSION", Version)
       workDir(imageAppBaseDir)
 
-      println("artifact.Path " + artifact.absolutePath)
-      println(artifact.exists)
-      println("artifactTargetPath " + artifactTargetPath)
+      runRaw("echo artifact.Path " + artifact.absolutePath)
+      runRaw("echo " + artifact.exists)
+      runRaw("echo artifactTargetPath " + artifactTargetPath)
 
-      println(s"cp ${artifact.absolutePath} $artifactTargetPath")
+      runRaw(s"echo cp ${artifact.absolutePath} $artifactTargetPath")
       copy(artifact, artifactTargetPath)
 
 
