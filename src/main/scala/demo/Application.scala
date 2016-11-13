@@ -38,26 +38,18 @@ object Application extends App {
   val seedHostName = "172.16.2.2" //sys.props.get(sysPropsSeedHost).fold(throw new Exception(s"Couldn't find $sysPropSeedPort system property"))(identity)
   val httpPort = sys.props.get(sysPropsHttpPort).fold(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))(identity)
 
-  private def createConfig(isSeed: Boolean) = {
+  private def createConfig(isSeed: Boolean, address: String) = {
     val overrideConfig = if (isSeed) {
       ConfigFactory.empty()
         .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$seedHostName"))
         .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
     } else {
       ConfigFactory.empty()
-        .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$workerNetwork"))
+        .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$address"))
         .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
     }
     overrideConfig.withFallback(ConfigFactory.load())
   }
-
-  val cfg = createConfig(isSeedNode)
-  implicit val system = ActorSystem(SystemName, cfg)
-  implicit val mat = ActorMaterializer()
-  implicit val _ = mat.executionContext
-
-  val cluster = Cluster(system)
-  val log = system.log
 
 
   import scala.collection.JavaConverters._
@@ -68,6 +60,16 @@ object Application extends App {
      .fold(throw new Exception("Couldn't find docker address"))(identity)
 
   log.info("Docker address {}", dockerInternalAddress.getHostAddress)
+
+
+  val cfg = createConfig(isSeedNode, dockerInternalAddress.getHostAddress)
+  implicit val system = ActorSystem(SystemName, cfg)
+  implicit val mat = ActorMaterializer()
+  implicit val _ = mat.executionContext
+
+  val cluster = Cluster(system)
+  val log = system.log
+
 
   if (isSeedNode) {
     log.info("seed-node.conf exists:{}", new File(confDir + "/ " + nodeType + ".conf").exists)
