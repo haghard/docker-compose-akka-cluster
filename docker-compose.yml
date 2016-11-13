@@ -10,15 +10,12 @@ services:
       - "${SEED_JMX_PORT}:${SEED_JMX_PORT}"
     environment:
       node.type: seed
-    networks:
-      dockernet:
-        ipv4_address: 172.18.0.2
 
   worker:
     image: "haghard/docker-cluster:0.2"
     environment:
       node.type: worker
-    links: ["seed:${SEED_NAME}"]
+    #links: ["seed:${SEED_NAME}"]
     depends_on:
       - seed
 
