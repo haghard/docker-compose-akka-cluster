@@ -18,4 +18,4 @@ services:
     depends_on:
       - seed
     links:
-      - seed
+     - "seed:${SEED_NAME}"
