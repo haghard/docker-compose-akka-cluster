@@ -64,6 +64,7 @@ dockerfile in docker := {
 
     env("VERSION", Version)
     workDir(imageAppBaseDir)
+    runRaw("ls -la")
 
     runRaw("echo artifact.Path " + artifact.absolutePath)
     runRaw("echo " + artifact.exists)
