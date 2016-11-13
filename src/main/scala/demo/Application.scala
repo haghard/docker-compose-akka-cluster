@@ -28,6 +28,8 @@ object Application extends App {
   val sysPropsSeedHost = "seedHost"
   val sysPropsHttpPort = "httpPort"
 
+  println("**** Node: " + System.getenv("node.type"))
+
   val seedNode = System.getenv("node.type") eq "seed"
   val port = sys.props.get(sysPropSeedPort).fold(throw new Exception(s"Couldn't find $AKKA_PORT system property"))(identity)
   val seedHostName = sys.props.get(sysPropsSeedHost).getOrElse(workerNetwork)
