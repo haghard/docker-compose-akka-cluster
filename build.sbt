@@ -49,7 +49,7 @@ lazy val root = project.in(file(".")).settings(
     val configDir = "conf"
 
     val artifactTargetPath = s"$imageAppBaseDir/${artifact.name}"
-    val artifactTargetPath_ln = s"$imageAppBaseDir/${name.value}.jar"
+    //val artifactTargetPath_ln = s"$imageAppBaseDir/${name.value}.jar"
 
     val seedConfigSrc = baseDir / "src" / "resources" / "seed-node.conf"
     val workerConfigSrc = baseDir / "src" / "resources" / "worker-node.conf"
@@ -65,7 +65,14 @@ lazy val root = project.in(file(".")).settings(
       env("VERSION", Version)
       workDir(imageAppBaseDir)
 
+      println("artifact.Path " + artifact.absolutePath)
+      println(artifact.exists)
+      println("artifactTargetPath " + artifactTargetPath)
+
+      println(s"cp ${artifact.absolutePath} $artifactTargetPath")
       copy(artifact, artifactTargetPath)
+
+
       copy(seedConfigSrc, artifactTargetPath)
       copy(workerConfigSrc, workerConfigTarget)
 
