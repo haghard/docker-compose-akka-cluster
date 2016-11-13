@@ -8,18 +8,12 @@ services:
     ports:
       - "${HTTP_PORT}:${HTTP_PORT}"
       - "${SEED_JMX_PORT}:${SEED_JMX_PORT}"
-    volumes:
-      - ./src/main/resources/seed-node.conf:/opt/docker/config/seed-node.conf
     environment:
-      NODE: seed
       JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHost=${SEED_NAME} -DseedPort=${AKKA_PORT} -DhttpPort=${HTTP_PORT} -Djava.rmi.server.hostname=${HOST} -Dcom.sun.management.jmxremote.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote=true"
 
   worker:
     image: "docker-cluster:0.1"
-    volumes:
-      - ./src/main/resources/worker-node.conf:/opt/docker/config/worker-node.conf
     environment:
-      NODE: worker
       JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHostToConnect=${SEED_NAME} -DseedPort=${AKKA_PORT}"
     links: ["seed:${SEED_NAME}"]
     depends_on:

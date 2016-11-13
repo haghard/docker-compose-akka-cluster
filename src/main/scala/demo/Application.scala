@@ -13,6 +13,10 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
+/*
+  volumes:  - ./src/main/resources/seed-node.conf:/opt/docker/config/seed-node.conf
+  volumes:  - ./src/main/resources/worker-node.conf:/opt/docker/config/worker-node.conf
+ */
 object Application extends App {
   val SystemName = "docker-cluster"
   val workerNetwork = "0.0.0.0"
@@ -50,7 +54,8 @@ object Application extends App {
   val log = system.log
 
   if (seedNode) {
-    log.info("seed-node.conf exists:{}", new File("/opt/docker/seed-node.conf").exists)
+    //log.info("seed-node.conf exists:{}", new File("/opt/docker/seed-node.conf").exists)
+    log.info("seed-node.conf exists:{}", new File("/app/config/seed-node.conf").exists)
 
     val address = Address("akka.tcp", SystemName, hostName, port.toInt)
     log.info("seed-node is being joined to itself {}", address)
@@ -67,7 +72,7 @@ object Application extends App {
           System.exit(-1)
       }
   } else {
-    log.info("worker-node.conf exists:{}", new File("/opt/docker/worker-node.conf").exists)
+    log.info("worker-node.conf exists:{}", new File("/app/config/worker-node.conf").exists)
     val seed = sys.props.get(sysPropsSeedHostForWorker).fold(throw new Exception(s"Couldn't find $sysPropsSeedHostForWorker system property"))(identity)
     val seedAddress = Address("akka.tcp", SystemName, seed, port.toInt)
     log.info(s"worker node joined seed {}", seedAddress)
