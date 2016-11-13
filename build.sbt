@@ -18,7 +18,35 @@ enablePlugins(JavaAppPackaging)
 
 mainClass in assembly := Some("demo.Application")
 
-assemblyJarName in assembly := s"elastic-cluster-${version}.jar"
+assemblyJarName in assembly := s"docker-cluster-${version}.jar"
+
+// Resolve duplicates for Sbt Assembly
+assemblyMergeStrategy in assembly := {
+  case PathList(xs@_*) if xs.last == "io.netty.versions.properties" => MergeStrategy.rename
+  case other => (assemblyMergeStrategy in assembly).value(other)
+}
+
+imageNames in docker := Seq(ImageName(namespace = Some("haghard"), repository = "docker-cluster", tag = Some(version)))
+
+buildOptions in docker := BuildOptions(cache = false,
+  removeIntermediateContainers = BuildOptions.Remove.Always,
+  pullBaseImage = BuildOptions.Pull.Always),
+
+dockerfile in docker := {
+  val baseDir = baseDirectory.value
+  val artifact: File = assembly.value
+
+  val imageAppBaseDir = "/app"
+  val configDir = "conf"
+  val artifactTargetPath = s"$imageAppBaseDir/${artifact.name}"
+  val artifactTargetPath_ln = s"$imageAppBaseDir/${name.value}.jar"
+
+  new sbtdocker.mutable.Dockerfile {
+    from("openjdk:8-jre")
+    maintainer("haghard")
+    runRaw("echo $JAVA_OPTS")
+  }
+}
 
 
 libraryDependencies ++= Seq(
