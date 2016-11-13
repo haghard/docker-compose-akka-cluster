@@ -1,6 +1,7 @@
 package demo
 
 import java.io.File
+import java.net.{NetworkInterface, InetSocketAddress}
 
 import akka.actor._
 import akka.cluster.Cluster
@@ -58,11 +59,20 @@ object Application extends App {
   val cluster = Cluster(system)
   val log = system.log
 
+
+  import scala.collection.JavaConverters._
+  NetworkInterface.getNetworkInterfaces.asScala.foreach { interface =>
+    interface.getInetAddresses.asScala.foreach { addr =>
+      println(interface.getName + " : " + addr.getHostAddress)
+    }
+  }
+
   if (isSeedNode) {
     log.info("seed-node.conf exists:{}", new File(confDir + "/ " + nodeType + ".conf").exists)
     val address = Address("akka.tcp", SystemName, seedHostName, port.toInt)
     log.info("seed-node is being joined to itself {}", address)
     cluster.joinSeedNodes(immutable.Seq(address))
+
 
     Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = httpPort.toInt)
       .onComplete {
