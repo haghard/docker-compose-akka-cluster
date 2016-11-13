@@ -63,7 +63,7 @@ object Application extends App {
   import scala.collection.JavaConverters._
   NetworkInterface.getNetworkInterfaces.asScala.foreach { interface =>
     interface.getInetAddresses.asScala.foreach { addr =>
-      println(interface.getName + " : " + addr.getHostAddress)
+      log.info("address {} : {}", interface.getName, addr.getHostAddress)
     }
   }
 
