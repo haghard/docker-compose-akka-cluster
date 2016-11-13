@@ -61,11 +61,13 @@ object Application extends App {
 
 
   import scala.collection.JavaConverters._
-  NetworkInterface.getNetworkInterfaces.asScala.foreach { interface =>
-    interface.getInetAddresses.asScala.foreach { addr =>
-      log.info("address {} : {}", interface.getName, addr.getHostAddress)
-    }
-  }
+  val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
+
+  val dockerInternalAddress = NetworkInterface.getByName("eth0").getInetAddresses.asScala
+    .find(_.getHostAddress.matches(ipExpression))
+     .fold(throw new Exception("Couldn't find docker address"))(identity)
+
+  log.info("Docker address {}", dockerInternalAddress.getHostAddress)
 
   if (isSeedNode) {
     log.info("seed-node.conf exists:{}", new File(confDir + "/ " + nodeType + ".conf").exists)
