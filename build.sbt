@@ -66,12 +66,21 @@ dockerfile in docker := {
     workDir(imageAppBaseDir)
     runRaw("ls -la")
 
-
     copy(artifact, artifactTargetPath)
     copy(seedConfigSrc, seedConfigTarget)
     copy(workerConfigSrc, workerConfigTarget)
 
+    if (System.getenv("node.type") == "seed") {
+      val javaOpts = s"-Xmx1024m -XX:+UseG1GC -DseedHost=${System.getenv("SEED_NAME")} -DseedPort=${System.getenv("AKKA_PORT")} -DhttpPort=${System.getenv("HTTP_PORT")}"
+      entryPoint("java", javaOpts, "-jar", artifactTargetPath)
+    } else {
+      val javaOpts = s"-Xmx1024m -XX:+UseG1GC -DseedHostToConnect=${System.getenv("SEED_NAME")} -DseedPort=${System.getenv("AKKA_PORT")}"
+      entryPoint("java", javaOpts, "-jar", artifactTargetPath)
+    }
+
     //"-Xmx1256M", "-XX:MaxMetaspaceSize=512m", "-XX:+HeapDumpOnOutOfMemoryError",
-    entryPoint("java", "-jar", artifactTargetPath)
   }
 }
+
+//#JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHost=${SEED_NAME} -DseedPort=${AKKA_PORT} -DhttpPort=${HTTP_PORT} -Djava.rmi.server.hostname=${HOST} -Dcom.sun.management.jmxremote.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote=true"
+//#JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHostToConnect=${SEED_NAME} -DseedPort=${AKKA_PORT}"

@@ -9,12 +9,12 @@ services:
       - "${HTTP_PORT}:${HTTP_PORT}"
       - "${SEED_JMX_PORT}:${SEED_JMX_PORT}"
     environment:
-      JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHost=${SEED_NAME} -DseedPort=${AKKA_PORT} -DhttpPort=${HTTP_PORT} -Djava.rmi.server.hostname=${HOST} -Dcom.sun.management.jmxremote.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote=true"
+      node.type: seed
 
   worker:
     image: "haghard/docker-cluster:0.2"
     environment:
-      JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHostToConnect=${SEED_NAME} -DseedPort=${AKKA_PORT}"
+      node.type: worker
     links: ["seed:${SEED_NAME}"]
     depends_on:
       - seed
