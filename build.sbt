@@ -63,14 +63,11 @@ lazy val root = project.in(file(".")).settings(
       maintainer("haghard")
 
       env("VERSION", Version)
+      workDir(imageAppBaseDir)
 
       copy(artifact, artifactTargetPath)
-
       copy(seedConfigSrc, artifactTargetPath)
       copy(workerConfigSrc, workerConfigTarget)
-
-      workDir(imageAppBaseDir)
-      copy(artifact, artifactTargetPath)
 
       runRaw("ls -la")
 
