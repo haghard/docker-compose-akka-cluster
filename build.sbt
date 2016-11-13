@@ -30,7 +30,7 @@ imageNames in docker := Seq(ImageName(namespace = Some("haghard"), repository = 
 
 buildOptions in docker := BuildOptions(cache = false,
   removeIntermediateContainers = BuildOptions.Remove.Always,
-  pullBaseImage = BuildOptions.Pull.Always),
+  pullBaseImage = BuildOptions.Pull.Always)
 
 dockerfile in docker := {
   val baseDir = baseDirectory.value
