@@ -1,0 +1,21 @@
+version: '2'
+
+services:
+
+  seed:
+    image: "haghard/docker-cluster:0.2"
+    hostname: ${SEED_NAME}
+    ports:
+      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${SEED_JMX_PORT}:${SEED_JMX_PORT}"
+    environment:
+      node.type: seed
+
+  worker:
+    image: "haghard/docker-cluster:0.2"
+    environment:
+      node.type: worker
+    depends_on:
+      - seed
+    links:
+      - seed
