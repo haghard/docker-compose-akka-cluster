@@ -12,7 +12,7 @@ services:
       node.type: seed
     networks:
       akkacluster:
-        ipv4_address: 172.16.2.1
+        ipv4_address: 172.16.2.2
 
   worker:
     image: "haghard/docker-cluster:0.2"
