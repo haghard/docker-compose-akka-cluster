@@ -53,6 +53,7 @@ object Application extends App {
     .fold(throw new Exception("Couldn't find docker address"))(identity)
 
   val cfg = if (isSeedNode) createConfig(seedHostName) else createConfig(dockerInternalAddress.getHostAddress)
+  val extraCfg = new File(s"${confDir}/${nodeType}.conf")
 
   implicit val system = ActorSystem(SystemName, cfg)
   implicit val mat = ActorMaterializer()
@@ -60,21 +61,18 @@ object Application extends App {
 
   val cluster = Cluster(system)
   val log = system.log
-  log.info("Docker address {}", dockerInternalAddress.getHostAddress)
-
-  val extraCfg = new File(s"${confDir}/${nodeType}.conf")
 
   if (isSeedNode) {
-    log.info("seed-node.conf exists:{}", extraCfg.exists)
+    log.info("locate seed-node.conf: {}", extraCfg.exists)
     val address = Address("akka.tcp", SystemName, seedHostName, port.toInt)
     log.info("seed-node is being joined to itself {}", address)
     cluster.joinSeedNodes(immutable.Seq(address))
-
 
     Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = httpPort.toInt)
       .onComplete {
         case Success(r) =>
           val jmxPort = sys.props.get("com.sun.management.jmxremote.port")
+          //val dockerHost = dockerInternalAddress.getHostAddress
           log.info(s"* * * http-server:${r.localAddress} host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} JMX-port:$jmxPort * * *")
         case Failure(ex) =>
           system.log.error(ex, "Couldn't bind http server")

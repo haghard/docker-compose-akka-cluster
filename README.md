@@ -2,11 +2,11 @@
 
 ### The project shows you how to scale the number of workers on one machine using `docker-compose`. ###
 
-#### A sequence of docker commands 1 ####
+#### A sequence of docker commands ####
   
   * To set env vars we need
     
-    `export SEED_NAME=akka-seed0`
+    `export SEED_NAME=akka-seed`
 
     `export HTTP_PORT=9000`
     
@@ -15,9 +15,9 @@
     `export SEED_JMX_PORT=1089`
     
     `export HOST=192.168.0.146`
+    
+  * To build and publish the image `sbt docker`
   
-  * To build and publish the image `sbt docker:publishLocal`
-
   * To start one seed node and one worker node `docker-compose -f docker-compose2.yml up -d`
      
   * To scale up the number of workers `docker-compose scale worker=3`
@@ -44,7 +44,7 @@
     
     `export HOST=192.168.0.146`
   
-  * To build and publish the image `sbt docker:publishLocal`
+  * To build and publish the image `sbt docker`
 
   * To start one seed node and one worker node `docker-compose -f docker-compose.yml up -d`
      
@@ -58,7 +58,7 @@
   
   * Now you can build image again         
 
-#### Docker utils ####
+#### Docker commands, utils ####
   
   For docker to show all ips `docker inspect -f '{{.Name}} - {{.NetworkSettings.IPAddress }}' $(docker ps -aq)`
   
@@ -69,12 +69,9 @@
 
   docker-compose rm seed
   docker-compose rm node
-  
-  
+    
   docker network ls
-  docker network rm bfb14b518775 a671ca262355
-  
-  docker-compose -f docker-compose2.yml  up
+  docker network rm bfb14b518775 a671ca262355    
 
 #### Available urls ####
 
