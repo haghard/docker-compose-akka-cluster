@@ -15,7 +15,7 @@ services:
     image: "haghard/docker-cluster:0.2"
     environment:
       node.type: worker
-    #links: ["seed:${SEED_NAME}"]
+    links: seed
     depends_on:
       - seed
 
