@@ -71,6 +71,13 @@ dockerfile in docker := {
     copy(workerConfigSrc, workerConfigTarget)
 
     entryPoint("java", "-Xmx1024m", "-XX:+UseG1GC",
+      s"-Djava.rmi.server.hostname=${System.getenv("HOST")}",
+      s"-Dcom.sun.management.jmxremote.port=${System.getenv("SEED_JMX_PORT")}",
+      s"-Dcom.sun.management.jmxremote.ssl=false",
+      s"-Dcom.sun.management.jmxremote.authenticate=false",
+      s"-Dcom.sun.management.jmxremote.local.only=false",
+      s"-Dcom.sun.management.jmxremote.rmi.port=${System.getenv("SEED_JMX_PORT")}",
+      s"-Dcom.sun.management.jmxremote=true",
       s"-DseedHost=${System.getenv("SEED_NAME")}",
       s"-DseedPort=${System.getenv("AKKA_PORT")}",
       s"-DhttpPort=${System.getenv("HTTP_PORT")}",
