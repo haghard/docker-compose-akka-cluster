@@ -26,7 +26,7 @@ assemblyMergeStrategy in assembly := {
   case other => (assemblyMergeStrategy in assembly).value(other)
 }
 
-imageNames in docker := Seq(ImageName(namespace = Some("haghard"), repository = "docker-cluster", tag = Some(version)))
+imageNames in docker := Seq(ImageName(namespace = Some("haghard"), repository = "docker-cluster", tag = Some(version.value)))
 
 buildOptions in docker := BuildOptions(cache = false,
   removeIntermediateContainers = BuildOptions.Remove.Always,
