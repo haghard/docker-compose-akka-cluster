@@ -63,6 +63,8 @@ dockerfile in docker := {
     maintainer("haghard")
 
     env("VERSION", Version)
+    env("CONF_DIR", imageAppBaseDir +"/"+ configDir)
+
     workDir(imageAppBaseDir)
     runRaw("ls -la")
 

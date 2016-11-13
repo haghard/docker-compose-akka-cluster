@@ -30,6 +30,8 @@ object Application extends App {
 
   val isSeedNode = System.getenv("node.type").trim == "seed"
 
+  val confDir = System.getenv("CONF_DIR")
+
   val port = sys.props.get(sysPropSeedPort).fold(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))(identity)
   val seedHostName = sys.props.get(sysPropsSeedHost).fold(throw new Exception(s"Couldn't find $sysPropSeedPort system property"))(identity)
   val httpPort = sys.props.get(sysPropsHttpPort).fold(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))(identity)
@@ -56,7 +58,7 @@ object Application extends App {
   val log = system.log
 
   if (isSeedNode) {
-    log.info("seed-node.conf exists:{}", new File("/app/config/seed-node.conf").exists)
+    log.info("seed-node.conf exists:{}", new File(confDir + "/seed-node.conf").exists)
     val address = Address("akka.tcp", SystemName, seedHostName, port.toInt)
     log.info("seed-node is being joined to itself {}", address)
     cluster.joinSeedNodes(immutable.Seq(address))
@@ -71,7 +73,7 @@ object Application extends App {
           System.exit(-1)
       }
   } else {
-    log.info("worker-node.conf exists:{}", new File("/app/config/worker-node.conf").exists)
+    log.info("worker-node.conf exists:{}", new File(confDir + "/worker-node.conf").exists)
     val seedAddress = Address("akka.tcp", SystemName, seedHostName, port.toInt)
     log.info(s"worker node joined seed {}", seedAddress)
     cluster.joinSeedNodes(immutable.Seq(seedAddress))
