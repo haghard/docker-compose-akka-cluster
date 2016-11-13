@@ -44,6 +44,8 @@ dockerfile in docker := {
   new sbtdocker.mutable.Dockerfile {
     from("openjdk:8-jre")
     maintainer("haghard")
+
+    runRaw("ls -la")
     runRaw("echo $JAVA_OPTS")
   }
 }
