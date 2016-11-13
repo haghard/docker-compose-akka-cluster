@@ -69,8 +69,10 @@ object Application extends App {
   val log = system.log
   log.info("Docker address {}", dockerInternalAddress.getHostAddress)
 
+  val extraCfg = new File(s"${confDir}/${nodeType}.conf")
+
   if (isSeedNode) {
-    log.info("seed-node.conf exists:{}", new File(confDir + "/ " + nodeType + ".conf").exists)
+    log.info("seed-node.conf exists:{}", extraCfg.exists)
     val address = Address("akka.tcp", SystemName, seedHostName, port.toInt)
     log.info("seed-node is being joined to itself {}", address)
     cluster.joinSeedNodes(immutable.Seq(address))
@@ -86,7 +88,7 @@ object Application extends App {
           System.exit(-1)
       }
   } else {
-    log.info("worker-node.conf exists:{}", new File(confDir + "/ " + nodeType + ".conf").exists)
+    log.info("worker-node.conf exists:{}", extraCfg.exists)
     val seedAddress = Address("akka.tcp", SystemName, seedHostName, port.toInt)
     log.info(s"worker has joined {}", seedAddress)
     cluster.joinSeedNodes(immutable.Seq(seedAddress))
