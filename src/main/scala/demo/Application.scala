@@ -67,13 +67,13 @@ object Application extends App {
           System.exit(-1)
       }
   } else {
+    log.info("worker-node.conf exists:{}", new File("/opt/docker/worker-node.conf").exists)
     val seed = sys.props.get(sysPropsSeedHostForWorker).fold(throw new Exception(s"Couldn't find $sysPropsSeedHostForWorker system property"))(identity)
     val seedAddress = Address("akka.tcp", SystemName, seed, port.toInt)
     log.info(s"worker node joined seed {}", seedAddress)
     cluster.joinSeedNodes(immutable.Seq(seedAddress))
     system.log.info(s"* * * host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} * * *")
   }
-
 
   sys.addShutdownHook {
     Await.ready(system.terminate, 5 seconds)
