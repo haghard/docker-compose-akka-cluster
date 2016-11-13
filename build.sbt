@@ -11,9 +11,9 @@ version := "0.2"
 
 val Akka = "2.4.11"
 
+val prj = project
 
-enablePlugins(sbtdocker.DockerPlugin)
-enablePlugins(JavaAppPackaging)
+prj.enablePlugins(sbtdocker.DockerPlugin, JavaAppPackaging)
 
 
 mainClass in assembly := Some("demo.Application")
