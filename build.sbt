@@ -7,7 +7,6 @@ val Akka = "2.4.11"
 
 val Version = "0.2"
 
-//lazy val root = project.in(file(".")).settings(
 name := "docker-cluster"
 version := Version
 scalacOptions in(Compile, console) := Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked")
@@ -37,7 +36,7 @@ assemblyMergeStrategy in assembly := {
   case other => (assemblyMergeStrategy in assembly).value(other)
 }
 
-imageNames in docker := Seq(ImageName(namespace = Some("haghard"), repository = "docker-cluster", tag = Some(version.value)))
+imageNames in docker := Seq(ImageName(namespace = Some("haghard"), repository = name.value, tag = Some(version.value)))
 
 buildOptions in docker := BuildOptions(cache = false,
   removeIntermediateContainers = BuildOptions.Remove.Always,
@@ -86,5 +85,3 @@ dockerfile in docker := {
 
   }
 }
-
-//).enablePlugins(sbtdocker.DockerPlugin, JavaAppPackaging)
