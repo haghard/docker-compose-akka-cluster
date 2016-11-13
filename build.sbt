@@ -72,7 +72,7 @@ dockerfile in docker := {
     copy(seedConfigSrc, seedConfigTarget)
     copy(workerConfigSrc, workerConfigTarget)
 
-    entryPoint("java", "-Xmx1024m", "-XX:+UseG1GC",
+    entryPoint("java", "-server", "-Xmx1024m", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=400", "-XX:+UseStringDeduplication", "-XX:ConcGCThreads=4", "-XX:ParallelGCThreads=4",
       s"-Djava.rmi.server.hostname=${System.getenv("HOST")}",
       s"-Dcom.sun.management.jmxremote.port=${System.getenv("SEED_JMX_PORT")}",
       s"-Dcom.sun.management.jmxremote.ssl=false",
@@ -89,5 +89,10 @@ dockerfile in docker := {
   }
 }
 
-//#JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHost=${SEED_NAME} -DseedPort=${AKKA_PORT} -DhttpPort=${HTTP_PORT} -Djava.rmi.server.hostname=${HOST} -Dcom.sun.management.jmxremote.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote=true"
-//#JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHostToConnect=${SEED_NAME} -DseedPort=${AKKA_PORT}"
+/*
+environment:
+  JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHost=${SEED_NAME} -DseedPort=${AKKA_PORT} -DhttpPort=${HTTP_PORT} -Djava.rmi.server.hostname=${HOST} -Dcom.sun.management.jmxremote.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote=true"
+
+environment:
+  JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHostToConnect=${SEED_NAME} -DseedPort=${AKKA_PORT}"
+*/

@@ -14,7 +14,7 @@
     
     `export SEED_JMX_PORT=1089`
     
-    `export HOST`
+    `export HOST=192.168.0.146`
   
   * To build and publish the image `sbt docker:publishLocal`
 
