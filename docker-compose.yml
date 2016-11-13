@@ -11,24 +11,27 @@ services:
     environment:
       node.type: seed
     networks:
-      akka-cluster:
+      akkacluster:
         ipv4_address: 172.16.2.1
 
   worker:
     image: "haghard/docker-cluster:0.2"
     environment:
       node.type: worker
-    #links: - "seed:${SEED_NAME}"
     depends_on:
       - seed
     networks:
-      - akka-cluster
+      - akkacluster
 
- networks:
-   akka-cluster:
+networks:
+   akkacluster:
     driver: bridge
     ipam:
       driver: default
       config:
       - subnet: 172.16.2.0/24
         gateway: 172.16.2.1
+
+
+
+#links: - "seed:${SEED_NAME}"
