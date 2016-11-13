@@ -2,16 +2,14 @@ import _root_.sbtdocker.DockerPlugin.autoImport._
 import sbt._
 import sbtdocker.ImageName
 
-
-scalaVersion := "2.11.8"
-
+val scalaV = "2.11.8"
 val Akka = "2.4.11"
 
 lazy val root = project.in(file(".")).settings(
   name := "docker-cluster",
   version := "0.2",
   scalacOptions in(Compile, console) := Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked"),
-  scalaVersion := scalaVersion,
+  scalaVersion := scalaV,
 
   libraryDependencies ++= Seq(
     "com.typesafe.akka" %% "akka-actor" % Akka,
