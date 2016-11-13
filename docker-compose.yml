@@ -16,7 +16,7 @@ services:
     environment:
       node.type: worker
     links:
-      - seed
+      - "seed:${SEED_NAME}"
     depends_on:
       - seed
 
