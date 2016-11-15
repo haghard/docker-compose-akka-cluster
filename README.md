@@ -66,6 +66,7 @@
 
 
   https://docs.docker.com/compose/compose-file/#ipv4-address-ipv6-address
+  https://www.digitalocean.com/community/tutorials/how-to-provision-and-manage-remote-docker-hosts-with-docker-machine-on-ubuntu-16-04
 
   docker-compose rm seed
   docker-compose rm node
