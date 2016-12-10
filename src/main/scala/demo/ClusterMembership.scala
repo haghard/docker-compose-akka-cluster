@@ -6,11 +6,11 @@ import akka.cluster.{Member, Cluster, MemberStatus}
 
 import scala.collection.immutable.SortedSet
 
-object ClusterMembershipSupport {
-  def props(cluster: Cluster) = Props(new ClusterMembershipSupport(cluster))
+object ClusterMembership {
+  def props(cluster: Cluster) = Props(new ClusterMembership(cluster))
 }
 
-class ClusterMembershipSupport(cluster: Cluster) extends Actor with ActorLogging {
+class ClusterMembership(cluster: Cluster) extends Actor with ActorLogging {
 
   override def preStart = {
     cluster.subscribe(self, classOf[ClusterDomainEvent])

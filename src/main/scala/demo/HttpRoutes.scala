@@ -5,7 +5,7 @@ import akka.cluster.Cluster
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.{Route, _}
 import akka.pattern.ask
-import akka.stream.scaladsl.{BroadcastHub, Keep, Sink, Source}
+import akka.stream.scaladsl._
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.util.ByteString
 
@@ -24,7 +24,7 @@ class HttpRoutes(cluster: Cluster)
         .withDispatcher(Dispatcher)
         .withInputBuffer(1, 1))
 
-  val members = system.actorOf(ClusterMembershipSupport.props(cluster), "cluster-members")
+  val members = system.actorOf(ClusterMembership.props(cluster), "cluster-members")
 
   //This allows us to have just one source actor and many subscribers
   val metricsSource =

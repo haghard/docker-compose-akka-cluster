@@ -2,8 +2,8 @@ import _root_.sbtdocker.DockerPlugin.autoImport._
 import sbt._
 import sbtdocker.ImageName
 
-val scalaV = "2.11.8"
-val Akka = "2.4.11"
+val scalaV = "2.12.1"
+val Akka = "2.4.14"
 
 val Version = "0.2"
 
@@ -15,13 +15,13 @@ scalaVersion := scalaV
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % Akka,
   "com.typesafe.akka" %% "akka-cluster" % Akka,
-  "com.typesafe.akka" %% "akka-http-experimental" % Akka,
   "com.typesafe.akka" %% "akka-cluster-metrics" % Akka,
   "com.typesafe.akka" %% "akka-stream" % Akka,
   "com.typesafe.akka" %% "akka-slf4j" % Akka,
+  "com.typesafe.akka" %% "akka-http" % "10.0.0",
   "io.spray" %% "spray-json" % "1.3.2",
-  "ch.qos.logback" % "logback-classic" % "1.1.2",
-  "com.typesafe.akka" %% "akka-stream-kafka" % "0.13"
+  "ch.qos.logback" % "logback-classic" % "1.1.2"
+  //"com.typesafe.akka" %% "akka-stream-kafka" % "0.13"
 )
 
 enablePlugins(sbtdocker.DockerPlugin, JavaAppPackaging)
