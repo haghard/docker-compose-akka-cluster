@@ -1,6 +1,6 @@
 package demo
 
-import akka.actor.{Actor, ActorLogging, Address, Props}
+import akka.actor.{Actor, ActorLogging, Props}
 import akka.cluster.ClusterEvent._
 import akka.cluster.{Member, Cluster, MemberStatus}
 
