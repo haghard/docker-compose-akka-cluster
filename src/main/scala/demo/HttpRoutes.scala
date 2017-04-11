@@ -28,7 +28,7 @@ class HttpRoutes(cluster: Cluster)
 
   //This allows us to have just one source actor and many subscribers
   val metricsSource =
-    Source.actorPublisher[ByteString](ClusterMetrics.props(cluster).withDispatcher(Dispatcher))
+    Source.actorPublisher[ByteString](ClusterJvmMetrics.props(cluster).withDispatcher(Dispatcher))
       .toMat(BroadcastHub.sink(bufferSize = 1 << 4))(Keep.right).run()
 
   //Ensure that the Broadcast output is dropped if there are no listening parties.
