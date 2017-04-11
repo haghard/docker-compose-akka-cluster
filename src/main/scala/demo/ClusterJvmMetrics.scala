@@ -16,11 +16,11 @@ import spray.json._
 import scala.annotation.tailrec
 import scala.collection.mutable
 
-object ClusterMetrics {
-  def props(cluster: Cluster) = Props(new ClusterMetrics(cluster))
+object ClusterJvmMetrics {
+  def props(cluster: Cluster) = Props(new ClusterJvmMetrics(cluster))
 }
 
-class ClusterMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with ActorLogging {
+class ClusterJvmMetrics(cluster: Cluster) extends ActorPublisher[ByteString] with ActorLogging {
   val divider = 1024 * 1024
   val extension = ClusterMetricsExtension(context.system)
 

@@ -14,15 +14,15 @@
     
     `export SEED_JMX_PORT=1089`
     
-    `export HOST=192.168.0.146`
+    `export HOST=192.168.178.99`
     
   * To build and publish the image `sbt docker`
   
   * To start one seed node and one worker node `docker-compose -f docker-compose2.yml up -d`
      
-  * To scale up the number of workers `docker-compose scale worker=3`
+  * To scale up the number of workers `docker-compose -f docker-compose2.yml scale worker=3`
    
-  * To scale down the number of workers `docker-compose scale worker=2`
+  * To scale down the number of workers `docker-compose -f docker-compose2.yml scale worker=2`
   
   * To stop all processes `docker-compose stop`
 
