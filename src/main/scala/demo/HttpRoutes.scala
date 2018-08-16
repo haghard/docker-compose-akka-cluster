@@ -6,7 +6,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.{Route, _}
 import akka.pattern.ask
 import akka.stream.scaladsl._
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import akka.stream._
 import akka.util.ByteString
 
 import scala.concurrent.duration._
