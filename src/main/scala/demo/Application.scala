@@ -1,7 +1,7 @@
 package demo
 
 import java.io.File
-import java.net.{NetworkInterface, InetSocketAddress}
+import java.net.NetworkInterface
 
 import akka.actor._
 import akka.cluster.Cluster
@@ -13,6 +13,7 @@ import scala.collection.immutable
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
+import scala.collection.JavaConverters._
 
 object Application extends App {
   val SystemName = "dc-cluster"
@@ -29,25 +30,24 @@ object Application extends App {
 
   val isSeedNode = nodeType equals "seed"
 
-  val port = sys.props.get(sysPropSeedPort).fold(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))(identity)
-  val seedHostName = sys.props.get(sysPropsSeedHost).fold(throw new Exception(s"Couldn't find $sysPropSeedPort system property"))(identity)
-  val httpPort = sys.props.get(sysPropsHttpPort).fold(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))(identity)
-
-  private def createConfig(address: String) = {
-    ConfigFactory.empty()
-      .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$address"))
-      .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
-      .withFallback(ConfigFactory.load())
-  }
-
-  import scala.collection.JavaConverters._
   val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
+
+  val port = sys.props.get(sysPropSeedPort).fold(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))(identity)
+  val seedHostAddress = sys.props.get(sysPropsSeedHost).fold(throw new Exception(s"Couldn't find $sysPropSeedPort system property"))(identity)
+  val httpPort = sys.props.get(sysPropsHttpPort).fold(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))(identity)
 
   val dockerInternalAddress = NetworkInterface.getByName("eth0").getInetAddresses.asScala
     .find(_.getHostAddress.matches(ipExpression))
     .fold(throw new Exception("Couldn't find docker address"))(identity)
 
-  val cfg = if (isSeedNode) createConfig(seedHostName) else createConfig(dockerInternalAddress.getHostAddress)
+
+  def createConfig(address: String) =
+    ConfigFactory.empty()
+      .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$address"))
+      .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
+      .withFallback(ConfigFactory.load())
+
+  val cfg = if (isSeedNode) createConfig(seedHostAddress) else createConfig(dockerInternalAddress.getHostAddress)
   val extraCfg = new File(s"${confDir}/${nodeType}.conf")
 
   implicit val system = ActorSystem(SystemName, cfg)
@@ -59,7 +59,7 @@ object Application extends App {
 
   if (isSeedNode) {
     log.info("locate seed-node.conf: {}", extraCfg.exists)
-    val address = Address("akka", SystemName, seedHostName, port.toInt)
+    val address = Address("akka", SystemName, seedHostAddress, port.toInt)
     log.info("seed-node is being joined to itself {}", address)
     cluster.joinSeedNodes(immutable.Seq(address))
 
@@ -74,7 +74,7 @@ object Application extends App {
       }
   } else {
     log.info("worker-node.conf exists:{}", extraCfg.exists)
-    val seedAddress = Address("akka", SystemName, seedHostName, port.toInt)
+    val seedAddress = Address("akka", SystemName, seedHostAddress, port.toInt)
     cluster.joinSeedNodes(immutable.Seq(seedAddress))
     system.log.info(s"* * * host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} * * *")
   }
