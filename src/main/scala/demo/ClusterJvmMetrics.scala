@@ -1,7 +1,7 @@
 package demo
 
 import java.time.format.DateTimeFormatter
-import java.time.{Instant, ZoneOffset, ZonedDateTime}
+import java.time.{Instant, ZoneId, ZonedDateTime}
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.cluster.Cluster
@@ -35,13 +35,16 @@ class ClusterJvmMetrics(cluster: Cluster) extends Actor with ActorLogging {
     case _ => //ignore
   }
 
+  //ZoneOffset.UTC
+  ////ZoneId.of(java.util.TimeZone.getDefault.getID)
   def connected(src: ActorRef): Receive = {
     case ClusterMetricsChanged(clusterMetrics) =>
       clusterMetrics.foreach {
         case HeapMemory(address, timestamp, used, _, max) =>
           val json = JsObject(Map("node" -> JsString(address.toString),
             "metric" -> JsString("heap"),
-            "when" -> JsString(formatter.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneOffset.UTC))),
+            "when" -> JsString(formatter.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestamp),
+              ZoneId.of(java.util.TimeZone.getDefault.getID)))),
             "used" -> JsString((used / divider).toString + " mb"),
             "max" -> JsString((max.getOrElse(0l) / divider).toString + " mb"))).prettyPrint
           src ! ByteString(json)
