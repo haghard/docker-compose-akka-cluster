@@ -14,18 +14,13 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
-/*
-  volumes:  - ./src/main/resources/seed.conf:/opt/docker/config/seed.conf
-  volumes:  - ./src/main/resources/worker.conf:/opt/docker/config/worker.conf
- */
 object Application extends App {
-  val SystemName = "docker-cluster"
-  val workerNetwork = "0.0.0.0"
+  val SystemName = "dc-cluster"
 
   val AKKA_PORT = "akka.remote.netty.tcp.port"
   val AKKA_HOST = "akka.remote.netty.tcp.hostname"
 
-  val sysPropSeedPort = "seedPort"
+  val sysPropSeedPort  = "seedPort"
   val sysPropsSeedHost = "seedHost"
   val sysPropsHttpPort = "httpPort"
 
@@ -72,7 +67,6 @@ object Application extends App {
       .onComplete {
         case Success(r) =>
           val jmxPort = sys.props.get("com.sun.management.jmxremote.port")
-          //val dockerHost = dockerInternalAddress.getHostAddress
           log.info(s"* * * http-server:${r.localAddress} host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} JMX-port:$jmxPort * * *")
         case Failure(ex) =>
           system.log.error(ex, "Couldn't bind http server")
@@ -81,7 +75,6 @@ object Application extends App {
   } else {
     log.info("worker-node.conf exists:{}", extraCfg.exists)
     val seedAddress = Address("akka.tcp", SystemName, seedHostName, port.toInt)
-    log.info(s"worker has joined {}", seedAddress)
     cluster.joinSeedNodes(immutable.Seq(seedAddress))
     system.log.info(s"* * * host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} * * *")
   }

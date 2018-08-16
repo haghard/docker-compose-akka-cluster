@@ -2,8 +2,8 @@ import _root_.sbtdocker.DockerPlugin.autoImport._
 import sbt._
 import sbtdocker.ImageName
 
-val scalaV = "2.12.3"
-val Akka = "2.5.3"
+val scalaV = "2.12.6"
+val Akka = "2.5.14"
 
 val Version = "0.2"
 
@@ -18,13 +18,13 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-metrics" % Akka,
   "com.typesafe.akka" %% "akka-stream" % Akka,
   "com.typesafe.akka" %% "akka-slf4j" % Akka,
-  "com.typesafe.akka" %% "akka-http" % "10.0.9",
+  "com.typesafe.akka" %% "akka-http" % "10.1.3",
   "io.spray" %% "spray-json" % "1.3.2",
   "ch.qos.logback" % "logback-classic" % "1.1.2"
   //"com.typesafe.akka" %% "akka-stream-kafka" % "0.13"
 )
 
-enablePlugins(sbtdocker.DockerPlugin, JavaAppPackaging)
+enablePlugins(sbtdocker.DockerPlugin)
 
 mainClass in assembly := Some("demo.Application")
 
@@ -80,7 +80,7 @@ dockerfile in docker := {
       s"-Dcom.sun.management.jmxremote.local.only=false",
       s"-Dcom.sun.management.jmxremote.rmi.port=${System.getenv("SEED_JMX_PORT")}",
       s"-Dcom.sun.management.jmxremote=true",
-      s"-DseedHost=${System.getenv("SEED_NAME")}",
+      s"-DseedHost=${System.getenv("SEED_NODE")}",
       s"-DseedPort=${System.getenv("AKKA_PORT")}",
       s"-DhttpPort=${System.getenv("HTTP_PORT")}",
       "-jar", artifactTargetPath)
@@ -89,8 +89,8 @@ dockerfile in docker := {
 
 /*
 environment:
-  JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHost=${SEED_NAME} -DseedPort=${AKKA_PORT} -DhttpPort=${HTTP_PORT} -Djava.rmi.server.hostname=${HOST} -Dcom.sun.management.jmxremote.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote=true"
+  JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHost=${SEED_NODE} -DseedPort=${AKKA_PORT} -DhttpPort=${HTTP_PORT} -Djava.rmi.server.hostname=${HOST} -Dcom.sun.management.jmxremote.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote=true"
 
 environment:
-  JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHostToConnect=${SEED_NAME} -DseedPort=${AKKA_PORT}"
+  JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHostToConnect=${SEED_NODE} -DseedPort=${AKKA_PORT}"
 */

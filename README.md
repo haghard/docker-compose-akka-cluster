@@ -6,7 +6,7 @@
   
   * To set env vars we need
     
-    `export SEED_NAME=akka-seed`
+    `export SEED_NODE=akka-seed`
 
     `export HTTP_PORT=9000`
     
@@ -14,27 +14,29 @@
     
     `export SEED_JMX_PORT=1089`
     
-    `export HOST=192.168.178.99`
+    `export HOST=192.168.77.10`
     
-  * To build and publish the image `sbt docker`
+  * Build and publish the image `sbt docker`
   
-  * To start one seed node and one worker node `docker-compose -f docker-compose2.yml up -d`
+  * Start one seed node and one worker node `docker-compose -f docker-compose2.yml up -d`
      
-  * To scale up the number of workers `docker-compose -f docker-compose2.yml scale worker=3`
+  * Scale up the number of workers `docker-compose -f docker-compose2.yml scale worker=3`
    
-  * To scale down the number of workers `docker-compose -f docker-compose2.yml scale worker=2`
+  * Scale down the number of workers `docker-compose -f docker-compose2.yml scale worker=2`
   
-  * To stop all processes `docker-compose stop`
+  * Stop all processes `docker-compose -f docker-compose2.yml stop`
 
-  * To clean images `docker rm $(docker ps -a -q)`
-  
+  * Delete images
+      docker-compose -f docker-compose2.yml rm seed
+      docker-compose -f docker-compose2.yml rm worker
+    
   * Now you can build image again
          
 #### A sequence of docker commands to run on static network ####
   
   * To set env vars we need
     
-    `export SEED_NAME=172.16.2.2`
+    `export SEED_NODE=172.16.2.2`
 
     `export HTTP_PORT=9000`
     
@@ -42,7 +44,7 @@
     
     `export SEED_JMX_PORT=1089`
     
-    `export HOST=192.168.0.146`
+    `export HOST=192.168.77.10`
   
   * To build and publish the image `sbt docker`
 
@@ -69,7 +71,7 @@
   https://www.digitalocean.com/community/tutorials/how-to-provision-and-manage-remote-docker-hosts-with-docker-machine-on-ubuntu-16-04
 
   docker-compose rm seed
-  docker-compose rm node
+  docker-compose rm worker
     
   docker network ls
   docker network rm bfb14b518775 a671ca262355    
