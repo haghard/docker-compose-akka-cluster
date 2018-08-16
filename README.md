@@ -1,5 +1,4 @@
 
-
 ### The project shows you how to scale the number of workers on one machine using `docker-compose`. ###
 
 #### A sequence of docker commands ####
@@ -58,7 +57,7 @@
 
   * To clean images `docker rm $(docker ps -a -q)`
   
-  * Now you can build image again         
+  * Now you can build image again
 
 #### Docker commands, utils ####
   
@@ -81,9 +80,3 @@
   Req/Resp `http GET 192.168.0.146:9000/members`
 
   Chunked resp `curl --no-buffer 192.168.0.146:9000/metrics`
-  
-  
-### Kafka ###
-
-Kafka does so distributing consumers across topic partitions, so each partition has exactly one consumer assigned. 
-If the number number of consumers > the number number of partitions, the remaining consumers won't fetch messages.

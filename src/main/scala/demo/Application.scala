@@ -17,8 +17,8 @@ import scala.util.{Failure, Success}
 object Application extends App {
   val SystemName = "dc-cluster"
 
-  val AKKA_PORT = "akka.remote.netty.tcp.port"
-  val AKKA_HOST = "akka.remote.netty.tcp.hostname"
+  val AKKA_PORT = "akka.remote.artery.canonical.port"
+  val AKKA_HOST = "akka.remote.artery.canonical.hostname"
 
   val sysPropSeedPort  = "seedPort"
   val sysPropsSeedHost = "seedHost"
@@ -59,7 +59,7 @@ object Application extends App {
 
   if (isSeedNode) {
     log.info("locate seed-node.conf: {}", extraCfg.exists)
-    val address = Address("akka.tcp", SystemName, seedHostName, port.toInt)
+    val address = Address("akka", SystemName, seedHostName, port.toInt)
     log.info("seed-node is being joined to itself {}", address)
     cluster.joinSeedNodes(immutable.Seq(address))
 
@@ -74,7 +74,7 @@ object Application extends App {
       }
   } else {
     log.info("worker-node.conf exists:{}", extraCfg.exists)
-    val seedAddress = Address("akka.tcp", SystemName, seedHostName, port.toInt)
+    val seedAddress = Address("akka", SystemName, seedHostName, port.toInt)
     cluster.joinSeedNodes(immutable.Seq(seedAddress))
     system.log.info(s"* * * host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} * * *")
   }
