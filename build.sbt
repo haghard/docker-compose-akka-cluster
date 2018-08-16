@@ -21,7 +21,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http" % "10.1.3",
   "io.spray" %% "spray-json" % "1.3.2",
   "ch.qos.logback" % "logback-classic" % "1.1.2"
-  //"com.typesafe.akka" %% "akka-stream-kafka" % "0.13"
 )
 
 enablePlugins(sbtdocker.DockerPlugin)
@@ -86,11 +85,3 @@ dockerfile in docker := {
       "-jar", artifactTargetPath)
   }
 }
-
-/*
-environment:
-  JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHost=${SEED_NODE} -DseedPort=${AKKA_PORT} -DhttpPort=${HTTP_PORT} -Djava.rmi.server.hostname=${HOST} -Dcom.sun.management.jmxremote.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.rmi.port=${SEED_JMX_PORT} -Dcom.sun.management.jmxremote=true"
-
-environment:
-  JAVA_OPTS: "-Xmx1024m -XX:+UseG1GC -DseedHostToConnect=${SEED_NODE} -DseedPort=${AKKA_PORT}"
-*/
