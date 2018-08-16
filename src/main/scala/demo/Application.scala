@@ -2,6 +2,8 @@ package demo
 
 import java.io.File
 import java.net.NetworkInterface
+import java.time.LocalDateTime
+import java.util.TimeZone
 
 import akka.actor._
 import akka.cluster.Cluster
@@ -14,6 +16,17 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 import scala.collection.JavaConverters._
+
+/*
+-Duser.timezone=UTC
+TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+
+
+Instant.now
+java.util.TimeZone.setDefault(TimeZone.getTimeZone("America/New_York"))
+//val tz = java.util.TimeZone.getDefault.getID
+LocalDateTime.now()
+*/
 
 object Application extends App {
   val SystemName = "dc-cluster"
@@ -57,26 +70,28 @@ object Application extends App {
   val cluster = Cluster(system)
   val log = system.log
 
+  TimeZone.getAvailableIDs
+
   if (isSeedNode) {
-    log.info("locate seed-node.conf: {}", extraCfg.exists)
+    //log.info("locate seed-node.conf: {}", extraCfg.exists)
     val address = Address("akka", SystemName, seedHostAddress, port.toInt)
-    log.info("seed-node is being joined to itself {}", address)
+    log.info("* * * seed-node is being joined to itself {} at {}", address, LocalDateTime.now())
     cluster.joinSeedNodes(immutable.Seq(address))
 
     Http().bindAndHandle(new HttpRoutes(cluster).route, interface = cluster.selfAddress.host.get, port = httpPort.toInt)
       .onComplete {
         case Success(r) =>
           val jmxPort = sys.props.get("com.sun.management.jmxremote.port")
-          log.info(s"* * * http-server:${r.localAddress} host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} JMX-port:$jmxPort * * *")
+          log.info(s"http-server:${r.localAddress} host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} JMX-port:$jmxPort * * *")
         case Failure(ex) =>
           system.log.error(ex, "Couldn't bind http server")
           System.exit(-1)
       }
   } else {
-    log.info("worker-node.conf exists:{}", extraCfg.exists)
+    //log.info("worker-node.conf exists:{}", extraCfg.exists)
     val seedAddress = Address("akka", SystemName, seedHostAddress, port.toInt)
     cluster.joinSeedNodes(immutable.Seq(seedAddress))
-    system.log.info(s"* * * host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} * * *")
+    system.log.info(s"* * * host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} at ${LocalDateTime.now()} * * *")
   }
 
   sys.addShutdownHook {

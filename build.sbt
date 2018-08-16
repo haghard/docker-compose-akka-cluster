@@ -82,6 +82,7 @@ dockerfile in docker := {
       s"-DseedHost=${System.getenv("SEED_NODE")}",
       s"-DseedPort=${System.getenv("AKKA_PORT")}",
       s"-DhttpPort=${System.getenv("HTTP_PORT")}",
+      s"-Duser.timezone=${System.getenv("TZ")}",
       "-jar", artifactTargetPath)
   }
 }

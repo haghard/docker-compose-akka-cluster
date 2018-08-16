@@ -15,6 +15,16 @@
     
     `export HOST=192.168.77.10`
     
+    `export TZ=UTC`
+
+export SEED_NODE=akka-seed &
+export HTTP_PORT=9000 &    
+export AKKA_PORT=2551 &    
+export SEED_JMX_PORT=1089 &    
+export HOST=192.168.77.10 &
+export TZ=America/New_York
+
+    
   * Build and publish the image `sbt docker`
   
   * Start one seed node and one worker node `docker-compose -f docker-compose2.yml up -d`
