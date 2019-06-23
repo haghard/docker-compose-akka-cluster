@@ -47,7 +47,7 @@ object Membership {
             case MemberUp(member) ⇒
               val av  = available + member.address
               val unv = removed - member.address
-              ctx.log.warning("★ ★ ★  MemberUp  :{}", av.mkString(","))
+              ctx.log.warning("★ ★ ★  MemberUp = {}", av.mkString(","))
               convergence(av, unv)
             case UnreachableMember(member) ⇒
               ctx.system.log.warning("★ ★ ★ Unreachable = {}", member.address)

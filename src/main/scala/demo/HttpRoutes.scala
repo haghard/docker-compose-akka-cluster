@@ -2,50 +2,57 @@ package demo
 
 import akka.actor.typed.ActorRef
 import akka.actor.ActorSystem
-import akka.cluster.Cluster
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.{Route, _}
-import akka.pattern.ask
 import akka.stream.scaladsl._
 import akka.stream._
 import akka.util.ByteString
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
-import akka.actor.typed.scaladsl.adapter._
+import scala.concurrent.Future
 import akka.cluster.ClusterEvent.ClusterDomainEvent
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.stream.typed.scaladsl.ActorSource
 
-class HttpRoutes(m: ActorRef[ClusterDomainEvent])(implicit sys: ActorSystem) extends Directives {
-  //val cluster = Cluster(system)
+class HttpRoutes(
+  metricsRef: ActorRef[ClusterDomainEvent],
+  srcRef: ActorRef[ClusterJvmMetrics.Confirm]
+)(implicit sys: ActorSystem)
+    extends Directives {
+  val DispatcherName = "akka.metrics-dispatcher"
 
   implicit val t   = akka.util.Timeout(1.seconds)
   implicit val sch = sys.scheduler
-  implicit val ec  = sys.dispatchers.lookup("akka.metrics-dispatcher")
+  implicit val ec  = sys.dispatchers.lookup(DispatcherName)
 
-  /*implicit val mat = ActorMaterializer(
-    ActorMaterializerSettings(system).withDispatcher(Dispatcher).withInputBuffer(1, 1)
-  )*/
+  val bufferSize = 1 << 4
 
-  /*val metricsSource =
-    Source
-      .fromGraph(
-        new ActorSource[ByteString](
-          system.actorOf(ClusterJvmMetrics.props(cluster).withDispatcher(Dispatcher), "jvm-metrics")
-        )
-      )
-      .toMat(BroadcastHub.sink(bufferSize = 1 << 4))(Keep.right)
+  implicit val mat = ActorMaterializer(
+    ActorMaterializerSettings(sys).withDispatcher(DispatcherName).withInputBuffer(bufferSize, bufferSize)
+  )
+
+  val (ref, metricsSource) =
+    ActorSource
+      .actorRefWithAck[ClusterJvmMetrics.JvmMetrics, ClusterJvmMetrics.Confirm](srcRef, ClusterJvmMetrics.Confirm, {
+        case ClusterJvmMetrics.Completed            ⇒ CompletionStrategy.immediately
+      }, { case ClusterJvmMetrics.StreamFailure(ex) ⇒ ex })
+      .collect { case ClusterJvmMetrics.ClusterMetrics(bt) ⇒ bt }
+      .toMat(BroadcastHub.sink[ByteString](bufferSize))(Keep.both)
       .run()
 
+  srcRef.tell(ClusterJvmMetrics.Connect(ref))
+
   //Ensure that the Broadcast output is dropped if there are no listening parties.
-  metricsSource.runWith(Sink.ignore)*/
+  metricsSource.runWith(Sink.ignore)
 
   val route: Route =
-    path("members")(get(complete(queryForMembers)))
-  //path("metrics")(get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource)))))
+    path("members")(get(complete(queryForMembers))) ~
+    path("metrics")(
+      get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
+    )
 
   private def queryForMembers: Future[HttpResponse] =
-    m.ask[Membership.ClusterState](Membership.GetClusterState(_)).map { reply ⇒
+    metricsRef.ask[Membership.ClusterState](Membership.GetClusterState(_)).map { reply ⇒
       HttpResponse(
         status = StatusCodes.OK,
         entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(reply.line))

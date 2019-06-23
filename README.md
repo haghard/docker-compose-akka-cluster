@@ -22,7 +22,7 @@ export HTTP_PORT=9000
 export AKKA_PORT=2551    
 export SEED_JMX_PORT=1089    
 export HOST=192.168.77.10
-export TZ=America/New_York
+export TZ=UTC
     
   * Build and publish the image `sbt docker`
   

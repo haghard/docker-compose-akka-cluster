@@ -98,7 +98,7 @@ object Application extends App {
       }
     }
 
-  def seed(config: Config): Behavior[SelfUp] =
+  def master(config: Config): Behavior[SelfUp] =
     Behaviors.setup[SelfUp] { ctx ⇒
       implicit val sys = ctx.system.toUntyped
       val cluster      = Cluster(ctx.system)
@@ -121,6 +121,9 @@ object Application extends App {
               "members",
               DispatcherSelector.fromConfig("akka.metrics-dispatcher")
             ),
+            ctx
+              .spawn(ClusterJvmMetrics(), "src-actor", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
+              .narrow[ClusterJvmMetrics.Confirm],
             cluster.selfMember.address.host.get,
             httpPort.toInt
           )
@@ -130,7 +133,7 @@ object Application extends App {
     }
 
   if (isSeedNode)
-    ActorSystem(seed(cfg), SystemName, cfg)
+    ActorSystem(master(cfg), SystemName, cfg)
   else
     ActorSystem(worker(cfg), SystemName, cfg)
 
