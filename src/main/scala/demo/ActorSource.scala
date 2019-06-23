@@ -12,31 +12,34 @@ import scala.reflect.ClassTag
 //A custom graph stage to create a Source using getActorStage
 //https://github.com/Keenworks/SampleActorStage/blob/master/src/main/scala/com/keenworks/sample/sampleactorstage/MessageSource.scala
 final class ActorSource[T: ClassTag](sourceFeeder: ActorRef) extends GraphStage[SourceShape[T]] {
-  val out: Outlet[T] = Outlet("out")
+  val out: Outlet[T]                 = Outlet("out")
   override val shape: SourceShape[T] = SourceShape(out)
 
   override def createLogic(attributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) with StageLogging {
       lazy val actorStage: StageActor = getStageActor(onReceive)
-      val buffer = mutable.Queue[T]()
+      val queue                       = mutable.Queue[T]()
 
       override def preStart(): Unit = {
         log.info("pre-starting ActorSource")
         sourceFeeder ! ConnectSource(actorStage.ref)
       }
 
-      setHandler(out,
+      setHandler(
+        out,
         new OutHandler {
           override def onDownstreamFinish(): Unit = {
-            val result = buffer.result
-            if (result.nonEmpty) {
+            val rest = queue.result
+            if (rest.nonEmpty) {
+              //may be emitMultiple(out, rest.iterator)
+              //or
               /*
               log.debug(
                 "In order to avoid message lost we need to notify the upsteam that " +
                   "consumed elements cannot be handled")
               1. actor ! result - resend maybe
               2. store to internal DB
-              */
+               */
               completeStage()
             }
             completeStage()
@@ -46,22 +49,19 @@ final class ActorSource[T: ClassTag](sourceFeeder: ActorRef) extends GraphStage[
         }
       )
 
-      def tryPush(): Unit = {
-        if (isAvailable(out) && buffer.nonEmpty) {
-          val element = buffer.dequeue
+      def tryPush(): Unit =
+        if (isAvailable(out) && queue.nonEmpty) {
+          val element = queue.dequeue
           push(out, element)
         }
-      }
 
-      def onReceive(x: (ActorRef, Any)): Unit = {
+      def onReceive(x: (ActorRef, Any)): Unit =
         x._2 match {
-          case msg: T =>
-            buffer enqueue msg
+          case msg: T ⇒
+            queue enqueue msg
             tryPush()
-          case other =>
-            failStage(throw new Exception(
-              s"Unexpected message type ${other.getClass.getSimpleName}"))
+          case other ⇒
+            failStage(throw new Exception(s"Unexpected message type ${other.getClass.getSimpleName}"))
         }
-      }
     }
 }

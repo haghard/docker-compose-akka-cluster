@@ -2,10 +2,10 @@ import _root_.sbtdocker.DockerPlugin.autoImport._
 import sbt._
 import sbtdocker.ImageName
 
-val scalaV = "2.12.6"
-val Akka = "2.5.14"
+val scalaV = "2.12.8"
+val Akka = "2.5.23"
 
-val Version = "0.2"
+val Version = "0.3"
 
 name := "docker-cluster"
 version := Version
@@ -18,10 +18,13 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-metrics" % Akka,
   "com.typesafe.akka" %% "akka-stream" % Akka,
   "com.typesafe.akka" %% "akka-slf4j" % Akka,
-  "com.typesafe.akka" %% "akka-http" % "10.1.3",
+  "com.typesafe.akka" %% "akka-http" % "10.1.8",
+  //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.12",
   "io.spray" %% "spray-json" % "1.3.2",
   "ch.qos.logback" % "logback-classic" % "1.1.2"
 )
+
+scalafmtOnCompile := true
 
 enablePlugins(sbtdocker.DockerPlugin)
 
@@ -58,7 +61,8 @@ dockerfile in docker := {
   val workerConfigTarget = s"${imageAppBaseDir}/${configDir}/worker.conf"
 
   new sbtdocker.mutable.Dockerfile {
-    from("openjdk:8-jre")
+    //from("openjdk:8-jre")
+    from("adoptopenjdk/openjdk12")
     maintainer("haghard")
 
     env("VERSION", Version)
@@ -71,7 +75,8 @@ dockerfile in docker := {
     copy(seedConfigSrc, seedConfigTarget)
     copy(workerConfigSrc, workerConfigTarget)
 
-    entryPoint("java", "-server", "-Xmx512m", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=400", "-XX:+UseStringDeduplication", "-XX:ConcGCThreads=4", "-XX:ParallelGCThreads=4",
+    entryPoint("java", "-server", "-Xmx512m", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=400", "-XX:ConcGCThreads=4", "-XX:ParallelGCThreads=4",
+      "-XX:MaxRAMFraction=1", "-XshowSettings", "-XX:+PreferContainerQuotaForCPUCount",
       s"-Djava.rmi.server.hostname=${System.getenv("HOST")}",
       s"-Dcom.sun.management.jmxremote.port=${System.getenv("SEED_JMX_PORT")}",
       s"-Dcom.sun.management.jmxremote.ssl=false",

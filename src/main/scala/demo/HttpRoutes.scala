@@ -12,22 +12,28 @@ import akka.util.ByteString
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-class HttpRoutes(cluster: Cluster)(implicit ex: ExecutionContext, system: ActorSystem) extends Directives {
+class HttpRoutes(implicit ex: ExecutionContext, system: ActorSystem) extends Directives {
   val Dispatcher = "akka.metrics-dispatcher"
 
-  implicit val _ = akka.util.Timeout(3.seconds)
+  val cluster = Cluster(system)
+
+  implicit val t = akka.util.Timeout(1.seconds)
 
   implicit val mat = ActorMaterializer(
-    ActorMaterializerSettings(system).withDispatcher(Dispatcher).withInputBuffer(1, 1))
+    ActorMaterializerSettings(system).withDispatcher(Dispatcher).withInputBuffer(1, 1)
+  )
 
   val membership =
     system.actorOf(ClusterMembership.props(cluster).withDispatcher(Dispatcher), "cluster-members")
 
-
   val metricsSource =
-    Source.fromGraph(new ActorSource[ByteString](
-      system.actorOf(ClusterJvmMetrics.props(cluster).withDispatcher(Dispatcher), "jvm-metrics")
-    )).toMat(BroadcastHub.sink(bufferSize = 1 << 4))(Keep.right)
+    Source
+      .fromGraph(
+        new ActorSource[ByteString](
+          system.actorOf(ClusterJvmMetrics.props(cluster).withDispatcher(Dispatcher), "jvm-metrics")
+        )
+      )
+      .toMat(BroadcastHub.sink(bufferSize = 1 << 4))(Keep.right)
       .run()
 
   //Ensure that the Broadcast output is dropped if there are no listening parties.
@@ -37,16 +43,12 @@ class HttpRoutes(cluster: Cluster)(implicit ex: ExecutionContext, system: ActorS
     path("members") {
       get(complete(queryForMembers))
     } ~
-      path("metrics") {
-        get {
-          complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource)))
-        }
-      }
-
-  private def queryForMembers: Future[HttpResponse] = {
-    (membership ask 'Members).mapTo[String].map { line: String =>
-      HttpResponse(status = StatusCodes.OK,
-        entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(line)))
+    path("metrics") {
+      get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
     }
-  }
+
+  private def queryForMembers: Future[HttpResponse] =
+    (membership ask 'Members).mapTo[String].map { json: String ⇒
+      HttpResponse(status = StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(json)))
+    }
 }

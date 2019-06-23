@@ -2,7 +2,7 @@ version: '3.3'
 services:
 
   seed:
-    image: "haghard/docker-cluster:0.2"
+    image: "haghard/docker-cluster:0.3"
     hostname: ${SEED_NODE}
     ports:
       - "${HTTP_PORT}:${HTTP_PORT}"

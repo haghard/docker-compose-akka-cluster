@@ -17,13 +17,12 @@
     
     `export TZ=UTC`
 
-export SEED_NODE=akka-seed &
-export HTTP_PORT=9000 &    
-export AKKA_PORT=2551 &    
-export SEED_JMX_PORT=1089 &    
-export HOST=192.168.77.10 &
+export SEED_NODE=akka-seed
+export HTTP_PORT=9000 
+export AKKA_PORT=2551    
+export SEED_JMX_PORT=1089    
+export HOST=192.168.77.10
 export TZ=America/New_York
-
     
   * Build and publish the image `sbt docker`
   
@@ -36,10 +35,13 @@ export TZ=America/New_York
   * Stop all processes `docker-compose -f docker-compose2.yml stop`
 
   * Delete images
-      docker-compose -f docker-compose2.yml rm seed
-      docker-compose -f docker-compose2.yml rm worker
+      docker-compose -f docker-compose2.yml rm seed & docker-compose -f docker-compose2.yml rm worker
     
   * Now you can build image again
+
+         
+         
+         
          
 #### A sequence of docker commands to run on static network ####
   
@@ -79,7 +81,7 @@ export TZ=America/New_York
   https://docs.docker.com/compose/compose-file/#ipv4-address-ipv6-address
   https://www.digitalocean.com/community/tutorials/how-to-provision-and-manage-remote-docker-hosts-with-docker-machine-on-ubuntu-16-04
 
-  docker-compose rm seed
+  docker-compose rm seed 
   docker-compose rm worker
     
   docker network ls
@@ -87,6 +89,6 @@ export TZ=America/New_York
 
 #### Available urls ####
 
-  Req/Resp `http GET 192.168.0.146:9000/members`
+  Req/Resp `http GET 192.168.77.10:9000/members`
 
-  Chunked resp `curl --no-buffer 192.168.0.146:9000/metrics`
+  Chunked resp `curl --no-buffer 192.168.77.10:9000/metrics`

@@ -2,7 +2,7 @@ package demo
 
 import akka.actor.{Actor, ActorLogging, Props}
 import akka.cluster.ClusterEvent._
-import akka.cluster.{Member, Cluster, MemberStatus}
+import akka.cluster.{Cluster, Member, MemberStatus}
 
 import scala.collection.immutable.SortedSet
 
@@ -12,34 +12,33 @@ object ClusterMembership {
 
 class ClusterMembership(cluster: Cluster) extends Actor with ActorLogging {
 
-  override def preStart = {
+  override def preStart =
     cluster.subscribe(self, classOf[ClusterDomainEvent])
-  }
 
   private def evolve(clusterMembers: SortedSet[Member]): Receive = {
-    case MemberUp(member) =>
+    case MemberUp(member) ⇒
       log.info("MemberUp = {}", member.address)
       context become (evolve(clusterMembers + member))
 
-    case MemberExited(member) =>
+    case MemberExited(member) ⇒
       log.info("MemberExited = {}", member.address)
 
-    case ReachableMember(member) =>
+    case ReachableMember(member) ⇒
       log.info("ReachableMember = {}", member.address)
 
-    case UnreachableMember(member) =>
+    case UnreachableMember(member) ⇒
       log.info("UnreachableMember = {}", member.address)
 
-    case MemberRemoved(member, prev) =>
+    case MemberRemoved(member, prev) ⇒
       if (prev == MemberStatus.Exiting) log.info("{} gracefully exited", member.address)
       else log.info("{} downed after being Unreachable", member.address)
       context become evolve(clusterMembers - member)
 
-    case state: CurrentClusterState =>
+    case state: CurrentClusterState ⇒
       log.info("Cluster state = {}", state.members)
       context become evolve(state.members)
 
-    case 'Members =>
+    case 'Members ⇒
       sender() ! clusterMembers.mkString(",")
   }
 

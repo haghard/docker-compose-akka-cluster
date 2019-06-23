@@ -17,12 +17,12 @@ object ClusterJvmMetrics {
   val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
 
   def props(cluster: Cluster) =
-    Props(new ClusterJvmMetrics(cluster)).withDispatcher("")
+    Props(new ClusterJvmMetrics(cluster)) //.withDispatcher("")
 }
 
 class ClusterJvmMetrics(cluster: Cluster) extends Actor with ActorLogging {
 
-  val divider = 1024 * 1024
+  val divider   = 1024 * 1024
   val extension = ClusterMetricsExtension(context.system)
 
   override def preStart() = extension.subscribe(self)
@@ -30,27 +30,35 @@ class ClusterJvmMetrics(cluster: Cluster) extends Actor with ActorLogging {
   override def postStop() = extension.unsubscribe(self)
 
   override def receive = {
-    case s: ConnectSource =>
+    case s: ConnectSource ⇒
       context become connected(s.src)
-    case _ => //ignore
+    case _ ⇒ //ignore
   }
 
   //ZoneOffset.UTC
   ////ZoneId.of(java.util.TimeZone.getDefault.getID)
   def connected(src: ActorRef): Receive = {
-    case ClusterMetricsChanged(clusterMetrics) =>
+    case ClusterMetricsChanged(clusterMetrics) ⇒
       clusterMetrics.foreach {
-        case HeapMemory(address, timestamp, used, _, max) =>
-          val json = JsObject(Map("node" -> JsString(address.toString),
-            "metric" -> JsString("heap"),
-            "when" -> JsString(formatter.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestamp),
-              ZoneId.of(java.util.TimeZone.getDefault.getID)))),
-            "used" -> JsString((used / divider).toString + " mb"),
-            "max" -> JsString((max.getOrElse(0l) / divider).toString + " mb"))).prettyPrint
+        case HeapMemory(address, timestamp, used, _, max) ⇒
+          val json = JsObject(
+            Map(
+              "node"   → JsString(address.toString),
+              "metric" → JsString("heap"),
+              "when" → JsString(
+                formatter.format(
+                  ZonedDateTime
+                    .ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.of(java.util.TimeZone.getDefault.getID))
+                )
+              ),
+              "used" → JsString((used / divider).toString + " mb"),
+              "max"  → JsString((max.getOrElse(0L) / divider).toString + " mb")
+            )
+          ).prettyPrint
           src ! ByteString(json)
-        case other =>
+        case other ⇒
           log.info("metric name: {}", other.getClass.getName)
       }
-    case _ =>
+    case _ ⇒
   }
 }
