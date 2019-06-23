@@ -13,7 +13,6 @@ scalacOptions in(Compile, console) := Seq("-feature", "-Xfatal-warnings", "-depr
 scalaVersion := scalaV
 
 libraryDependencies ++= Seq(
-  //"com.typesafe.akka" %% "akka-actor" % Akka,
   "com.typesafe.akka" %% "akka-cluster-typed" % Akka,
   "com.typesafe.akka" %% "akka-cluster-metrics" % Akka,
   "com.typesafe.akka" %% "akka-stream-typed" % Akka,

@@ -2,8 +2,6 @@ package demo
 
 import java.io.File
 import java.net.NetworkInterface
-import java.time.LocalDateTime
-import java.util.TimeZone
 
 import akka.actor.{Address, CoordinatedShutdown}
 import akka.actor.CoordinatedShutdown.PhaseClusterExitingDone
@@ -15,6 +13,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.JavaConverters._
 import akka.actor.typed.scaladsl.adapter._
+import akka.cluster.MemberStatus
 import akka.stream.ActorMaterializerSettings
 
 /*
@@ -80,18 +79,23 @@ object Application extends App {
       cluster.manager tell Join(seedAddress)
       cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
 
-      Behaviors.receive { (ctx, _) ⇒
-        ctx.log.info("★ ★ ★ Worker joined cluster {}:{} ★ ★ ★", cfg.getString(AKKA_HOST), cfg.getInt(AKKA_PORT))
-        cluster.subscriptions ! Unsubscribe(ctx.self)
-        val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
+      Behaviors.receive[SelfUp] {
+        case (ctx, _ @SelfUp(state)) ⇒
+          val av = state.members.filter(_.status == MemberStatus.Up).map(_.address)
+          ctx.log.warning(
+            "★ ★ ★ Worker joined cluster {}:{}  with existing members:[{}] ★ ★ ★",
+            cfg.getString(AKKA_HOST),
+            cfg.getInt(AKKA_PORT),
+            av
+          )
 
-        //ctx.spawn(ClusterMembership(), "cluster-members")
+          cluster.subscriptions ! Unsubscribe(ctx.self)
+          val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
-        shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
-          Future.successful(ctx.log.info("after.cluster-exiting-done")).map(_ ⇒ akka.Done)(ExecutionContext.global)
-        }
-
-        Behaviors.empty
+          shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
+            Future.successful(ctx.log.info("after.cluster-exiting-done")).map(_ ⇒ akka.Done)(ExecutionContext.global)
+          }
+          Behaviors.empty
       }
     }
 
@@ -99,17 +103,14 @@ object Application extends App {
     Behaviors.setup[SelfUp] { ctx ⇒
       implicit val sys = ctx.system.toUntyped
       val cluster      = Cluster(ctx.system)
-      val address = Address("akka", SystemName, seedHostAddress, port.toInt)
+      val address      = Address("akka", SystemName, seedHostAddress, port.toInt)
 
       cluster.manager tell Join(address)
       cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
 
       Behaviors.receive[SelfUp] {
         case (ctx, _ @SelfUp(state)) ⇒
-          ctx.log.info(
-            "★ ★ ★ Seed joined cluster {}:{} ★ ★ ★",
-            seedHostAddress,
-            port.toInt)
+          ctx.log.warning("★ ★ ★ Seed joined cluster {}:{} ★ ★ ★", seedHostAddress, port.toInt)
 
           cluster.subscriptions ! Unsubscribe(ctx.self)
           val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
@@ -117,7 +118,7 @@ object Application extends App {
           new Bootstrap(
             shutdown,
             ctx.spawn(
-              ClusterMembership(state),
+              Membership(state),
               "members",
               DispatcherSelector.fromConfig("akka.metrics-dispatcher")
             ),

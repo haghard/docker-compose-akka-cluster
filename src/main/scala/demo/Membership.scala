@@ -10,10 +10,10 @@ import akka.cluster.typed.{Cluster, Subscribe}
 import scala.collection.immutable.SortedSet
 import scala.concurrent.duration._
 
-object ClusterMembership {
+object Membership {
 
-  case object ShowClusterState                                                  extends ClusterDomainEvent
-  case class GetClusterState(replyTo: ActorRef[ClusterMembership.ClusterState]) extends ClusterDomainEvent
+  case object ShowClusterState                                           extends ClusterDomainEvent
+  case class GetClusterState(replyTo: ActorRef[Membership.ClusterState]) extends ClusterDomainEvent
   case class ClusterState(line: String)
 
   private val onTerminate: PartialFunction[(ActorContext[ClusterDomainEvent], Signal), Behavior[ClusterDomainEvent]] = {
@@ -58,7 +58,7 @@ object ClusterMembership {
               ctx.log.warning("★ ★ ★ {} exit gracefully", member.address)
               convergence(am, rm)
             case ShowClusterState ⇒
-              ctx.log.info("★ ★ ★ av:[{}] - rm:[{}]", available.mkString(","), removed.mkString(","))
+              ctx.log.info("★ ★ ★ [{}] - [{}]", available.mkString(","), removed.mkString(","))
               Behaviors.same
             case GetClusterState(replyTo) ⇒
               replyTo.tell(ClusterState(available.mkString(",")))
@@ -93,7 +93,7 @@ object ClusterMembership {
               convergence(am, rm)
             case ShowClusterState ⇒
               ctx.log
-                .info("av:[{}] - rm:[{}]", available.mkString(","), removed.mkString(","))
+                .info("[{}] - [{}]", available.mkString(","), removed.mkString(","))
               Behaviors.same
             case GetClusterState(replyTo) ⇒
               replyTo.tell(ClusterState(available.mkString(",")))

@@ -45,7 +45,7 @@ class HttpRoutes(m: ActorRef[ClusterDomainEvent])(implicit sys: ActorSystem) ext
   //path("metrics")(get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource)))))
 
   private def queryForMembers: Future[HttpResponse] =
-    m.ask[ClusterMembership.ClusterState](ClusterMembership.GetClusterState(_)).map { reply ⇒
+    m.ask[Membership.ClusterState](Membership.GetClusterState(_)).map { reply ⇒
       HttpResponse(
         status = StatusCodes.OK,
         entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(reply.line))
