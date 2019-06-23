@@ -89,7 +89,7 @@ object Membership {
             case MemberRemoved(member, _) ⇒
               val rm = removed + member.address
               val am = available - member.address
-              ctx.log.warning("★ ★ ★ {} was taken downed after being unreachable.", member.address)
+              ctx.log.warning("★ ★ ★ MemberRemoved = {}. Taken downed after being unreachable.", member.address)
               convergence(am, rm)
             case ShowClusterState ⇒
               ctx.log

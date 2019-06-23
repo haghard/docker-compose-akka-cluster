@@ -87,6 +87,8 @@ export TZ=America/New_York
   docker network ls
   docker network rm bfb14b518775 a671ca262355    
 
+  docker pause asdgfasd 
+
 #### Available urls ####
 
   Req/Resp `http GET 192.168.77.10:9000/members`
