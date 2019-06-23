@@ -14,7 +14,6 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.JavaConverters._
 import akka.actor.typed.scaladsl.adapter._
 import akka.cluster.MemberStatus
-import akka.stream.ActorMaterializerSettings
 
 /*
 -Duser.timezone=UTC
