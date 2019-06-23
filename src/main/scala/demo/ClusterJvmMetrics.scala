@@ -32,7 +32,7 @@ object ClusterJvmMetrics {
         active(src, mutable.Queue.empty[ClusterMetrics])
       case (ctx, other) ⇒
         ctx.log.warning("Unexpected message: {} in await", other.getClass.getName)
-        Behaviors.ignore
+        Behaviors.stopped
     }
 
   def await(
@@ -85,7 +85,7 @@ object ClusterJvmMetrics {
           } else Behaviors.same
         case (ctx, other) ⇒
           ctx.log.warning("Unexpected message: {} active", other.getClass.getName)
-          Behaviors.ignore
+          Behaviors.stopped
       }
       .receiveSignal {
         case (ctx, PostStop) ⇒
