@@ -1,5 +1,6 @@
 package demo
 
+import akka.actor.typed.ActorRef
 import akka.actor.ActorSystem
 import akka.cluster.Cluster
 import akka.http.scaladsl.model._
@@ -11,22 +12,22 @@ import akka.util.ByteString
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import akka.actor.typed.scaladsl.adapter._
+import akka.cluster.ClusterEvent.ClusterDomainEvent
+import akka.actor.typed.scaladsl.AskPattern._
 
-class HttpRoutes(implicit ex: ExecutionContext, system: ActorSystem) extends Directives {
-  val Dispatcher = "akka.metrics-dispatcher"
+class HttpRoutes(m: ActorRef[ClusterDomainEvent])(implicit sys: ActorSystem) extends Directives {
+  //val cluster = Cluster(system)
 
-  val cluster = Cluster(system)
+  implicit val t   = akka.util.Timeout(1.seconds)
+  implicit val sch = sys.scheduler
+  implicit val ec  = sys.dispatchers.lookup("akka.metrics-dispatcher")
 
-  implicit val t = akka.util.Timeout(1.seconds)
-
-  implicit val mat = ActorMaterializer(
+  /*implicit val mat = ActorMaterializer(
     ActorMaterializerSettings(system).withDispatcher(Dispatcher).withInputBuffer(1, 1)
-  )
+  )*/
 
-  val membership =
-    system.actorOf(ClusterMembership.props(cluster).withDispatcher(Dispatcher), "cluster-members")
-
-  val metricsSource =
+  /*val metricsSource =
     Source
       .fromGraph(
         new ActorSource[ByteString](
@@ -37,18 +38,18 @@ class HttpRoutes(implicit ex: ExecutionContext, system: ActorSystem) extends Dir
       .run()
 
   //Ensure that the Broadcast output is dropped if there are no listening parties.
-  metricsSource.runWith(Sink.ignore)
+  metricsSource.runWith(Sink.ignore)*/
 
   val route: Route =
-    path("members") {
-      get(complete(queryForMembers))
-    } ~
-    path("metrics") {
-      get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
-    }
+    path("members")(get(complete(queryForMembers)))
+  //path("metrics")(get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource)))))
 
   private def queryForMembers: Future[HttpResponse] =
-    (membership ask 'Members).mapTo[String].map { json: String ⇒
-      HttpResponse(status = StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(json)))
+    m.ask[ClusterMembership.ClusterState](ClusterMembership.GetClusterState(_)).map { reply ⇒
+      HttpResponse(
+        status = StatusCodes.OK,
+        entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(reply.line))
+      )
     }
+
 }

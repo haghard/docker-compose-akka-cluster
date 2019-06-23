@@ -5,14 +5,17 @@ import java.net.NetworkInterface
 import java.time.LocalDateTime
 import java.util.TimeZone
 
+import akka.actor.{Address, CoordinatedShutdown}
 import akka.actor.CoordinatedShutdown.PhaseClusterExitingDone
-import akka.actor._
-import akka.cluster.Cluster
-import com.typesafe.config.ConfigFactory
+import akka.actor.typed._
+import akka.actor.typed.scaladsl.Behaviors
+import akka.cluster.typed.{Cluster, Join, SelfUp, Subscribe, Unsubscribe}
+import com.typesafe.config.{Config, ConfigFactory}
 
-import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.JavaConverters._
+import akka.actor.typed.scaladsl.adapter._
+import akka.stream.ActorMaterializerSettings
 
 /*
 -Duser.timezone=UTC
@@ -69,27 +72,66 @@ object Application extends App {
   val extraCfg = new File(s"${confDir}/${nodeType}.conf")
   val cfg      = if (isSeedNode) createConfig(seedHostAddress) else createConfig(dockerInternalAddress.getHostAddress)
 
-  implicit val system = ActorSystem(SystemName, cfg)
+  def worker(config: Config): Behavior[SelfUp] =
+    Behaviors.setup[SelfUp] { ctx ⇒
+      implicit val sys = ctx.system.toUntyped
+      val cluster      = Cluster(ctx.system)
+      val seedAddress  = Address("akka", SystemName, seedHostAddress, port.toInt)
+      cluster.manager tell Join(seedAddress)
+      cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
 
-  val cluster  = Cluster(system)
-  val log      = system.log
-  val shutdown = CoordinatedShutdown(system)
+      Behaviors.receive { (ctx, _) ⇒
+        ctx.log.info("★ ★ ★ Worker joined cluster {}:{} ★ ★ ★", cfg.getString(AKKA_HOST), cfg.getInt(AKKA_PORT))
+        cluster.subscriptions ! Unsubscribe(ctx.self)
+        val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
-  //TimeZone.getAvailableIDs
+        //ctx.spawn(ClusterMembership(), "cluster-members")
 
-  if (isSeedNode) {
-    val address = Address("akka", SystemName, seedHostAddress, port.toInt)
-    cluster.joinSeedNodes(immutable.Seq(address))
-    new Bootstrap(shutdown, cluster.selfAddress.host.get, httpPort.toInt)
-  } else {
-    val seedAddress = Address("akka", SystemName, seedHostAddress, port.toInt)
-    cluster.joinSeedNodes(immutable.Seq(seedAddress))
-    system.log.info(
-      s"* * * host:${cfg.getString(AKKA_HOST)} akka-port:${cfg.getInt(AKKA_PORT)} at ${LocalDateTime.now} * * *"
-    )
+        shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
+          Future.successful(ctx.log.info("after.cluster-exiting-done")).map(_ ⇒ akka.Done)(ExecutionContext.global)
+        }
 
-    shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
-      Future.successful(log.info("after.cluster-exiting-done")).map(_ ⇒ akka.Done)(ExecutionContext.global)
+        Behaviors.empty
+      }
     }
-  }
+
+  def seed(config: Config): Behavior[SelfUp] =
+    Behaviors.setup[SelfUp] { ctx ⇒
+      implicit val sys = ctx.system.toUntyped
+      val cluster      = Cluster(ctx.system)
+      val address = Address("akka", SystemName, seedHostAddress, port.toInt)
+
+      cluster.manager tell Join(address)
+      cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
+
+      Behaviors.receive[SelfUp] {
+        case (ctx, _ @SelfUp(state)) ⇒
+          ctx.log.info(
+            "★ ★ ★ Seed joined cluster {}:{} ★ ★ ★",
+            seedHostAddress,
+            port.toInt)
+
+          cluster.subscriptions ! Unsubscribe(ctx.self)
+          val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
+
+          new Bootstrap(
+            shutdown,
+            ctx.spawn(
+              ClusterMembership(state),
+              "members",
+              DispatcherSelector.fromConfig("akka.metrics-dispatcher")
+            ),
+            cluster.selfMember.address.host.get,
+            httpPort.toInt
+          )
+
+          Behaviors.empty
+      }
+    }
+
+  if (isSeedNode)
+    ActorSystem(seed(cfg), SystemName, cfg)
+  else
+    ActorSystem(worker(cfg), SystemName, cfg)
+
 }
