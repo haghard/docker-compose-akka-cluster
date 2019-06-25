@@ -1,6 +1,7 @@
 package demo
 
 import java.io.File
+import java.lang.management.ManagementFactory
 import java.net.NetworkInterface
 
 import akka.actor.{Address, CoordinatedShutdown}
@@ -70,7 +71,7 @@ object Application extends App {
   val extraCfg = new File(s"${confDir}/${nodeType}.conf")
   val cfg      = if (isSeedNode) createConfig(seedHostAddress) else createConfig(dockerInternalAddress.getHostAddress)
 
-  def worker(config: Config): Behavior[SelfUp] =
+  def worker(config: Config, runtimeInfo: String): Behavior[SelfUp] =
     Behaviors.setup[SelfUp] { ctx ⇒
       implicit val sys = ctx.system.toUntyped
       val cluster      = Cluster(ctx.system)
@@ -82,11 +83,12 @@ object Application extends App {
         case (ctx, _ @SelfUp(state)) ⇒
           val av = state.members.filter(_.status == MemberStatus.Up).map(_.address)
           ctx.log.warning(
-            "★ ★ ★ Worker joined cluster {}:{}  with existing members:[{}] ★ ★ ★",
+            "★ ★ ★ Worker joined cluster {}:{} to existing members:[{}] ★ ★ ★",
             cfg.getString(AKKA_HOST),
             cfg.getInt(AKKA_PORT),
             av
           )
+          ctx.log.info(runtimeInfo)
 
           cluster.subscriptions ! Unsubscribe(ctx.self)
           val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
@@ -98,7 +100,7 @@ object Application extends App {
       }
     }
 
-  def master(config: Config): Behavior[SelfUp] =
+  def master(config: Config, runtimeInfo: String): Behavior[SelfUp] =
     Behaviors.setup[SelfUp] { ctx ⇒
       implicit val sys = ctx.system.toUntyped
       val cluster      = Cluster(ctx.system)
@@ -110,6 +112,7 @@ object Application extends App {
       Behaviors.receive[SelfUp] {
         case (ctx, _ @SelfUp(state)) ⇒
           ctx.log.warning("★ ★ ★ Seed joined cluster {}:{} ★ ★ ★", seedHostAddress, port.toInt)
+          ctx.log.info(runtimeInfo)
 
           cluster.subscriptions ! Unsubscribe(ctx.self)
           val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
@@ -132,9 +135,24 @@ object Application extends App {
       }
     }
 
+  val memorySize = ManagementFactory.getOperatingSystemMXBean
+    .asInstanceOf[com.sun.management.OperatingSystemMXBean]
+    .getTotalPhysicalMemorySize
+  val runtimeInfo = new StringBuilder()
+    .append("=================================================================================================")
+    .append('\n')
+    .append(s"Cores:${Runtime.getRuntime.availableProcessors}")
+    .append(" Total Memory:" + Runtime.getRuntime.totalMemory / 1000000 + "Mb")
+    .append(" Max Memory:" + Runtime.getRuntime.maxMemory / 1000000 + "Mb")
+    .append(" Free Memory:" + Runtime.getRuntime.freeMemory / 1000000 + "Mb")
+    .append(" RAM:" + memorySize / 1000000 + "Mb")
+    .append('\n')
+    .append("=================================================================================================")
+    .toString()
+
   if (isSeedNode)
-    ActorSystem(master(cfg), SystemName, cfg)
+    ActorSystem(master(cfg, runtimeInfo), SystemName, cfg)
   else
-    ActorSystem(worker(cfg), SystemName, cfg)
+    ActorSystem(worker(cfg, runtimeInfo), SystemName, cfg)
 
 }
