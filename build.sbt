@@ -20,8 +20,16 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http" % "10.1.8",
   "com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.12",
   "io.spray" %% "spray-json" % "1.3.2",
-  "ch.qos.logback" % "logback-classic" % "1.1.2"
+  "ch.qos.logback" % "logback-classic" % "1.1.2",
+  ("com.lihaoyi" % "ammonite" % "1.6.8" % "test").cross(CrossVersion.full)
 )
+
+//test:run
+sourceGenerators in Test += Def.task {
+  val file = (sourceManaged in Test).value / "amm.scala"
+  IO.write(file, """object amm extends App { ammonite.Main().run() }""")
+  Seq(file)
+}.taskValue
 
 scalafmtOnCompile := true
 

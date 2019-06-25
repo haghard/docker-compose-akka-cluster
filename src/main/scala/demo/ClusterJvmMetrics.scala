@@ -11,13 +11,11 @@ import akka.actor.typed.{ActorRef, Behavior, PostStop}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.adapter._
 
-import scala.collection.mutable
-
 object ClusterJvmMetrics {
 
-  sealed trait Confirm                                                             extends ClusterMetricsEvent
-  case object Confirm                                                              extends Confirm
-  case class Connect(ref: akka.actor.typed.ActorRef[ClusterJvmMetrics.JvmMetrics]) extends Confirm
+  sealed trait Confirm                                            extends ClusterMetricsEvent
+  case object Confirm                                             extends Confirm
+  case class Connect(ref: ActorRef[ClusterJvmMetrics.JvmMetrics]) extends Confirm
 
   sealed trait JvmMetrics
   case class ClusterMetrics(bs: ByteString) extends JvmMetrics
@@ -29,40 +27,39 @@ object ClusterJvmMetrics {
       case (ctx, _ @Connect(src)) ⇒
         val ex = ClusterMetricsExtension(ctx.system.toUntyped)
         ex.subscribe(ctx.self.toUntyped)
-        active(src, mutable.Queue.empty[ClusterMetrics])
+        active(src, new RingBuffer[ClusterMetrics](1 << 5)) //if you have more than 32 node in the cluster you need to increase this buffer
       case (ctx, other) ⇒
         ctx.log.warning("Unexpected message: {} in await", other.getClass.getName)
         Behaviors.stopped
     }
 
-  def await(
-    src: ActorRef[ClusterJvmMetrics.JvmMetrics],
-    q: mutable.Queue[ClusterMetrics]
+  def tryPush(
+    sourceIn: ActorRef[ClusterJvmMetrics.JvmMetrics],
+    rb: RingBuffer[ClusterMetrics]
   ): Behavior[ClusterMetricsEvent] =
     Behaviors.receive[ClusterMetricsEvent] {
       case (_, ClusterJvmMetrics.Confirm) ⇒
-        if (q.nonEmpty) {
-          src.tell(q.dequeue)
-          await(src, q)
-        } else active(src, q)
-      case (ctx, other) ⇒
-        ctx.log.warning("Unexpected message: {} in await", other.getClass.getName)
+        if (rb.size > 0) {
+          rb.poll.foreach(sourceIn.tell(_))
+          tryPush(sourceIn, rb)
+        } else active(sourceIn, rb)
+      case _ ⇒
         Behaviors.ignore
     }
 
   def active(
-    src: ActorRef[ClusterJvmMetrics.JvmMetrics],
-    q: mutable.Queue[ClusterMetrics],
+    sourceIn: ActorRef[ClusterJvmMetrics.JvmMetrics],
+    rb: RingBuffer[ClusterMetrics],
     divider: Long = 1024 * 1024,
     defaultTZ: ZoneId = ZoneId.of(java.util.TimeZone.getDefault.getID),
     formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")
   ): Behavior[ClusterMetricsEvent] =
     Behaviors
       .receive[ClusterMetricsEvent] {
-        case (_, _ @ClusterMetricsChanged(clusterMetrics)) ⇒
-          clusterMetrics.foreach {
+        case (_, _ @ClusterMetricsChanged(metrics)) ⇒
+          metrics.foreach {
             case HeapMemory(address, timestamp, used, _, max) ⇒
-              val s = JsObject(
+              val js = JsObject(
                 Map(
                   "node"   → JsString(address.toString),
                   "metric" → JsString("heap"),
@@ -76,12 +73,15 @@ object ClusterJvmMetrics {
                   "max"  → JsString((max.getOrElse(0L) / divider).toString + " mb")
                 )
               ).prettyPrint
-              q.enqueue(ClusterMetrics(ByteString(s)))
+              //the size of metrics emitted at once is equal to the number of nodes in the cluster,
+              //therefore the max size of the queue is bound to the number
+              rb.offer(ClusterMetrics(ByteString(js)))
+            case _ ⇒
           }
 
-          if (q.nonEmpty) {
-            src.tell(q.dequeue)
-            await(src, q)
+          if (rb.size > 0) {
+            rb.poll.foreach(sourceIn.tell(_))
+            tryPush(sourceIn, rb)
           } else Behaviors.same
         case (ctx, other) ⇒
           ctx.log.warning("Unexpected message: {} active", other.getClass.getName)
@@ -89,8 +89,8 @@ object ClusterJvmMetrics {
       }
       .receiveSignal {
         case (ctx, PostStop) ⇒
-          ctx.log.warning("PostStop !!!")
-          src ! StreamFailure(new Exception("Never gonna stop !!!"))
+          ctx.log.warning("PostStop")
+          sourceIn ! StreamFailure(new Exception("Never should stop"))
           Behaviors.stopped
       }
 }

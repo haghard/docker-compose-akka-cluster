@@ -52,7 +52,7 @@ class HttpRoutes(
     )
 
   private def queryForMembers: Future[HttpResponse] =
-    metricsRef.ask[Membership.ClusterState](Membership.GetClusterState(_)).map { reply ⇒
+    metricsRef.ask[Membership.ClusterStateResponse](Membership.ClusterStateRequest(_)).map { reply ⇒
       HttpResponse(
         status = StatusCodes.OK,
         entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(reply.line))

@@ -12,9 +12,9 @@ import scala.concurrent.duration._
 
 object Membership {
 
-  case object ShowClusterState                                           extends ClusterDomainEvent
-  case class GetClusterState(replyTo: ActorRef[Membership.ClusterState]) extends ClusterDomainEvent
-  case class ClusterState(line: String)
+  case object ShowClusterState                                                       extends ClusterDomainEvent
+  case class ClusterStateRequest(replyTo: ActorRef[Membership.ClusterStateResponse]) extends ClusterDomainEvent
+  case class ClusterStateResponse(line: String)
 
   private val onTerminate: PartialFunction[(ActorContext[ClusterDomainEvent], Signal), Behavior[ClusterDomainEvent]] = {
     case (ctx, Terminated(actor)) ⇒
@@ -60,8 +60,8 @@ object Membership {
             case ShowClusterState ⇒
               ctx.log.info("★ ★ ★ [{}] - [{}]", available.mkString(","), removed.mkString(","))
               Behaviors.same
-            case GetClusterState(replyTo) ⇒
-              replyTo.tell(ClusterState(available.mkString(",")))
+            case ClusterStateRequest(replyTo) ⇒
+              replyTo.tell(ClusterStateResponse(available.mkString(",")))
               Behaviors.same
             case other ⇒
               //ReachabilityChanged(reachability)
@@ -71,7 +71,7 @@ object Membership {
       }
       .receiveSignal(onTerminate)
 
-  //leader should take an action
+  //a node was detected as unreachable and now a leader should take an action to deal with this situation
   def awaitForConvergence(
     available: SortedSet[Address],
     removed: SortedSet[Address]
@@ -95,8 +95,8 @@ object Membership {
               ctx.log
                 .info("[{}] - [{}]", available.mkString(","), removed.mkString(","))
               Behaviors.same
-            case GetClusterState(replyTo) ⇒
-              replyTo.tell(ClusterState(available.mkString(",")))
+            case ClusterStateRequest(replyTo) ⇒
+              replyTo.tell(ClusterStateResponse(available.mkString(",")))
               Behaviors.same
             case _ ⇒
               Behaviors.same
