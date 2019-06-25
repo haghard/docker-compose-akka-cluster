@@ -29,7 +29,7 @@ object ClusterJvmMetrics {
         ex.subscribe(ctx.self.toUntyped)
         active(src, new RingBuffer[ClusterMetrics](1 << 5)) //if you have more than 32 node in the cluster you need to increase this buffer
       case (ctx, other) ⇒
-        ctx.log.warning("Unexpected message: {} in await", other.getClass.getName)
+        ctx.log.warning("Unexpected message: {} in init", other.getClass.getName)
         Behaviors.stopped
     }
 
