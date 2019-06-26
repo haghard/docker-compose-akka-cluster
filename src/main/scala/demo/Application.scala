@@ -40,7 +40,7 @@ object Application extends App {
   val confDir  = System.getenv("EXTRA_CONF_DIR")
   val nodeType = System.getenv("node.type").trim
 
-  val isSeedNode = nodeType equals "seed"
+  val isMasterNode = nodeType equals "master"
 
   val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
 
@@ -69,7 +69,7 @@ object Application extends App {
       .withFallback(ConfigFactory.load())
 
   val extraCfg = new File(s"${confDir}/${nodeType}.conf")
-  val cfg      = if (isSeedNode) createConfig(seedHostAddress) else createConfig(dockerInternalAddress.getHostAddress)
+  val cfg      = if (isMasterNode) createConfig(seedHostAddress) else createConfig(dockerInternalAddress.getHostAddress)
 
   def worker(config: Config, runtimeInfo: String): Behavior[SelfUp] =
     Behaviors.setup[SelfUp] { ctx ⇒
@@ -111,7 +111,7 @@ object Application extends App {
 
       Behaviors.receive[SelfUp] {
         case (ctx, _ @SelfUp(state)) ⇒
-          ctx.log.warning("★ ★ ★ Seed joined cluster {}:{} ★ ★ ★", seedHostAddress, port.toInt)
+          ctx.log.warning("★ ★ ★  Seed joined cluster {}:{} ★ ★ ★", seedHostAddress, port.toInt)
           ctx.log.info(runtimeInfo)
 
           cluster.subscriptions ! Unsubscribe(ctx.self)
@@ -125,7 +125,7 @@ object Application extends App {
               DispatcherSelector.fromConfig("akka.metrics-dispatcher")
             ),
             ctx
-              .spawn(ClusterJvmMetrics(), "src-actor", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
+              .spawn(ClusterJvmMetrics(), "jvm-metrics", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
               .narrow[ClusterJvmMetrics.Confirm],
             cluster.selfMember.address.host.get,
             httpPort.toInt
@@ -137,20 +137,24 @@ object Application extends App {
 
   val memorySize = ManagementFactory.getOperatingSystemMXBean
     .asInstanceOf[com.sun.management.OperatingSystemMXBean]
-    .getTotalPhysicalMemorySize
+    .getTotalPhysicalMemorySize()
   val runtimeInfo = new StringBuilder()
     .append("=================================================================================================")
     .append('\n')
     .append(s"Cores:${Runtime.getRuntime.availableProcessors}")
+    .append('\n')
     .append(" Total Memory:" + Runtime.getRuntime.totalMemory / 1000000 + "Mb")
+    .append('\n')
     .append(" Max Memory:" + Runtime.getRuntime.maxMemory / 1000000 + "Mb")
+    .append('\n')
     .append(" Free Memory:" + Runtime.getRuntime.freeMemory / 1000000 + "Mb")
+    .append('\n')
     .append(" RAM:" + memorySize / 1000000 + "Mb")
     .append('\n')
     .append("=================================================================================================")
     .toString()
 
-  if (isSeedNode)
+  if (isMasterNode)
     ActorSystem(master(cfg, runtimeInfo), SystemName, cfg)
   else
     ActorSystem(worker(cfg, runtimeInfo), SystemName, cfg)

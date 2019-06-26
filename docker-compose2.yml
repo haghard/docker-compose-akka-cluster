@@ -1,20 +1,22 @@
-version: '3.3'
+version: '2.4'
 services:
 
-  seed:
+  master:
     image: haghard/docker-cluster:0.3
-    hostname: ${SEED_NODE}
+    hostname: ${MASTER_NODE}
     ports:
       - "${HTTP_PORT}:${HTTP_PORT}"
       - "${SEED_JMX_PORT}:${SEED_JMX_PORT}"
+    mem_limit: 300m
+    mem_reservation: 100m
     environment:
-      node.type: seed
+      node.type: master
 
   worker:
     image: haghard/docker-cluster:0.3
     environment:
       node.type: worker
     depends_on:
-      - seed
+      - master
     links:
-     - "seed:${SEED_NODE}"
+     - "master:${MASTER_NODE}"

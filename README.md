@@ -5,7 +5,7 @@
   
   * To set env vars we need
     
-    `export SEED_NODE=akka-seed`
+    `export MASTER_NODE=master`
 
     `export HTTP_PORT=9000`
     
@@ -17,7 +17,7 @@
     
     `export TZ=UTC`
 
-export SEED_NODE=master
+export MASTER_NODE=master
 export HTTP_PORT=9000 
 export AKKA_PORT=2551    
 export SEED_JMX_PORT=1089    
