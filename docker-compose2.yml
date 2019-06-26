@@ -1,3 +1,6 @@
+#https://github.com/chbatey/docker-jvm-akka/blob/master/docker-compose.yml
+#http://www.batey.info/docker-jvm-k8s.html
+
 version: '2.4'
 services:
 
@@ -8,7 +11,8 @@ services:
       - "${HTTP_PORT}:${HTTP_PORT}"
       - "${SEED_JMX_PORT}:${SEED_JMX_PORT}"
     mem_limit: 300m
-    mem_reservation: 100m
+    mem_reservation: 150m
+    cpu_shares: 3072  #3 -cores
     environment:
       node.type: master
 
@@ -16,6 +20,9 @@ services:
     image: haghard/docker-cluster:0.3
     environment:
       node.type: worker
+    mem_limit: 300m
+    mem_reservation: 150m
+    cpu_shares: 2048  #2 -cores
     depends_on:
       - master
     links:

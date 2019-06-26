@@ -71,6 +71,7 @@ dockerfile in docker := {
   new sbtdocker.mutable.Dockerfile {
     //from("openjdk:8-jre")
     //from("adoptopenjdk/openjdk11:jdk-11.0.1.13")
+    //from("adoptopenjdk/openjdk8:x86_64-alpine-jdk8u192-b12")
     from("adoptopenjdk/openjdk12")
 
     maintainer("haghard")
@@ -85,12 +86,12 @@ dockerfile in docker := {
     copy(seedConfigSrc, seedConfigTarget)
     copy(workerConfigSrc, workerConfigTarget)
 
-    entryPoint("java", "-server", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=400", "-XX:ConcGCThreads=4", "-XX:ParallelGCThreads=4",
+    //https://docs.docker.com/compose/compose-file/#resources
+    entryPoint("java", "-server", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=400", "-XX:ConcGCThreads=2", "-XX:ParallelGCThreads=2",
       //"-XX:+PrintFlagsFinal",
       "-XshowSettings",
       "-XX:MaxRAMFraction=1",
-      //"-XX:+UnlockExperimentalVMOptions",
-      //"-XX:+PreferContainerQuotaForCPUCount", //Added in JDK11. Support for using the cpu_quota instead of cpu_shares for
+      "-XX:+PreferContainerQuotaForCPUCount", //Added in JDK11. Support for using the cpu_quota instead of cpu_shares for
       // picking the number of cores the JVM uses to makes decisions such as how many compiler theads, GC threads and sizing of the fork join pool
       s"-Djava.rmi.server.hostname=${System.getenv("HOST")}",
       s"-Dcom.sun.management.jmxremote.port=${System.getenv("SEED_JMX_PORT")}",
