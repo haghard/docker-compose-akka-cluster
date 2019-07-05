@@ -15,6 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.JavaConverters._
 import akka.actor.typed.scaladsl.adapter._
 import akka.cluster.MemberStatus
+import demo.hashing.Rendezvous
 
 /*
 -Duser.timezone=UTC
@@ -44,6 +45,8 @@ object Application extends App {
 
   val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
 
+  val replicaName = "alpha"
+
   val port = sys.props
     .get(sysPropSeedPort)
     .fold(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))(identity)
@@ -61,11 +64,12 @@ object Application extends App {
     .find(_.getHostAddress.matches(ipExpression))
     .fold(throw new Exception("Couldn't find docker address"))(identity)
 
-  def createConfig(address: String) =
+  def createConfig(address: String): Config =
     ConfigFactory
       .empty()
       .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$address"))
       .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
+      .withFallback(ConfigFactory.parseString(s"akka.cluster.roles = [ $replicaName ]"))
       .withFallback(ConfigFactory.load())
 
   val extraCfg = new File(s"${confDir}/${nodeType}.conf")
@@ -93,6 +97,10 @@ object Application extends App {
           cluster.subscriptions ! Unsubscribe(ctx.self)
           val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
+          val hash = Rendezvous[Replica]
+          DistributedShardedDomain("alpha", sys, hash).toTyped[DeviceCommand]
+          ctx.spawn(Membership(state, hash), "members", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
+
           shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
             Future.successful(ctx.log.info("after.cluster-exiting-done")).map(_ ⇒ akka.Done)(ExecutionContext.global)
           }
@@ -117,16 +125,34 @@ object Application extends App {
           cluster.subscriptions ! Unsubscribe(ctx.self)
           val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
+          /*
+          val sharding = akka.cluster.sharding.typed.scaladsl.ClusterSharding(ctx.system)
+          sharding.init(
+            akka.cluster.sharding.typed.scaladsl.Entity(
+               Domain.entityTypeKey,
+               { ctx => Domain.persistentEntity(ctx.shard, ctx.entityId)}
+            )
+          )
+
+          import scala.concurrent.duration._
+          implicit val askTimeout = Timeout(2.seconds)
+          sharding.entityRefFor(Domain.entityTypeKey, "chat.1").ask(Domain.AddMsg("alice", "hello"))
+           */
+
+          val hash        = Rendezvous[Replica]
+          val shardRegion = DistributedShardedDomain("alpha", sys, hash).toTyped[DeviceCommand]
+
           new Bootstrap(
             shutdown,
             ctx.spawn(
-              Membership(state),
+              Membership(state, hash),
               "members",
               DispatcherSelector.fromConfig("akka.metrics-dispatcher")
             ),
             ctx
               .spawn(ClusterJvmMetrics(), "jvm-metrics", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
               .narrow[ClusterJvmMetrics.Confirm],
+            shardRegion,
             cluster.selfMember.address.host.get,
             httpPort.toInt
           )

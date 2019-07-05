@@ -12,11 +12,14 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 import akka.cluster.ClusterEvent.ClusterDomainEvent
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.cluster.sharding.ShardRegion.{ClusterShardingStats, GetClusterShardingStats, ShardRegionQuery, ShardRegionStats}
+import akka.http.scaladsl.model.StatusCodes.OK
 import akka.stream.typed.scaladsl.ActorSource
 
 class HttpRoutes(
   metricsRef: ActorRef[ClusterDomainEvent],
-  srcRef: ActorRef[ClusterJvmMetrics.Confirm]
+  srcRef: ActorRef[ClusterJvmMetrics.Confirm],
+  sr: ActorRef[DeviceCommand]
 )(implicit sys: ActorSystem)
     extends Directives {
   val DispatcherName = "akka.metrics-dispatcher"
@@ -47,7 +50,23 @@ class HttpRoutes(
 
   val route: Route =
     path("members")(get(complete(queryForMembers))) ~
-    path("metrics")(
+    path("shards") {
+      get {
+        import akka.actor.typed.scaladsl.adapter._
+        import akka.pattern.ask
+        complete {
+          (sr.toUntyped ? GetClusterShardingStats(2.seconds))
+            .mapTo[ClusterShardingStats]
+            .map(stats ⇒ stats.regions.mkString(","))
+        }
+      }
+    } ~
+    path("device" / IntNumber) { deviceId ⇒
+      get {
+        sr.tell(PingDevice(deviceId))
+        complete(OK)
+      }
+    } ~ path("metrics")(
       get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
     )
 

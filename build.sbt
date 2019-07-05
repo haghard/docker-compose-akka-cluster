@@ -14,9 +14,13 @@ scalacOptions in(Compile, console) := Seq("-feature", "-Xfatal-warnings", "-depr
 scalaVersion := scalaV
 
 libraryDependencies ++= Seq(
+  "com.github.mpilquist" %% "simulacrum" % "0.12.0",
   "com.typesafe.akka" %% "akka-cluster-typed" % Akka,
   "com.typesafe.akka" %% "akka-cluster-metrics" % Akka,
   "com.typesafe.akka" %% "akka-stream-typed" % Akka,
+  //"com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
+  "com.typesafe.akka" %% "akka-cluster-sharding" % Akka,
+  //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.98",
   "com.typesafe.akka" %% "akka-slf4j" % Akka,
   "com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.12",
   "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
@@ -52,6 +56,8 @@ buildOptions in docker := BuildOptions(cache = false,
   removeIntermediateContainers = BuildOptions.Remove.Always,
   pullBaseImage = BuildOptions.Pull.Always)
 
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+
 dockerfile in docker := {
   val baseDir = baseDirectory.value
   val artifact: File = assembly.value
@@ -61,11 +67,11 @@ dockerfile in docker := {
 
   val artifactTargetPath = s"$imageAppBaseDir/${artifact.name}"
 
-  val seedConfigSrc = baseDir / "src" / "main" / "resources" / "seed.conf"
+  val seedConfigSrc = baseDir / "src" / "main" / "resources" / "master.conf"
   val workerConfigSrc = baseDir / "src" / "main" / "resources" / "worker.conf"
 
 
-  val seedConfigTarget = s"${imageAppBaseDir}/${configDir}/seed.conf"
+  val seedConfigTarget = s"${imageAppBaseDir}/${configDir}/master.conf"
   val workerConfigTarget = s"${imageAppBaseDir}/${configDir}/worker.conf"
 
   new sbtdocker.mutable.Dockerfile {
@@ -100,7 +106,7 @@ dockerfile in docker := {
       s"-Dcom.sun.management.jmxremote.local.only=false",
       s"-Dcom.sun.management.jmxremote.rmi.port=${System.getenv("SEED_JMX_PORT")}",
       s"-Dcom.sun.management.jmxremote=true",
-      s"-DseedHost=${System.getenv("SEED_NODE")}",
+      s"-DseedHost=${System.getenv("MASTER_DNS")}",
       s"-DseedPort=${System.getenv("AKKA_PORT")}",
       s"-DhttpPort=${System.getenv("HTTP_PORT")}",
       s"-Duser.timezone=${System.getenv("TZ")}",

@@ -1,17 +1,19 @@
+#https://docs.docker.com/compose/compose-file/#resources
 #https://github.com/chbatey/docker-jvm-akka/blob/master/docker-compose.yml
 #http://www.batey.info/docker-jvm-k8s.html
+#https://dzone.com/articles/docker-container-resource-management-cpu-ram-and-i
 
 version: '2.4'
 services:
 
   master:
     image: haghard/docker-cluster:0.3
-    hostname: ${MASTER_NODE}
+    hostname: ${MASTER_DNS}
     ports:
       - "${HTTP_PORT}:${HTTP_PORT}"
       - "${SEED_JMX_PORT}:${SEED_JMX_PORT}"
-    mem_limit: 300m
-    mem_reservation: 150m
+    mem_limit: 250m
+    mem_reservation: 200m
     cpu_shares: 3072  #3 -cores
     environment:
       node.type: master
@@ -20,10 +22,10 @@ services:
     image: haghard/docker-cluster:0.3
     environment:
       node.type: worker
-    mem_limit: 300m
-    mem_reservation: 150m
-    cpu_shares: 2048  #2 -cores
+    mem_limit: 250m
+    mem_reservation: 200m
+    cpu_shares: 1048  #1 -core
     depends_on:
       - master
     links:
-     - "master:${MASTER_NODE}"
+     - "master:${MASTER_DNS}"

@@ -5,7 +5,7 @@
   
   * To set env vars we need
     
-    `export MASTER_NODE=master`
+    `export MASTER_DNS=master`
 
     `export HTTP_PORT=9000`
     
@@ -17,7 +17,7 @@
     
     `export TZ=UTC`
 
-export MASTER_NODE=master
+export MASTER_DNS=master
 export HTTP_PORT=9000 
 export AKKA_PORT=2551    
 export SEED_JMX_PORT=1089    
@@ -94,3 +94,7 @@ export TZ=UTC
   Req/Resp `http GET 192.168.77.10:9000/members`
 
   Chunked resp `curl --no-buffer 192.168.77.10:9000/metrics`
+  
+  
+https://doc.akka.io/docs/akka/2.5.23/typed/cluster-sharding.html
+  
