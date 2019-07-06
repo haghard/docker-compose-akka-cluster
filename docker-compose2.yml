@@ -17,11 +17,13 @@ services:
     cpu_shares: 3072  #3 -cores
     environment:
       node.type: master
+      role: alpha
 
   worker:
     image: haghard/docker-cluster:0.3
     environment:
       node.type: worker
+      role: alpha
     mem_limit: 250m
     mem_reservation: 200m
     cpu_shares: 1048  #1 -core

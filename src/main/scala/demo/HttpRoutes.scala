@@ -50,6 +50,7 @@ class HttpRoutes(
 
   val route: Route =
     path("members")(get(complete(queryForMembers))) ~
+    //curl  http://192.168.77.10:9000/shards
     path("shards") {
       get {
         import akka.actor.typed.scaladsl.adapter._
@@ -57,7 +58,7 @@ class HttpRoutes(
         complete {
           (sr.toUntyped ? GetClusterShardingStats(2.seconds))
             .mapTo[ClusterShardingStats]
-            .map(stats ⇒ stats.regions.mkString(","))
+            .map(stats ⇒ "\n" + stats.regions.mkString("\n"))
         }
       }
     } ~

@@ -10,7 +10,13 @@ object DistributedShardedDomain {
     ClusterSharding(system).start(
       typeName = "devices",
       entityProps = DeviceShadow.props(replicaName),
-      settings = ClusterShardingSettings(system).withRememberEntities(true).withRole(replicaName),
+      /*
+      rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
+      a different `ShardRegion` due to rebalance, crash or graceful exit. That is exactly what we want.
+      But there is one downside - the associated shard entity will be allocated on first message arrives.
+      if u need to load massive amount of date, it could be problematic.
+       */
+      settings = ClusterShardingSettings(system).withRememberEntities(false).withRole(replicaName),
       extractShardId = Membership.shardId(hash),
       extractEntityId = Membership.entityId(hash)
     )

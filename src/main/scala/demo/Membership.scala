@@ -1,7 +1,6 @@
 package demo
 
 import java.nio.ByteBuffer
-import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.Address
 import akka.actor.typed.{ActorRef, Behavior, Signal, Terminated}
@@ -10,7 +9,7 @@ import akka.cluster.ClusterEvent._
 import akka.cluster.MemberStatus
 import akka.cluster.sharding.ShardRegion
 import akka.cluster.typed.{Cluster, Subscribe}
-import demo.hashing.{CassandraMurmurHash, Rendezvous}
+import demo.hashing.{CassandraHash, Rendezvous}
 
 import scala.collection.immutable.SortedSet
 import scala.concurrent.duration._
@@ -30,25 +29,24 @@ object Membership {
 
   def entityId(h: Rendezvous[Replica]): ShardRegion.ExtractEntityId = {
     case cmd: DeviceCommand ⇒
-      val r        = h.shardFor(cmd.id.toString, 1).head
+      val r        = h.replicaFor(cmd.id.toString, 1).head
       val shardBts = r.toString.getBytes
-      val hash =
-        CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(shardBts), 0, shardBts.length, h.seed)(1).toHexString
+      val hash     = CassandraHash.hash3_x64_128(ByteBuffer.wrap(shardBts), 0, shardBts.length, h.seed)(1).toHexString
       println(s"entity: ${cmd.id}/${r}/${hash}")
       (hash, cmd)
   }
 
   def shardId(h: Rendezvous[Replica]): ShardRegion.ExtractShardId = {
     case cmd: DeviceCommand ⇒
-      val r        = h.shardFor(cmd.id.toString, 1).head
+      val r        = h.replicaFor(cmd.id.toString, 1).head
       val shardBts = r.toString.getBytes
-      val hash =
-        CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(shardBts), 0, shardBts.length, h.seed)(1).toHexString
+      val hash     = CassandraHash.hash3_x64_128(ByteBuffer.wrap(shardBts), 0, shardBts.length, h.seed)(1).toHexString
       println(s"shard: ${cmd.id}/${r}/${hash}")
       hash
-    case ShardRegion.StartEntity(entityId) ⇒
+    /*case ShardRegion.StartEntity(entityId) ⇒
       println(s"start-entity: ${entityId}") //recreates shard that went down
-      entityId
+      entityId*/
+    //"dev/null"
   }
 
   def apply(state: CurrentClusterState, h: Rendezvous[Replica]): Behavior[ClusterDomainEvent] =
@@ -86,7 +84,7 @@ object Membership {
             case MemberExited(member) ⇒ //graceful exit
               val rm = removed + member.address
               val av = available - member.address
-              ctx.log.warning("★ ★ ★ {} exit gracefully", member.address)
+              ctx.log.warning("★ ★ ★ {} exits gracefully", member.address)
               h.remove(Replica(member.address))
               convergence(av, rm, h)
             case ShowClusterState ⇒

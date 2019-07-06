@@ -29,7 +29,7 @@ package object hashing {
 
     def add(shard: Shard): Boolean
 
-    def shardFor(key: String, rf: Int): Set[Shard]
+    def replicaFor(key: String, rf: Int): Set[Shard]
 
     def validated(shard: Shard): Boolean
   }
@@ -55,7 +55,7 @@ package object hashing {
     override def add(shard: Shard): Boolean =
       if (validated(shard)) members.add(shard) else false
 
-    override def shardFor(key: String, rf: Int): Set[Shard] = {
+    override def replicaFor(key: String, rf: Int): Set[Shard] = {
       if (rf > members.size)
         throw new Exception("Replication factor more than the number of the ranges on a ring")
 
@@ -66,7 +66,7 @@ package object hashing {
         val keyBytes        = key.getBytes(UTF_8)
         val nodeBytes       = toBinary(shard)
         val keyAndShard     = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes)
-        val shardHash128bit = CassandraMurmurHash.hash3_x64_128(keyAndShard, 0, keyAndShard.array.length, seed)(1)
+        val shardHash128bit = CassandraHash.hash3_x64_128(keyAndShard, 0, keyAndShard.array.length, seed)(1)
         candidates = candidates + (shardHash128bit → shard)
       }
       candidates.take(rf).map(_._2)
@@ -116,7 +116,7 @@ package object hashing {
         val vNodeSuffix = Array.ofDim[Byte](4)
         writeInt(vNodeSuffix, vNodeId, 0)
         val bytes          = toBinary(shard) ++ vNodeSuffix
-        val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
+        val nodeHash128bit = CassandraHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
         acc & shard == ring.remove(nodeHash128bit)
       }
 
@@ -128,17 +128,17 @@ package object hashing {
           writeInt(suffix, i, 0)
           val shardBytes = toBinary(shard) ++ suffix
           val nodeHash128bit =
-            CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(shardBytes), 0, shardBytes.length, seed)(1)
+            CassandraHash.hash3_x64_128(ByteBuffer.wrap(shardBytes), 0, shardBytes.length, seed)(1)
           acc & (shard == ring.put(nodeHash128bit, shard))
         }
       } else false
 
-    override def shardFor(key: String, rf: Int): Set[Shard] = {
+    override def replicaFor(key: String, rf: Int): Set[Shard] = {
       if (rf > ring.keySet.size)
         throw new Exception("Replication factor more than the number of the ranges on a ring")
 
       val keyBytes = key.getBytes(UTF_8)
-      val keyHash  = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(keyBytes), 0, keyBytes.length, seed)(1)
+      val keyHash  = CassandraHash.hash3_x64_128(ByteBuffer.wrap(keyBytes), 0, keyBytes.length, seed)(1)
       if (ring.containsKey(keyHash)) {
         ring.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
       } else {

@@ -2,7 +2,7 @@ package demo.hashing;
 
 import java.nio.ByteBuffer;
 
-public class CassandraMurmurHash {
+public class CassandraHash {
 
   private static long getblock(ByteBuffer key, int offset, int index) {
     int i_8 = index << 3;

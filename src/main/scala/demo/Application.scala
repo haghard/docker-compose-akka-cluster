@@ -45,7 +45,7 @@ object Application extends App {
 
   val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
 
-  val replicaName = "alpha"
+  val replicaName = System.getenv("role").trim
 
   val port = sys.props
     .get(sysPropSeedPort)
@@ -75,7 +75,7 @@ object Application extends App {
   val extraCfg = new File(s"${confDir}/${nodeType}.conf")
   val cfg      = if (isMasterNode) createConfig(seedHostAddress) else createConfig(dockerInternalAddress.getHostAddress)
 
-  def worker(config: Config, runtimeInfo: String): Behavior[SelfUp] =
+  def worker(config: Config, replicaName: String, runtimeInfo: String): Behavior[SelfUp] =
     Behaviors.setup[SelfUp] { ctx ⇒
       implicit val sys = ctx.system.toUntyped
       val cluster      = Cluster(ctx.system)
@@ -87,7 +87,8 @@ object Application extends App {
         case (ctx, _ @SelfUp(state)) ⇒
           val av = state.members.filter(_.status == MemberStatus.Up).map(_.address)
           ctx.log.warning(
-            "★ ★ ★ Worker joined cluster {}:{} to existing members:[{}] ★ ★ ★",
+            "★ ★ ★ {} Worker joined cluster {}:{} to existing members:[{}] ★ ★ ★",
+            replicaName,
             cfg.getString(AKKA_HOST),
             cfg.getInt(AKKA_PORT),
             av
@@ -98,7 +99,7 @@ object Application extends App {
           val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
           val hash = Rendezvous[Replica]
-          DistributedShardedDomain("alpha", sys, hash).toTyped[DeviceCommand]
+          DistributedShardedDomain(replicaName, sys, hash).toTyped[DeviceCommand]
           ctx.spawn(Membership(state, hash), "members", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
 
           shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
@@ -108,7 +109,7 @@ object Application extends App {
       }
     }
 
-  def master(config: Config, runtimeInfo: String): Behavior[SelfUp] =
+  def master(config: Config, replicaName: String, runtimeInfo: String): Behavior[SelfUp] =
     Behaviors.setup[SelfUp] { ctx ⇒
       implicit val sys = ctx.system.toUntyped
       val cluster      = Cluster(ctx.system)
@@ -119,28 +120,14 @@ object Application extends App {
 
       Behaviors.receive[SelfUp] {
         case (ctx, _ @SelfUp(state)) ⇒
-          ctx.log.warning("★ ★ ★  Seed joined cluster {}:{} ★ ★ ★", seedHostAddress, port.toInt)
+          ctx.log.warning("★ ★ ★ {} Seed joined cluster {}:{} ★ ★ ★", replicaName, seedHostAddress, port.toInt)
           ctx.log.info(runtimeInfo)
 
           cluster.subscriptions ! Unsubscribe(ctx.self)
           val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
-          /*
-          val sharding = akka.cluster.sharding.typed.scaladsl.ClusterSharding(ctx.system)
-          sharding.init(
-            akka.cluster.sharding.typed.scaladsl.Entity(
-               Domain.entityTypeKey,
-               { ctx => Domain.persistentEntity(ctx.shard, ctx.entityId)}
-            )
-          )
-
-          import scala.concurrent.duration._
-          implicit val askTimeout = Timeout(2.seconds)
-          sharding.entityRefFor(Domain.entityTypeKey, "chat.1").ask(Domain.AddMsg("alice", "hello"))
-           */
-
           val hash        = Rendezvous[Replica]
-          val shardRegion = DistributedShardedDomain("alpha", sys, hash).toTyped[DeviceCommand]
+          val shardRegion = DistributedShardedDomain(replicaName, sys, hash).toTyped[DeviceCommand]
 
           new Bootstrap(
             shutdown,
@@ -181,8 +168,8 @@ object Application extends App {
     .toString()
 
   if (isMasterNode)
-    ActorSystem(master(cfg, runtimeInfo), SystemName, cfg)
+    ActorSystem(master(cfg, replicaName, runtimeInfo), SystemName, cfg)
   else
-    ActorSystem(worker(cfg, runtimeInfo), SystemName, cfg)
+    ActorSystem(worker(cfg, replicaName, runtimeInfo), SystemName, cfg)
 
 }
