@@ -2,13 +2,14 @@ package demo
 
 import java.nio.ByteBuffer
 
-import akka.actor.Address
+import akka.actor.{ActorPath, Address}
+import akka.actor.typed.receptionist.{Receptionist, ServiceKey}
 import akka.actor.typed.{ActorRef, Behavior, Signal, Terminated}
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.cluster.ClusterEvent._
 import akka.cluster.MemberStatus
 import akka.cluster.sharding.ShardRegion
-import akka.cluster.typed.{Cluster, Subscribe}
+import akka.cluster.typed.{Cluster, SelfUp, Subscribe, Unsubscribe}
 import demo.hashing.{CassandraHash, Rendezvous}
 
 import scala.collection.immutable.SortedSet
@@ -16,124 +17,98 @@ import scala.concurrent.duration._
 
 object Membership {
 
-  case object ShowClusterState                                                       extends ClusterDomainEvent
-  case class ClusterStateRequest(replyTo: ActorRef[Membership.ClusterStateResponse]) extends ClusterDomainEvent
+  val domainKey = ServiceKey[DataProtocol]("domain")
+
   case class ClusterStateResponse(line: String)
 
-  private val onTerminate: PartialFunction[(ActorContext[ClusterDomainEvent], Signal), Behavior[ClusterDomainEvent]] = {
+  sealed trait Ops
+
+  case object SelfUpDb extends Ops
+
+  case class MembershipChanged(replicas: Set[ActorRef[DataProtocol]]) extends Ops
+
+  case class ReplicaNameReply(role: String, ar: ActorRef[DataProtocol]) extends Ops
+
+  case class RolesInfo(m: Map[String, Set[ActorRef[DataProtocol]]]) extends Ops
+  case object ReplyTimeout                                          extends Ops
+
+  /*val onTerminate: PartialFunction[(ActorContext[ClusterDomainEvent], Signal), Behavior[ClusterDomainEvent]] = {
     case (ctx, Terminated(actor)) ⇒
       ctx.log.error("★ ★ ★ {} Terminated", actor)
-      //shutdown.run(Bootstrap.DBFailure)
       Behaviors.stopped
-  }
+  }*/
 
-  def entityId(h: Rendezvous[Replica]): ShardRegion.ExtractEntityId = {
-    case cmd: DeviceCommand ⇒
-      val r        = h.replicaFor(cmd.id.toString, 1).head
-      val shardBts = r.toString.getBytes
-      val hash     = CassandraHash.hash3_x64_128(ByteBuffer.wrap(shardBts), 0, shardBts.length, h.seed)(1).toHexString
-      println(s"entity: ${cmd.id}/${r}/${hash}")
-      (hash, cmd)
-  }
-
-  def shardId(h: Rendezvous[Replica]): ShardRegion.ExtractShardId = {
-    case cmd: DeviceCommand ⇒
-      val r        = h.replicaFor(cmd.id.toString, 1).head
-      val shardBts = r.toString.getBytes
-      val hash     = CassandraHash.hash3_x64_128(ByteBuffer.wrap(shardBts), 0, shardBts.length, h.seed)(1).toHexString
-      println(s"shard: ${cmd.id}/${r}/${hash}")
-      hash
-    /*case ShardRegion.StartEntity(entityId) ⇒
-      println(s"start-entity: ${entityId}") //recreates shard that went down
-      entityId*/
-    //"dev/null"
-  }
-
-  def apply(state: CurrentClusterState, h: Rendezvous[Replica]): Behavior[ClusterDomainEvent] =
+  def apply(): Behavior[Ops] =
     Behaviors.setup { ctx ⇒
-      val c = Cluster(ctx.system)
-      Behaviors.withTimers[ClusterDomainEvent] { t ⇒
-        c.subscriptions ! Subscribe(ctx.self, classOf[ClusterDomainEvent])
-        t.startPeriodicTimer(ShowClusterState, ShowClusterState, 15000.millis)
+      ctx.system.receptionist ! akka.actor.typed.receptionist.Receptionist.Subscribe(
+        Membership.domainKey,
+        ctx.messageAdapter[akka.actor.typed.receptionist.Receptionist.Listing] {
+          case Membership.domainKey.Listing(replicas) ⇒
+            MembershipChanged(replicas)
+        }
+      )
 
-        val av = state.members.filter(_.status == MemberStatus.Up).map(_.address)
-        av.foreach(a ⇒ h.add(Replica(a)))
-        ctx.log.warning("★ ★ ★ Cluster State:{} ★ ★ ★", av.mkString(","))
-        convergence(av, SortedSet[Address](), h)
+      /*Map[String, Set[ActorRef[ClusterOps]]]().withDefaultValue(Set.empty),*/
+      run(StashBuffer[Ops](1 << 5))
+    }
+
+  def run(
+    buf: StashBuffer[Ops]
+  ): Behavior[Ops] =
+    Behaviors.receive { (ctx, msg) ⇒
+      msg match {
+        case MembershipChanged(rs) if rs.nonEmpty ⇒
+          val hash = Rendezvous[String]
+          val map = Map[String, Set[ActorRef[DataProtocol]]]().withDefaultValue(Set.empty)
+          collectRoles(ctx.self, rs.head, rs.tail,
+            hash,
+            //map,
+            buf
+          )
+        case _ ⇒
+          Behaviors.same
       }
     }
 
-  def convergence(
-    available: SortedSet[Address],
-    removed: SortedSet[Address],
-    h: Rendezvous[Replica]
-  ): Behavior[ClusterDomainEvent] =
-    Behaviors
-      .receivePartial[ClusterDomainEvent] {
-        case (ctx, msg) ⇒
-          msg match {
-            case MemberUp(member) ⇒
-              val av  = available + member.address
-              val unv = removed - member.address
-              ctx.log.warning("★ ★ ★  MemberUp = {}", av.mkString(","))
-              av.foreach(a ⇒ h.add(Replica(a)))
-              convergence(av, unv, h)
-            case UnreachableMember(member) ⇒
-              ctx.system.log.warning("★ ★ ★ Unreachable = {}", member.address)
-              awaitForConvergence(available, removed, h)
-            case MemberExited(member) ⇒ //graceful exit
-              val rm = removed + member.address
-              val av = available - member.address
-              ctx.log.warning("★ ★ ★ {} exits gracefully", member.address)
-              h.remove(Replica(member.address))
-              convergence(av, rm, h)
-            case ShowClusterState ⇒
-              //ctx.log.info("★ ★ ★ [{}] - [{}]", available.mkString(","), removed.mkString(","))
-              Behaviors.same
-            case ClusterStateRequest(replyTo) ⇒
-              replyTo.tell(ClusterStateResponse(available.mkString(",")))
-              Behaviors.same
-            case other ⇒
-              //ReachabilityChanged(reachability)
-              //ctx.log.warning("★ ★ ★ unexpected in convergence: {}", other)
-              Behaviors.same
+  def collectRoles(
+    self: ActorRef[Ops],
+    current: ActorRef[DataProtocol],
+    rest: Set[ActorRef[DataProtocol]],
+    m: Map[String, Set[ActorRef[DataProtocol]]],
+    stash: StashBuffer[Ops]
+  ): Behavior[Ops] =
+    Behaviors.withTimers { ctx ⇒
+      ctx.startSingleTimer('TO, ReplyTimeout, 1.seconds)
+      current.tell(GetReplicaName(self))
+      awaitResp(self, current, rest, m, stash)
+    }
+
+  def awaitResp(
+    self: ActorRef[Ops],
+    current: ActorRef[DataProtocol],
+    rest: Set[ActorRef[DataProtocol]],
+    m: Map[String, Set[ActorRef[DataProtocol]]],
+    buf: StashBuffer[Ops]
+  ): Behavior[Ops] =
+    Behaviors.receive { (ctx, msg) ⇒
+      msg match {
+        case ReplicaNameReply(role, ar) ⇒
+          val um = m.updated(role, m(role) + ar)
+          if (rest.nonEmpty) collectRoles(self, rest.head, rest.tail, um, buf)
+          else {
+            ctx.log.warning("---- end: {}", um.mkString(","))
+            buf.unstashAll(ctx, run( /*um,*/ buf))
           }
+        case ReplyTimeout ⇒
+          //retry
+          ctx.log.warning("retry {} ", current)
+          collectRoles(self, current, rest, m, buf)
+        case m: MembershipChanged if m.replicas.nonEmpty ⇒
+          buf.stash(m)
+          Behaviors.same
+        case _ ⇒
+          Behaviors.stopped
       }
-      .receiveSignal(onTerminate)
-  /*
-    A node was detected as unreachable and now a leader should take an action to deal with this situation.
-    Two outcomes are possible, it's either becomes reachable or stays unreachable and will be removed from the cluster.
-   */
-  def awaitForConvergence(
-    available: SortedSet[Address],
-    removed: SortedSet[Address],
-    h: Rendezvous[Replica]
-  ): Behavior[ClusterDomainEvent] =
-    Behaviors
-      .receivePartial[ClusterDomainEvent] {
-        case (ctx, msg) ⇒
-          msg match {
-            case ReachableMember(member) ⇒
-              ctx.log.warning("★ ★ ★  Reachable again = {}", member.address)
-              convergence(available, removed, h)
-            case UnreachableMember(member) ⇒
-              ctx.log.warning("★ ★ ★  Unreachable = {}", member.address)
-              awaitForConvergence(available, removed, h)
-            case MemberRemoved(member, _) ⇒ //sbr down the member
-              val rm = removed + member.address
-              val av = available - member.address
-              h.remove(Replica(member.address))
-              ctx.log.warning("★ ★ ★ MemberRemoved = {}. Taken downed after being unreachable.", member.address)
-              convergence(av, rm, h)
-            case ShowClusterState ⇒
-              //ctx.log.info("[{}] - [{}]", available.mkString(","), removed.mkString(","))
-              Behaviors.same
-            case ClusterStateRequest(replyTo) ⇒
-              replyTo.tell(ClusterStateResponse(available.mkString(",")))
-              Behaviors.same
-            case _ ⇒
-              Behaviors.same
-          }
-      }
-      .receiveSignal(onTerminate)
+    }
+
 }

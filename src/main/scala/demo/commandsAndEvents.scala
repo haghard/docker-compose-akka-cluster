@@ -1,8 +1,12 @@
 package demo
 
-import akka.cluster.sharding.ShardRegion.ShardRegionQuery
+import akka.actor.typed.ActorRef
+import demo.Membership.Ops
 
-sealed trait DeviceCommand {
+sealed trait DataProtocol
+case class GetReplicaName(replyTo: ActorRef[Ops]) extends DataProtocol
+
+sealed trait DeviceCommand extends DataProtocol {
   def id: Int
 }
 

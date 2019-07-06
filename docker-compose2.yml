@@ -19,7 +19,7 @@ services:
       node.type: master
       role: alpha
 
-  worker:
+  workerA:
     image: haghard/docker-cluster:0.3
     environment:
       node.type: worker
@@ -31,3 +31,29 @@ services:
       - master
     links:
      - "master:${MASTER_DNS}"
+
+  workerB:
+    image: haghard/docker-cluster:0.3
+    environment:
+      node.type: worker
+      role: betta
+    mem_limit: 250m
+    mem_reservation: 200m
+    cpu_shares: 1048  #1 -core
+    depends_on:
+      - master
+    links:
+      - "master:${MASTER_DNS}"
+
+  workerG:
+    image: haghard/docker-cluster:0.3
+    environment:
+      node.type: worker
+      role: gamma
+    mem_limit: 250m
+    mem_reservation: 200m
+    cpu_shares: 1048  #1 -core
+    depends_on:
+      - master
+    links:
+      - "master:${MASTER_DNS}"

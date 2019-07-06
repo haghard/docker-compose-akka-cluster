@@ -1,11 +1,10 @@
 package demo
 
-import scala.concurrent.duration._
 import akka.cluster.sharding.ShardRegion.Passivate
 import akka.actor.{Actor, ActorLogging, Props, ReceiveTimeout}
 
 object DeviceShadow {
-  case object PassivationCnfm
+  //case object PassivationCnfm
 
   def props(replicaName: String) =
     Props(new DeviceShadow(replicaName)).withDispatcher("akka.shard-dispatcher")
@@ -13,6 +12,7 @@ object DeviceShadow {
 
 class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
 
+  //import scala.concurrent.duration._
   //context.setReceiveTimeout(30.seconds)
 
   override def preStart(): Unit =
@@ -26,7 +26,7 @@ class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
       log.info("ping for {}", id)
   }
 
-  def withPassivation(r: Receive): Receive =
+  /*def withPassivation(r: Receive): Receive =
     r.orElse(
       {
         case ReceiveTimeout ⇒
@@ -35,6 +35,6 @@ class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
         case DeviceShadow.PassivationCnfm ⇒
           log.warning("* * *  passivate cmf * * *")
       }
-    )
+    )*/
 
 }

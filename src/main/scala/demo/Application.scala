@@ -87,7 +87,7 @@ object Application extends App {
         case (ctx, _ @SelfUp(state)) ⇒
           val av = state.members.filter(_.status == MemberStatus.Up).map(_.address)
           ctx.log.warning(
-            "★ ★ ★ {} Worker joined cluster {}:{} to existing members:[{}] ★ ★ ★",
+            "★ ★ ★ {} Worker {}:{} joined cluster with existing members:[{}] ★ ★ ★",
             replicaName,
             cfg.getString(AKKA_HOST),
             cfg.getInt(AKKA_PORT),
@@ -98,9 +98,15 @@ object Application extends App {
           cluster.subscriptions ! Unsubscribe(ctx.self)
           val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
-          val hash = Rendezvous[Replica]
-          DistributedShardedDomain(replicaName, sys, hash).toTyped[DeviceCommand]
-          ctx.spawn(Membership(state, hash), "members", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
+          val hash = Rendezvous[String]
+          //DistributedShardedDomain(replicaName, sys, hash).toTyped[DeviceCommand]
+          ctx.spawn(
+            Membership(),
+            "members",
+            DispatcherSelector.fromConfig("akka.metrics-dispatcher")
+          )
+
+          ctx.spawn(DataDomain(replicaName, hash), "dr")
 
           shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
             Future.successful(ctx.log.info("after.cluster-exiting-done")).map(_ ⇒ akka.Done)(ExecutionContext.global)
@@ -119,30 +125,31 @@ object Application extends App {
       cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
 
       Behaviors.receive[SelfUp] {
-        case (ctx, _ @SelfUp(state)) ⇒
-          ctx.log.warning("★ ★ ★ {} Seed joined cluster {}:{} ★ ★ ★", replicaName, seedHostAddress, port.toInt)
+        case (ctx, _ @SelfUp(_)) ⇒
+          ctx.log.warning("★ ★ ★ {} Seed {}:{} joined cluster ★ ★ ★", replicaName, seedHostAddress, port.toInt)
           ctx.log.info(runtimeInfo)
 
           cluster.subscriptions ! Unsubscribe(ctx.self)
           val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
-          val hash        = Rendezvous[Replica]
-          val shardRegion = DistributedShardedDomain(replicaName, sys, hash).toTyped[DeviceCommand]
+          val hash = Rendezvous[String]
 
           new Bootstrap(
             shutdown,
             ctx.spawn(
-              Membership(state, hash),
+              Membership(),
               "members",
               DispatcherSelector.fromConfig("akka.metrics-dispatcher")
             ),
             ctx
               .spawn(ClusterJvmMetrics(), "jvm-metrics", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
               .narrow[ClusterJvmMetrics.Confirm],
-            shardRegion,
+            //shardRegion,
             cluster.selfMember.address.host.get,
             httpPort.toInt
           )
+
+          ctx.spawn(DataDomain(replicaName, hash), "dr")
 
           Behaviors.empty
       }
@@ -150,7 +157,7 @@ object Application extends App {
 
   val memorySize = ManagementFactory.getOperatingSystemMXBean
     .asInstanceOf[com.sun.management.OperatingSystemMXBean]
-    .getTotalPhysicalMemorySize()
+    .getTotalPhysicalMemorySize
   val runtimeInfo = new StringBuilder()
     .append("=================================================================================================")
     .append('\n')
