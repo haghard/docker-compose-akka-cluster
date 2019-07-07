@@ -1,36 +1,35 @@
 package demo
 
-import java.nio.ByteBuffer
+import akka.actor.typed.receptionist.ServiceKey
+import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.scaladsl.{Behaviors, StashBuffer, TimerScheduler}
+import demo.hashing.Rendezvous
 
-import akka.actor.{ActorPath, Address}
-import akka.actor.typed.receptionist.{Receptionist, ServiceKey}
-import akka.actor.typed.{ActorRef, Behavior, Signal, Terminated}
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
-import akka.cluster.ClusterEvent._
-import akka.cluster.MemberStatus
-import akka.cluster.sharding.ShardRegion
-import akka.cluster.typed.{Cluster, SelfUp, Subscribe, Unsubscribe}
-import demo.hashing.{CassandraHash, Rendezvous}
-
-import scala.collection.immutable.SortedSet
 import scala.concurrent.duration._
 
 object Membership {
 
-  val domainKey = ServiceKey[DataProtocol]("domain")
+  val domainKey = ServiceKey[ShardRegionCmd]("domain")
 
-  case class ClusterStateResponse(line: String)
+  case class ClusterStateResponse(state: String)
 
-  sealed trait Ops
+  sealed trait Command
 
-  case object SelfUpDb extends Ops
+  case object SelfUpDb                                                    extends Command
+  case class ClusterStateRequest(replyTo: ActorRef[ClusterStateResponse]) extends Command
 
-  case class MembershipChanged(replicas: Set[ActorRef[DataProtocol]]) extends Ops
+  case class MembershipChanged(replicas: Set[ActorRef[ShardRegionCmd]]) extends Command
 
-  case class ReplicaNameReply(role: String, ar: ActorRef[DataProtocol]) extends Ops
+  case class ReplicaNameReply(shard: String, ref: ActorRef[ShardRegionCmd], hostId: String) extends Command
 
-  case class RolesInfo(m: Map[String, Set[ActorRef[DataProtocol]]]) extends Ops
-  case object ReplyTimeout                                          extends Ops
+  case class RolesInfo(m: Map[String, Set[ActorRef[ShardRegionCmd]]]) extends Command
+  case object ReplyTimeout                                            extends Command
+
+  case class Ping(id: Int) extends Command
+
+
+  case class Entity(h: Rendezvous[String], as: Set[ActorRef[ShardRegionCmd]])
+
 
   /*val onTerminate: PartialFunction[(ActorContext[ClusterDomainEvent], Signal), Behavior[ClusterDomainEvent]] = {
     case (ctx, Terminated(actor)) ⇒
@@ -38,7 +37,8 @@ object Membership {
       Behaviors.stopped
   }*/
 
-  def apply(): Behavior[Ops] =
+
+  def apply(replicaName: String): Behavior[Command] =
     Behaviors.setup { ctx ⇒
       ctx.system.receptionist ! akka.actor.typed.receptionist.Receptionist.Subscribe(
         Membership.domainKey,
@@ -47,68 +47,136 @@ object Membership {
             MembershipChanged(replicas)
         }
       )
-
-      /*Map[String, Set[ActorRef[ClusterOps]]]().withDefaultValue(Set.empty),*/
-      run(StashBuffer[Ops](1 << 5))
+      converge(replicaName)
     }
 
-  def run(
-    buf: StashBuffer[Ops]
-  ): Behavior[Ops] =
+  def converge(rn: String, buf: StashBuffer[Command] = StashBuffer[Command](1 << 5)): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
-        case MembershipChanged(rs) if rs.nonEmpty ⇒
-          val hash = Rendezvous[String]
-          val map = Map[String, Set[ActorRef[DataProtocol]]]().withDefaultValue(Set.empty)
-          collectRoles(ctx.self, rs.head, rs.tail,
-            hash,
-            //map,
-            buf
-          )
-        case _ ⇒
+        case MembershipChanged(rs) ⇒
+          if (rs.nonEmpty) {
+            //on each cluster state change we rebuild the whole state
+            val map          = Map[String, Set[ActorRef[ShardRegionCmd]]]().withDefaultValue(Set.empty)
+            val shardHash    = Rendezvous[String]
+            val replicasHash = Rendezvous[String]
+            reqClusterInfo(
+              rn,
+              ctx.self,
+              rs.head,
+              rs.tail,
+              shardHash,
+              replicasHash,
+              map,
+              buf
+            )
+          } else Behaviors.same
+
+        case ReplyTimeout ⇒
+          Behaviors.same
+        case cmd: Ping ⇒
+          //TODO: respond fast, because we're not ready yet
+          ctx.log.warning("{} respond fast, because we're not ready yet", cmd)
+          Behaviors.same
+        case other ⇒
+          ctx.log.warning("other: {}", other)
           Behaviors.same
       }
     }
 
-  def collectRoles(
-    self: ActorRef[Ops],
-    current: ActorRef[DataProtocol],
-    rest: Set[ActorRef[DataProtocol]],
-    m: Map[String, Set[ActorRef[DataProtocol]]],
-    stash: StashBuffer[Ops]
-  ): Behavior[Ops] =
+  def reqClusterInfo(
+    rn: String,
+    self: ActorRef[Command],
+    current: ActorRef[ShardRegionCmd],
+    rest: Set[ActorRef[ShardRegionCmd]],
+    sh: Rendezvous[String],
+    rh: Rendezvous[String],
+    m: Map[String, Set[ActorRef[ShardRegionCmd]]],
+    stash: StashBuffer[Command]
+  ): Behavior[Command] =
     Behaviors.withTimers { ctx ⇒
-      ctx.startSingleTimer('TO, ReplyTimeout, 1.seconds)
-      current.tell(GetReplicaName(self))
-      awaitResp(self, current, rest, m, stash)
+      ctx.startSingleTimer('TO, ReplyTimeout, 2.seconds)
+      current.tell(IdentifyShard(self))
+      awaitInfo(rn, self, current, rest, sh, rh, m, stash, ctx)
     }
 
-  def awaitResp(
-    self: ActorRef[Ops],
-    current: ActorRef[DataProtocol],
-    rest: Set[ActorRef[DataProtocol]],
-    m: Map[String, Set[ActorRef[DataProtocol]]],
-    buf: StashBuffer[Ops]
-  ): Behavior[Ops] =
+  def awaitInfo(
+    rn: String,
+    self: ActorRef[Command],
+    current: ActorRef[ShardRegionCmd],
+    rest: Set[ActorRef[ShardRegionCmd]],
+    sh: Rendezvous[String],
+    rh: Rendezvous[String],
+    m: Map[String, Set[ActorRef[ShardRegionCmd]]],
+    buf: StashBuffer[Command],
+    timer: TimerScheduler[Command]
+  ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
-        case ReplicaNameReply(role, ar) ⇒
-          val um = m.updated(role, m(role) + ar)
-          if (rest.nonEmpty) collectRoles(self, rest.head, rest.tail, um, buf)
+        case ReplicaNameReply(rName, ref, pid) ⇒
+          timer.cancel('TO)
+
+          val um = m.updated(rName, m(rName) + ref)
+
+          if (rn == rName) rh.add(pid)
+
+          sh.add(rName)
+          if (rest.nonEmpty) reqClusterInfo(rn, self, rest.head, rest.tail, sh, rh, um, buf)
           else {
-            ctx.log.warning("---- end: {}", um.mkString(","))
-            buf.unstashAll(ctx, run( /*um,*/ buf))
+            ctx.log.warning("★ ★ ★ {} -> shards:{} replicas:{} {}", rn, sh.toString, rh.toString, buf.isEmpty)
+            if (buf.isEmpty) convergence(sh, rh, um, rn)
+            else buf.unstashAll(ctx, converge(rn, buf))
           }
         case ReplyTimeout ⇒
-          //retry
           ctx.log.warning("retry {} ", current)
-          collectRoles(self, current, rest, m, buf)
-        case m: MembershipChanged if m.replicas.nonEmpty ⇒
+          //TODO: limit retry with some number because requested node might die,
+          // therefore we won't get info back
+          reqClusterInfo(rn, self, current, rest, sh, rh, m, buf)
+        case m @ MembershipChanged(rs) if rs.nonEmpty ⇒
           buf.stash(m)
           Behaviors.same
-        case _ ⇒
+        case cmd: Ping ⇒
+          //TODO: respond false, because we're not ready yet
+          ctx.log.warning("{} respond fast, because we're not ready yet", cmd)
+          Behaviors.same
+        case cmd: ClusterStateRequest ⇒
+          cmd.replyTo.tell(ClusterStateResponse("Not ready. Try later"))
+          Behaviors.same
+        case other ⇒
+          ctx.log.warning("Unexpected message in awaitInfo: {}", other)
           Behaviors.stopped
       }
     }
 
+  def convergence(
+    sh: Rendezvous[String],
+    rh: Rendezvous[String],
+    m: Map[String, Set[ActorRef[ShardRegionCmd]]],
+    rn: String
+  ): Behavior[Command] =
+    Behaviors.receive { (ctx, msg) ⇒
+      msg match {
+        case Ping(id) ⇒
+          //pick shard and replica
+          val shard   = sh.memberFor(id.toString, 1).head
+          val replica = rh.memberFor(id.toString, 1).head
+          ctx.log.warning("{}: {} -> {}", id, shard, replica)
+
+          val replicas = m(shard)
+          if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for ${shard}")
+          else replicas.head.tell(PingDevice(id, replica))
+
+          Behaviors.same
+        case m @ MembershipChanged(rs)  ⇒
+          if (rs.nonEmpty) {
+            ctx.self.tell(m)
+            converge(rn)
+          } else Behaviors.same
+        case ClusterStateRequest(r) ⇒
+          r.tell(ClusterStateResponse("\n" + sh.toString + "\n" + rh.toString))
+          Behaviors.same
+        case other ⇒
+          ctx.log.warning("Unexpected message in convergence: {}", other)
+          Behaviors.same
+      }
+    }
 }

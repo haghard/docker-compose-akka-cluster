@@ -1,10 +1,8 @@
 package demo
 
-import akka.cluster.sharding.ShardRegion.Passivate
-import akka.actor.{Actor, ActorLogging, Props, ReceiveTimeout}
+import akka.actor.{Actor, ActorLogging, Props}
 
 object DeviceShadow {
-  //case object PassivationCnfm
 
   def props(replicaName: String) =
     Props(new DeviceShadow(replicaName)).withDispatcher("akka.shard-dispatcher")
@@ -22,8 +20,8 @@ class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
     log.warning("* * *   postStop  * * * ")
 
   override val receive: Receive = {
-    case PingDevice(id) ⇒
-      log.info("ping for {}", id)
+    case PingDevice(id, _) ⇒
+      log.info("ping device {}", id)
   }
 
   /*def withPassivation(r: Receive): Receive =

@@ -29,7 +29,7 @@ package object hashing {
 
     def add(shard: Shard): Boolean
 
-    def replicaFor(key: String, rf: Int): Set[Shard]
+    def memberFor(key: String, rf: Int): Set[Shard]
 
     def validated(shard: Shard): Boolean
   }
@@ -44,22 +44,22 @@ package object hashing {
     *
     */
   @simulacrum.typeclass
-  trait Rendezvous[Shard] extends Hashing[Shard] {
+  trait Rendezvous[T] extends Hashing[T] {
     override val seed     = 512L
     override val name     = "rendezvous-hashing"
-    protected val members = new ConcurrentSkipListSet[Shard]()
+    protected val members = new ConcurrentSkipListSet[T]()
 
-    override def remove(shard: Shard): Boolean =
+    override def remove(shard: T): Boolean =
       members.remove(shard)
 
-    override def add(shard: Shard): Boolean =
+    override def add(shard: T): Boolean =
       if (validated(shard)) members.add(shard) else false
 
-    override def replicaFor(key: String, rf: Int): Set[Shard] = {
+    override def memberFor(key: String, rf: Int): Set[T] = {
       if (rf > members.size)
         throw new Exception("Replication factor more than the number of the ranges on a ring")
 
-      var candidates = SortedSet.empty[(Long, Shard)]((x: (Long, Shard), y: (Long, Shard)) ⇒ -x._1.compare(y._1))
+      var candidates = SortedSet.empty[(Long, T)]((x: (Long, T), y: (Long, T)) ⇒ -x._1.compare(y._1))
       val iter       = members.iterator
       while (iter.hasNext) {
         val shard           = iter.next
@@ -133,7 +133,7 @@ package object hashing {
         }
       } else false
 
-    override def replicaFor(key: String, rf: Int): Set[Shard] = {
+    override def memberFor(key: String, rf: Int): Set[Shard] = {
       if (rf > ring.keySet.size)
         throw new Exception("Replication factor more than the number of the ranges on a ring")
 

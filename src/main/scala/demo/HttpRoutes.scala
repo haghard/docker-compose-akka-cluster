@@ -11,16 +11,15 @@ import akka.util.ByteString
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import akka.actor.typed.scaladsl.AskPattern._
-import akka.cluster.sharding.ShardRegion.{ClusterShardingStats, GetClusterShardingStats, ShardRegionQuery, ShardRegionStats}
+import akka.cluster.sharding.ShardRegion.{ClusterShardingStats, GetClusterShardingStats}
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.stream.typed.scaladsl.ActorSource
-import demo.hashing.Rendezvous
+import demo.Membership.Ping
 
 class HttpRoutes(
-  membersRef: ActorRef[Membership.Ops],
-  srcRef: ActorRef[ClusterJvmMetrics.Confirm]
-  //sr: ActorRef[DeviceCommand]
-  //h: Rendezvous[String]
+  membersRef: ActorRef[Membership.Command],
+  srcRef: ActorRef[ClusterJvmMetrics.Confirm],
+  sr: ActorRef[DeviceCommand]
 )(implicit sys: ActorSystem)
     extends Directives {
   val DispatcherName = "akka.metrics-dispatcher"
@@ -50,9 +49,9 @@ class HttpRoutes(
   metricsSource.runWith(Sink.ignore)
 
   val route: Route =
-    //path("members")(get(complete(queryForMembers))) ~
+    path("members")(get(complete(queryForMembers))) ~
     //curl  http://192.168.77.10:9000/shards
-    /*path("shards") {
+    path("shards") {
       get {
         import akka.actor.typed.scaladsl.adapter._
         import akka.pattern.ask
@@ -62,23 +61,22 @@ class HttpRoutes(
             .map(stats ⇒ "\n" + stats.regions.mkString("\n"))
         }
       }
-    } ~*/
+    } ~
     path("device" / IntNumber) { deviceId ⇒
       get {
-        //h.replicaFor(deviceId.toString, 1).head
-        //sr.tell(PingDevice(deviceId))
+        membersRef.tell(Ping(deviceId))
         complete(OK)
       }
     } ~ path("metrics")(
       get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
     )
 
-  /*private def queryForMembers: Future[HttpResponse] =
+  private def queryForMembers: Future[HttpResponse] =
     membersRef.ask[Membership.ClusterStateResponse](Membership.ClusterStateRequest(_)).map { reply ⇒
       HttpResponse(
         status = StatusCodes.OK,
-        entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(reply.line))
+        entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(reply.state))
       )
-    }*/
+    }
 
 }
