@@ -3,12 +3,12 @@ package demo
 import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 
-object DistributedShardedDomain {
+object SharedDomain {
 
   def apply(replicaName: String, system: ActorSystem): ActorRef =
     ClusterSharding(system).start(
       typeName = "devices",
-      entityProps = DeviceShadow.props(replicaName),
+      entityProps = DeviceReplica.props(replicaName),
       /*
       rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
       a different `ShardRegion` due to rebalance, crash or graceful exit. That is exactly what we want.

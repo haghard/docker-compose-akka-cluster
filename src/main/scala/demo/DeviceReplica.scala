@@ -2,13 +2,13 @@ package demo
 
 import akka.actor.{Actor, ActorLogging, Props}
 
-object DeviceShadow {
+object DeviceReplica {
 
   def props(replicaName: String) =
-    Props(new DeviceShadow(replicaName)).withDispatcher("akka.shard-dispatcher")
+    Props(new DeviceReplica(replicaName)).withDispatcher("akka.shard-dispatcher")
 }
 
-class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
+class DeviceReplica(replicaName: String) extends Actor with ActorLogging {
 
   //import scala.concurrent.duration._
   //context.setReceiveTimeout(30.seconds)

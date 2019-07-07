@@ -101,7 +101,7 @@ object Application extends App {
           val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
           val shardRegion =
-            DistributedShardedDomain(shard, ctx.system.toUntyped).toTyped[DeviceCommand]
+            SharedDomain(shard, ctx.system.toUntyped).toTyped[DeviceCommand]
 
           ctx.spawn(
             Membership(shard),
@@ -139,7 +139,7 @@ object Application extends App {
           val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
           val shardRegion =
-            DistributedShardedDomain(shard, ctx.system.toUntyped).toTyped[DeviceCommand]
+            SharedDomain(shard, ctx.system.toUntyped).toTyped[DeviceCommand]
 
           new Bootstrap(
             shutdown,

@@ -37,10 +37,7 @@ export TZ=UTC
   * Delete images
       docker-compose -f docker-compose2.yml rm seed & docker-compose -f docker-compose2.yml rm worker
     
-  * Now you can build image again
-
-         
-         
+  * Now you can build image again                
          
          
 #### A sequence of docker commands to run on static network ####
@@ -94,7 +91,4 @@ export TZ=UTC
   Req/Resp `http GET 192.168.77.10:9000/members`
 
   Chunked resp `curl --no-buffer 192.168.77.10:9000/metrics`
-  
-  
-https://doc.akka.io/docs/akka/2.5.23/typed/cluster-sharding.html
   

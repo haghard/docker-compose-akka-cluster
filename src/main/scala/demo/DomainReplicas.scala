@@ -2,7 +2,7 @@ package demo
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import demo.Membership.ReplicaNameReply
+import demo.Membership.ShardInfo
 import akka.cluster.sharding.ShardRegion
 
 object DomainReplicas {
@@ -51,7 +51,7 @@ object DomainReplicas {
       Behaviors.receiveMessage {
         case IdentifyShard(r) ⇒
           //if (java.util.concurrent.ThreadLocalRandom.current.nextBoolean)
-          r.tell(ReplicaNameReply(shard, ctx.self, hostId))
+          r.tell(ShardInfo(shard, ctx.self, hostId))
 
           Behaviors.same
         case cmd: PingDevice ⇒
