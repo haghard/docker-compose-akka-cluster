@@ -15,7 +15,6 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.JavaConverters._
 import akka.actor.typed.scaladsl.adapter._
 import akka.cluster.MemberStatus
-import demo.hashing.Rendezvous
 
 /*
 -Duser.timezone=UTC
@@ -110,7 +109,7 @@ object Application extends App {
           )
 
           val hostAddress = cluster.selfMember.address.host
-            .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"$h:$p"))
+            .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-p${p}"))
             .getOrElse("none")
           ctx.spawn(DomainReplicas(shardRegion, shard, hostAddress), Name)
 
@@ -154,7 +153,7 @@ object Application extends App {
 
           //dockerInternalAddress.getHostAddress
           val hostAddress = cluster.selfMember.address.host
-            .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"$h:$p"))
+            .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-p${p}"))
             .getOrElse("none")
 
           ctx.spawn(DomainReplicas(shardRegion, shard, hostAddress), Name)
