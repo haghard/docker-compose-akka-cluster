@@ -3,7 +3,7 @@ package demo
 import java.util
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets._
-import java.util.concurrent.ConcurrentSkipListSet
+import java.util.concurrent.{ConcurrentSkipListMap, ConcurrentSkipListSet}
 
 import scala.collection.immutable.SortedSet
 
@@ -42,8 +42,16 @@ package object hashing {
     */
   @simulacrum.typeclass
   trait Rendezvous[T] extends Hashing[T] {
-    override val seed     = 512L
-    override val name     = "rendezvous-hashing"
+    override val seed = 512L
+    override val name = "rendezvous-hashing"
+
+    /*
+      Provides expected average log(n) time cost for the contains, add, and remove operations and their variants.
+      Insertion, removal, and access operations safely execute concurrently by multiple threads.
+
+      ConcurrentSkipListSet and ConcurrentSkipListMap are useful when you need a sorted container that will be accessed by multiple threads.
+      These are essentially the equivalents of TreeMap and TreeSet for concurrent code.
+     */
     protected val members = new ConcurrentSkipListSet[T]()
 
     override def remove(shard: T): Boolean =
@@ -90,7 +98,7 @@ package object hashing {
       to move data between the existing nodes
    */
   @simulacrum.typeclass
-  trait Consistent[Shard] extends Hashing[Shard] {
+  trait Consistent[T] extends Hashing[T] {
     import scala.collection.JavaConverters._
     import java.util.{SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap}
 
@@ -98,7 +106,7 @@ package object hashing {
     override val seed          = 512L
     override val name          = "consistent-hashing"
 
-    private val ring: JSortedMap[Long, Shard] = new JTreeMap[Long, Shard]()
+    private val ring: JSortedMap[Long, T] = new ConcurrentSkipListMap[Long, T]() //JTreeMap[Long, Shard]()
 
     private def writeInt(arr: Array[Byte], i: Int, offset: Int): Array[Byte] = {
       arr(offset) = (i >>> 24).toByte
@@ -108,7 +116,7 @@ package object hashing {
       arr
     }
 
-    override def remove(shard: Shard): Boolean =
+    override def remove(shard: T): Boolean =
       (0 to numberOfVNodes).foldLeft(true) { (acc, vNodeId) ⇒
         val vNodeSuffix = Array.ofDim[Byte](4)
         writeInt(vNodeSuffix, vNodeId, 0)
@@ -117,7 +125,7 @@ package object hashing {
         acc & shard == ring.remove(nodeHash128bit)
       }
 
-    override def add(shard: Shard): Boolean =
+    override def add(shard: T): Boolean =
       //Hash each node to several numberOfVNodes
       if (validated(shard)) {
         (0 to numberOfVNodes).foldLeft(true) { (acc, i) ⇒
@@ -130,7 +138,7 @@ package object hashing {
         }
       } else false
 
-    override def memberFor(key: String, rf: Int): Set[Shard] = {
+    override def memberFor(key: String, rf: Int): Set[T] = {
       if (rf > ring.keySet.size)
         throw new Exception("Replication factor more than the number of the ranges on a ring")
 

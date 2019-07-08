@@ -11,7 +11,6 @@ import akka.actor.CoordinatedShutdown.{PhaseServiceRequestsDone, PhaseServiceUnb
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
-import akka.cluster.ClusterEvent.ClusterDomainEvent
 
 object Bootstrap {
   case object BindFailure extends Reason
@@ -30,6 +29,13 @@ class Bootstrap(
 
   val termDeadline = 2.seconds
   implicit val mat = ActorMaterializer(ActorMaterializerSettings.create(sys).withDispatcher("akka.cluster-dispatcher"))
+
+  /*Http().bind(hostName, port)
+    .to(akka.stream.scaladsl.Sink.foreach { con =>
+      //increment counter
+      con.handleWith(new HttpRoutes(membersRef, srcRef, sr).route)
+      //decrement counter
+    }).run()*/
 
   Http()
     .bindAndHandle(new HttpRoutes(membersRef, srcRef, sr).route, hostName, port)

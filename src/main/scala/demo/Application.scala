@@ -107,7 +107,7 @@ object Application extends App {
               ctx.spawn(Membership(shard), "members", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
 
             val hostAddress = cluster.selfMember.address.host
-              .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-p${p}"))
+              .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-${p}"))
               .getOrElse("none")
             ctx.spawn(DomainReplicas(shardRegion, shard, hostAddress), Name)
 
@@ -163,7 +163,7 @@ object Application extends App {
 
             //dockerInternalAddress.getHostAddress
             val hostAddress = cluster.selfMember.address.host
-              .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-p${p}"))
+              .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-${p}"))
               .getOrElse("none")
 
             ctx.spawn(DomainReplicas(shardRegion, shard, hostAddress), Name)

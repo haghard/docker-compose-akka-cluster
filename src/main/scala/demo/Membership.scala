@@ -30,11 +30,15 @@ object Membership {
 
   case class ReplicaEntity(h: Rendezvous[String], actors: Set[ActorRef[ShardRegionCmd]])
 
+  case object ToKey
+
   /*val onTerminate: PartialFunction[(ActorContext[ClusterDomainEvent], Signal), Behavior[ClusterDomainEvent]] = {
     case (ctx, Terminated(actor)) ⇒
       ctx.log.error("★ ★ ★ {} Terminated", actor)
       Behaviors.stopped
   }*/
+
+  private val replyTimeout = 2.seconds
 
   def apply(replicaName: String): Behavior[Command] =
     Behaviors.setup { ctx ⇒
@@ -84,7 +88,7 @@ object Membership {
     stash: StashBuffer[Command]
   ): Behavior[Command] =
     Behaviors.withTimers { ctx ⇒
-      ctx.startSingleTimer('TO, ReplyTimeout, 2.seconds)
+      ctx.startSingleTimer(ToKey, ReplyTimeout, replyTimeout)
       current.tell(IdentifyShard(self))
       awaitInfo(rName, self, current, rest, sh, m, stash, ctx)
     }
@@ -102,7 +106,7 @@ object Membership {
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
         case ShardInfo(rName, ref, pid) ⇒
-          timer.cancel('TO)
+          timer.cancel(ToKey)
 
           val um = if (m.contains(rName)) {
             val entity = m(rName)
@@ -133,7 +137,7 @@ object Membership {
             else buf.unstashAll(ctx, converge(rName, buf))
           }
         case ReplyTimeout ⇒
-          ctx.log.warning("retry {} ", current)
+          ctx.log.warning(s"No response within ${replyTimeout}. Retry {} ", current)
           //TODO: Limit number of retries because the target node might die in the middle of the process,
           // therefore we won't get the reply back. Moreover, we could step into infinite loop
           reqClusterInfo(rName, self, current, rest, sh, m, buf)
