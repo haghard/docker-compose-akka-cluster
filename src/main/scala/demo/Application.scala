@@ -148,6 +148,8 @@ object Application extends App {
             val membership =
               ctx.spawn(Membership(shard), "members", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
 
+            ctx.watch(membership)
+
             new Bootstrap(
               shutdown,
               membership,

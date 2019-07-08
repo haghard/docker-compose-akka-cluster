@@ -91,4 +91,10 @@ export TZ=UTC
   Req/Resp `http GET 192.168.77.10:9000/members`
 
   Chunked resp `curl --no-buffer 192.168.77.10:9000/metrics`
-  
+
+
+https://doc.akka.io/docs/akka/2.5.23/typed/cluster-sharding.html
+
+### Sharded replication (Cluster Sharding and DData with roles)
+
+https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0  

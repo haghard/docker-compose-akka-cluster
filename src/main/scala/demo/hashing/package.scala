@@ -39,9 +39,6 @@ package object hashing {
     * https://github.com/clohfink/RendezvousHash
     * https://www.pvk.ca/Blog/2017/09/24/rendezvous-hashing-my-baseline-consistent-distribution-method/
     * A random uniform way to partition your keyspace up among the available nodes
-    *
-    *
-    *
     */
   @simulacrum.typeclass
   trait Rendezvous[T] extends Hashing[T] {
