@@ -5,11 +5,12 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets._
 import java.util.concurrent.{ConcurrentSkipListMap, ConcurrentSkipListSet}
 
+import scala.collection.immutable
 import scala.collection.immutable.SortedSet
+import scala.reflect.ClassTag
 
 package object hashing {
 
-  @simulacrum.typeclass
   trait Hashing[Shard] {
     def seed: Long
 
@@ -40,7 +41,6 @@ package object hashing {
     * https://www.pvk.ca/Blog/2017/09/24/rendezvous-hashing-my-baseline-consistent-distribution-method/
     * A random uniform way to partition your keyspace up among the available nodes
     */
-  @simulacrum.typeclass
   trait Rendezvous[T] extends Hashing[T] {
     override val seed = 512L
     override val name = "rendezvous-hashing"
@@ -64,7 +64,7 @@ package object hashing {
       if (rf > members.size)
         throw new Exception("Replication factor more than the number of the ranges on a ring")
 
-      var candidates = SortedSet.empty[(Long, T)]((x: (Long, T), y: (Long, T)) ⇒ -x._1.compare(y._1))
+      var candidates = immutable.SortedSet.empty[(Long, T)]((x: (Long, T), y: (Long, T)) ⇒ -x._1.compare(y._1))
       val iter       = members.iterator
       while (iter.hasNext) {
         val shard           = iter.next
@@ -74,7 +74,7 @@ package object hashing {
         val shardHash128bit = CassandraHash.hash3_x64_128(keyAndShard, 0, keyAndShard.array.length, seed)(1)
         candidates = candidates + (shardHash128bit → shard)
       }
-      candidates.take(rf).map(_._2)
+      immutable.Set.from(candidates.take(rf).iterator.map(_._2))
     }
 
     override def toString: String = {
@@ -97,7 +97,6 @@ package object hashing {
       as well as the ability to add new nodes and have them take a fair share of the load without the necessity
       to move data between the existing nodes
    */
-  @simulacrum.typeclass
   trait Consistent[T] extends Hashing[T] {
     import scala.collection.JavaConverters._
     import java.util.{SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap}
@@ -145,15 +144,16 @@ package object hashing {
       val keyBytes = key.getBytes(UTF_8)
       val keyHash  = CassandraHash.hash3_x64_128(ByteBuffer.wrap(keyBytes), 0, keyBytes.length, seed)(1)
       if (ring.containsKey(keyHash)) {
-        ring.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
+        immutable.Set.from(ring.keySet.asScala).map(ring.get)
+        //ring.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
       } else {
         val clockWiseSubRing = ring.tailMap(keyHash)
-        val replicas         = clockWiseSubRing.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
+        val replicas         = immutable.Set.from(clockWiseSubRing.keySet.asScala).take(rf).map(ring.get)
         //println(s"got ${candidates.mkString(",")} till the end of range")
         if (replicas.size < rf) {
           //println(s"the end is reached. need ${rest} more")
           //we must be at the end of the ring so we move to the beginning
-          replicas ++ ring.keySet.asScala.take(rf - replicas.size).map(ring.get).to[scala.collection.immutable.Set]
+          replicas ++ immutable.Set.from(ring.keySet.asScala).take(rf - replicas.size).map(ring.get)
         } else replicas
       }
     }
@@ -174,6 +174,8 @@ package object hashing {
       override def toBinary(node: String): Array[Byte] = node.getBytes(UTF_8)
       override def validated(node: String): Boolean    = true
     }
+
+    def apply[T: Consistent: ClassTag] = implicitly[Consistent[T]]
   }
 
   object Rendezvous {
@@ -187,5 +189,7 @@ package object hashing {
         s"${node.addr.host}:${node.addr.port}".getBytes(UTF_8)
       override def validated(shard: demo.Replica): Boolean = true
     }
+
+    def apply[T: Rendezvous: ClassTag] = implicitly[Rendezvous[T]]
   }
 }

@@ -49,14 +49,14 @@ object Membership {
       converge(replicaName)
     }
 
-  def converge(rName: String, buf: StashBuffer[Command] = StashBuffer[Command](1 << 4)): Behavior[Command] =
+  def converge(shardName: String, buf: StashBuffer[Command] = StashBuffer[Command](1 << 5)): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
         case MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {
             //on each cluster state change we rebuild the whole state
             reqClusterInfo(
-              rName,
+              shardName,
               ctx.self,
               rs.head,
               rs.tail,
@@ -79,7 +79,7 @@ object Membership {
     }
 
   def reqClusterInfo(
-    rName: String,
+    shardName: String,
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
@@ -90,11 +90,11 @@ object Membership {
     Behaviors.withTimers { ctx ⇒
       ctx.startSingleTimer(ToKey, ReplyTimeout, replyTimeout)
       current.tell(IdentifyShard(self))
-      awaitInfo(rName, self, current, rest, sh, m, stash, ctx)
+      awaitInfo(shardName, self, current, rest, sh, m, stash, ctx)
     }
 
   def awaitInfo(
-    rName: String,
+    shardName: String,
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
@@ -133,14 +133,14 @@ object Membership {
               buf.isEmpty
             )
 
-            if (buf.isEmpty) convergence(sh, um, rName)
+            if (buf.isEmpty) active(sh, um, rName)
             else buf.unstashAll(ctx, converge(rName, buf))
           }
         case ReplyTimeout ⇒
           ctx.log.warning(s"No response within ${replyTimeout}. Retry {} ", current)
           //TODO: Limit number of retries because the target node might die in the middle of the process,
           // therefore we won't get the reply back. Moreover, we could step into infinite loop
-          reqClusterInfo(rName, self, current, rest, sh, m, buf)
+          reqClusterInfo(shardName, self, current, rest, sh, m, buf)
         case m @ MembershipChanged(rs) if rs.nonEmpty ⇒
           buf.stash(m)
           Behaviors.same
@@ -157,10 +157,10 @@ object Membership {
       }
     }
 
-  def convergence(
+  def active(
     sh: Rendezvous[String],
     m: Map[String, ReplicaEntity],
-    rn: String
+    shardName: String
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
@@ -180,7 +180,7 @@ object Membership {
         case m @ MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {
             ctx.self.tell(m)
-            converge(rn)
+            converge(shardName)
           } else Behaviors.same
         case ClusterStateRequest(r) ⇒
           val info = m.keySet.map(k ⇒ s"[$k -> ${m(k).h.toString}]").mkString(";")

@@ -76,7 +76,7 @@ object Application extends App {
 
   val Name = "domain"
 
-  def worker(config: Config, shard: String, runtimeInfo: String): Behavior[Nothing] =
+  def worker(config: Config, shardName: String, runtimeInfo: String): Behavior[Nothing] =
     Behaviors
       .setup[SelfUp] { ctx ⇒
         implicit val sys = ctx.system.toUntyped
@@ -90,7 +90,7 @@ object Application extends App {
             val av = state.members.filter(_.status == MemberStatus.Up).map(_.address)
             ctx.log.warning(
               "★ ★ ★ {} Worker {}:{} joined cluster with existing members:[{}] ★ ★ ★",
-              shard,
+              shardName,
               cfg.getString(AKKA_HOST),
               cfg.getInt(AKKA_PORT),
               av
@@ -101,15 +101,15 @@ object Application extends App {
             val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
             val shardRegion =
-              SharedDomain(shard, ctx.system.toUntyped).toTyped[DeviceCommand]
+              SharedDomain(shardName, ctx.system.toUntyped).toTyped[DeviceCommand]
 
             val membership =
-              ctx.spawn(Membership(shard), "members", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
+              ctx.spawn(Membership(shardName), "members", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
 
             val hostAddress = cluster.selfMember.address.host
               .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-${p}"))
               .getOrElse("none")
-            ctx.spawn(DomainReplicas(shardRegion, shard, hostAddress), Name)
+            ctx.spawn(DomainReplicas(shardRegion, shardName, hostAddress), Name)
 
             shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
               Future.successful(ctx.log.info("after.cluster-exiting-done")).map(_ ⇒ akka.Done)(ExecutionContext.global)
@@ -124,7 +124,7 @@ object Application extends App {
       }
       .narrow
 
-  def master(config: Config, shard: String, runtimeInfo: String): Behavior[Nothing] =
+  def master(config: Config, shardName: String, runtimeInfo: String): Behavior[Nothing] =
     Behaviors
       .setup[SelfUp] { ctx ⇒
         implicit val sys = ctx.system.toUntyped
@@ -136,17 +136,23 @@ object Application extends App {
 
         Behaviors.receive[SelfUp] {
           case (ctx, _ @SelfUp(_)) ⇒
-            ctx.log.warning("★ ★ ★ {} Seed {}:{} joined cluster ★ ★ ★", shard, seedHostAddress, port.toInt)
+            ctx.log.warning(
+              "★ ★ ★ {} {} bytes Seed {}:{} joined cluster ★ ★ ★",
+              shardName,
+              config.getMemorySize("akka.remote.artery.advanced.maximum-frame-size"),
+              seedHostAddress,
+              port.toInt
+            )
             ctx.log.info(runtimeInfo)
 
             cluster.subscriptions ! Unsubscribe(ctx.self)
             val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
             val shardRegion =
-              SharedDomain(shard, ctx.system.toUntyped).toTyped[DeviceCommand]
+              SharedDomain(shardName, ctx.system.toUntyped).toTyped[DeviceCommand]
 
             val membership =
-              ctx.spawn(Membership(shard), "members", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
+              ctx.spawn(Membership(shardName), "members", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
 
             ctx.watch(membership)
 
@@ -166,7 +172,7 @@ object Application extends App {
               .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-${p}"))
               .getOrElse("none")
 
-            ctx.spawn(DomainReplicas(shardRegion, shard, hostAddress), Name)
+            ctx.spawn(DomainReplicas(shardRegion, shardName, hostAddress), Name)
 
             Behaviors.receiveSignal {
               case (_, Terminated(`membership`)) ⇒
