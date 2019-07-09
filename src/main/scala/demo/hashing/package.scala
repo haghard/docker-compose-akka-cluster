@@ -133,9 +133,8 @@ package object hashing {
           writeInt(suffix, i, 0)
           val shardBytes     = toBinary(shard) ++ suffix
           val nodeHash128bit = CassandraHash.hash3_x64_128(ByteBuffer.wrap(shardBytes), 0, shardBytes.length, seed)(1)
-          (acc && (ring.put(nodeHash128bit, shard) != null))
+          (acc && (ring.put(nodeHash128bit, shard) == null))
         }
-        true
       } else false
 
     override def memberFor(key: String, rf: Int): Set[T] = {
@@ -146,12 +145,12 @@ package object hashing {
       val keyBytes = key.getBytes(UTF_8)
       val keyHash  = CassandraHash.hash3_x64_128(ByteBuffer.wrap(keyBytes), 0, keyBytes.length, seed)(1)
 
+      var i    = 0
+      var res  = Set.empty[T]
       val tail = localRing.tailMap(keyHash).values
       val all  = localRing.values
 
-      var i   = 0
-      var res = Set.empty[T]
-      val it  = tail.iterator
+      val it = tail.iterator
       if (tail.size >= rf) {
         val it = tail.iterator
         while (it.hasNext && i < rf) {
