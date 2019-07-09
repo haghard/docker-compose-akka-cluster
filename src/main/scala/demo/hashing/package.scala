@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets._
 import java.util.concurrent.{ConcurrentSkipListMap, ConcurrentSkipListSet}
 
 import scala.collection.immutable
-import scala.collection.immutable.SortedSet
 import scala.reflect.ClassTag
 
 package object hashing {
@@ -98,14 +97,16 @@ package object hashing {
       to move data between the existing nodes
    */
   trait Consistent[T] extends Hashing[T] {
-    import scala.collection.JavaConverters._
-    import java.util.{SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap}
-
-    private val numberOfVNodes = 4
+    private val numberOfVNodes = 1 << 5
     override val seed          = 512L
     override val name          = "consistent-hashing"
 
-    private val ring: JSortedMap[Long, T] = new ConcurrentSkipListMap[Long, T]() //JTreeMap[Long, Shard]()
+    /*
+    val ring = SortedMap[Long, T]()
+    ring.keysIteratorFrom()
+    ring.iteratorFrom()
+     */
+    private val ring: java.util.SortedMap[Long, T] = new ConcurrentSkipListMap[Long, T]()
 
     private def writeInt(arr: Array[Byte], i: Int, offset: Int): Array[Byte] = {
       arr(offset) = (i >>> 24).toByte
@@ -130,40 +131,63 @@ package object hashing {
         (0 to numberOfVNodes).foldLeft(true) { (acc, i) ⇒
           val suffix = Array.ofDim[Byte](4)
           writeInt(suffix, i, 0)
-          val shardBytes = toBinary(shard) ++ suffix
-          val nodeHash128bit =
-            CassandraHash.hash3_x64_128(ByteBuffer.wrap(shardBytes), 0, shardBytes.length, seed)(1)
-          acc & (shard == ring.put(nodeHash128bit, shard))
+          val shardBytes     = toBinary(shard) ++ suffix
+          val nodeHash128bit = CassandraHash.hash3_x64_128(ByteBuffer.wrap(shardBytes), 0, shardBytes.length, seed)(1)
+          (acc && (ring.put(nodeHash128bit, shard) != null))
         }
+        true
       } else false
 
     override def memberFor(key: String, rf: Int): Set[T] = {
-      if (rf > ring.keySet.size)
-        throw new Exception("Replication factor more than the number of the ranges on a ring")
+      val localRing = ring
+      if (rf > localRing.keySet.size / numberOfVNodes)
+        throw new Exception("Replication factor more than the number of the ranges in the ring")
 
       val keyBytes = key.getBytes(UTF_8)
       val keyHash  = CassandraHash.hash3_x64_128(ByteBuffer.wrap(keyBytes), 0, keyBytes.length, seed)(1)
-      if (ring.containsKey(keyHash)) {
-        immutable.Set.from(ring.keySet.asScala).map(ring.get)
-        //ring.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
+
+      val tail = localRing.tailMap(keyHash).values
+      val all  = localRing.values
+
+      var i   = 0
+      var res = Set.empty[T]
+      val it  = tail.iterator
+      if (tail.size >= rf) {
+        val it = tail.iterator
+        while (it.hasNext && i < rf) {
+          val n = it.next
+          if (!res.contains(n)) {
+            i += 1
+            res = res + n
+          }
+        }
+        res
       } else {
-        val clockWiseSubRing = ring.tailMap(keyHash)
-        val replicas         = immutable.Set.from(clockWiseSubRing.keySet.asScala).take(rf).map(ring.get)
-        //println(s"got ${candidates.mkString(",")} till the end of range")
-        if (replicas.size < rf) {
-          //println(s"the end is reached. need ${rest} more")
-          //we must be at the end of the ring so we move to the beginning
-          replicas ++ immutable.Set.from(ring.keySet.asScala).take(rf - replicas.size).map(ring.get)
-        } else replicas
+        while (it.hasNext) {
+          val n = it.next
+          if (!res.contains(n)) {
+            i += 1
+            res = res + n
+          }
+        }
+        val it0 = all.iterator
+        while (it0.hasNext && i < rf) {
+          val n = it0.next
+          if (!res.contains(n)) {
+            i += 1
+            res = res + n
+          }
+        }
+        res
       }
     }
 
     override def toString: String = {
       val sb   = new StringBuilder
-      val iter = ring.keySet.iterator
+      val iter = ring.entrySet.iterator
       while (iter.hasNext) {
-        val key = iter.next
-        sb.append(s"[${key}: ${ring.get(key)}]").append("->")
+        val n = iter.next
+        sb.append(s"[${n.getValue}: ${n.getKey}]").append("->")
       }
       sb.toString
     }

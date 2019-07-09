@@ -125,15 +125,9 @@ object Membership {
               .map(k ⇒ s"[$k -> ${um(k).h.toString}]")
               .mkString(";")
 
-            ctx.log.warning(
-              "★ ★ ★ {} -> shards:{} replicas:{} {}",
-              rName,
-              sh.toString,
-              info,
-              buf.isEmpty
-            )
+            ctx.log.warning("★ ★ ★ {} - {}", rName, info)
 
-            if (buf.isEmpty) active(sh, um, rName)
+            if (buf.isEmpty) stable(sh, um, rName)
             else buf.unstashAll(ctx, converge(rName, buf))
           }
         case ReplyTimeout ⇒
@@ -157,7 +151,7 @@ object Membership {
       }
     }
 
-  def active(
+  def stable(
     sh: Rendezvous[String],
     m: Map[String, ReplicaEntity],
     shardName: String
@@ -184,7 +178,7 @@ object Membership {
           } else Behaviors.same
         case ClusterStateRequest(r) ⇒
           val info = m.keySet.map(k ⇒ s"[$k -> ${m(k).h.toString}]").mkString(";")
-          r.tell(ClusterStateResponse(s"\n ${sh.toString}\n $info"))
+          r.tell(ClusterStateResponse(info))
           Behaviors.same
         case other ⇒
           ctx.log.warning("Unexpected message in convergence: {}", other)
