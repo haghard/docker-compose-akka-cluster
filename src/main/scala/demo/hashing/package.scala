@@ -52,20 +52,20 @@ package object hashing {
       ConcurrentSkipListSet and ConcurrentSkipListMap are useful when you need a sorted container that will be accessed by multiple threads.
       These are essentially the equivalents of TreeMap and TreeSet for concurrent code.
      */
-    protected val members = new ConcurrentSkipListSet[T]()
+    protected val ring = new ConcurrentSkipListSet[T]()
 
     override def remove(shard: T): Boolean =
-      members.remove(shard)
+      ring.remove(shard)
 
     override def add(shard: T): Boolean =
-      if (validated(shard)) members.add(shard) else false
+      if (validated(shard)) ring.add(shard) else false
 
     override def memberFor(key: String, rf: Int): Set[T] = {
-      if (rf > members.size)
+      if (rf > ring.size)
         throw new Exception("Replication factor more than the number of the ranges on a ring")
 
       var candidates = immutable.SortedSet.empty[(Long, T)]((x: (Long, T), y: (Long, T)) ⇒ -x._1.compare(y._1))
-      val iter       = members.iterator
+      val iter       = ring.iterator
       while (iter.hasNext) {
         val shard           = iter.next
         val keyBytes        = key.getBytes(UTF_8)
@@ -78,7 +78,7 @@ package object hashing {
     }
 
     override def toString: String = {
-      val iter = members.iterator
+      val iter = ring.iterator
       val sb   = new StringBuilder
       while (iter.hasNext) {
         val shard = iter.next
@@ -159,8 +159,8 @@ package object hashing {
     }
 
     override def toString: String = {
-      val iter = ring.keySet.iterator
       val sb   = new StringBuilder
+      val iter = ring.keySet.iterator
       while (iter.hasNext) {
         val key = iter.next
         sb.append(s"[${key}: ${ring.get(key)}]").append("->")
@@ -170,7 +170,7 @@ package object hashing {
   }
 
   object Consistent {
-    implicit def instance0 = new Consistent[String] {
+    implicit def instance = new Consistent[String] {
       override def toBinary(node: String): Array[Byte] = node.getBytes(UTF_8)
       override def validated(node: String): Boolean    = true
     }

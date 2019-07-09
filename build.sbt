@@ -3,7 +3,7 @@ import sbt._
 import sbtdocker.ImageName
 
 val scalaV = "2.13.0"
-val Akka = "2.5.23"
+val Akka = "2.5.23" //"2.6.0-M4"
 val akkaHttpVersion = "10.1.8"
 
 val Version = "0.3"
@@ -18,9 +18,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-metrics" % Akka,
   "com.typesafe.akka" %% "akka-stream-typed" % Akka,
   "com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
-  //"com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
   "com.typesafe.akka" %% "akka-cluster-sharding" % Akka,
   //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.98",
+  //"com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
   "com.typesafe.akka" %% "akka-slf4j" % Akka,
 
   //local build for 2.13 /Users/haghard/.ivy2/local/com.github.TanUkkii007/akka-cluster-custom-downing_2.13/0.0.13-SNAPSHOT/jars/akka-cluster-custom-downing_2.13.jar
