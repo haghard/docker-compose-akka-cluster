@@ -8,18 +8,18 @@ import akka.stream.scaladsl._
 import akka.stream._
 import akka.util.ByteString
 
+import demo.Membership.Ping
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import akka.actor.typed.scaladsl.AskPattern._
-import akka.cluster.sharding.ShardRegion.{ClusterShardingStats, GetClusterShardingStats}
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.stream.typed.scaladsl.ActorSource
-import demo.Membership.Ping
+import akka.cluster.sharding.ShardRegion.{ClusterShardingStats, GetClusterShardingStats}
 
 class HttpRoutes(
-  membersRef: ActorRef[Membership.Command],
-  srcRef: ActorRef[ClusterJvmMetrics.Confirm],
-  sr: ActorRef[DeviceCommand]
+  membership: ActorRef[Membership.Command],
+  jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
+  shardRegion: ActorRef[DeviceCommand]
 )(implicit sys: ActorSystem)
     extends Directives {
   val DispatcherName = "akka.metrics-dispatcher"
@@ -28,22 +28,25 @@ class HttpRoutes(
   implicit val sch = sys.scheduler
   implicit val ec  = sys.dispatchers.lookup(DispatcherName)
 
-  val bufferSize = 1 << 4
-
   implicit val mat = ActorMaterializer(
-    ActorMaterializerSettings(sys).withDispatcher(DispatcherName).withInputBuffer(bufferSize, bufferSize)
+    ActorMaterializerSettings(sys)
+      .withDispatcher(DispatcherName)
+      .withInputBuffer(Application.bufferSize, Application.bufferSize)
   )
 
   val (ref, metricsSource) =
     ActorSource
-      .actorRefWithAck[ClusterJvmMetrics.JvmMetrics, ClusterJvmMetrics.Confirm](srcRef, ClusterJvmMetrics.Confirm, {
-        case ClusterJvmMetrics.Completed            ⇒ CompletionStrategy.immediately
-      }, { case ClusterJvmMetrics.StreamFailure(ex) ⇒ ex })
+      .actorRefWithAck[ClusterJvmMetrics.JvmMetrics, ClusterJvmMetrics.Confirm](
+        jvmMetricsSrc,
+        ClusterJvmMetrics.Confirm, {
+          case ClusterJvmMetrics.Completed            ⇒ CompletionStrategy.immediately
+        }, { case ClusterJvmMetrics.StreamFailure(ex) ⇒ ex }
+      )
       .collect { case ClusterJvmMetrics.ClusterMetrics(bt) ⇒ bt }
-      .toMat(BroadcastHub.sink[ByteString](bufferSize))(Keep.both)
+      .toMat(BroadcastHub.sink[ByteString](Application.bufferSize))(Keep.both) //one to many
       .run()
 
-  srcRef.tell(ClusterJvmMetrics.Connect(ref))
+  jvmMetricsSrc.tell(ClusterJvmMetrics.Connect(ref))
 
   //Ensure that the Broadcast output is dropped if there are no listening parties.
   metricsSource.runWith(Sink.ignore)
@@ -56,7 +59,7 @@ class HttpRoutes(
         import akka.actor.typed.scaladsl.adapter._
         import akka.pattern.ask
         complete {
-          (sr.toUntyped ? GetClusterShardingStats(2.seconds))
+          (shardRegion.toUntyped ? GetClusterShardingStats(2.seconds))
             .mapTo[ClusterShardingStats]
             .map(stats ⇒ "\n" + stats.regions.mkString("\n"))
         }
@@ -64,7 +67,7 @@ class HttpRoutes(
     } ~
     path("device" / IntNumber) { deviceId ⇒
       get {
-        membersRef.tell(Ping(deviceId))
+        membership.tell(Ping(deviceId))
         complete(OK)
       }
     } ~ path("metrics")(
@@ -72,11 +75,10 @@ class HttpRoutes(
     )
 
   private def queryForMembers: Future[HttpResponse] =
-    membersRef.ask[Membership.ClusterStateResponse](Membership.ClusterStateRequest(_)).map { reply ⇒
+    membership.ask[Membership.ClusterStateResponse](Membership.ClusterStateRequest(_)).map { reply ⇒
       HttpResponse(
         status = StatusCodes.OK,
         entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(reply.state))
       )
     }
-
 }

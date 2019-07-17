@@ -28,7 +28,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
   "ch.qos.logback" % "logback-classic" % "1.2.3",
-  ("com.lihaoyi" % "ammonite" % "1.6.8" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "1.6.9" % "test").cross(CrossVersion.full)
 )
 
 //test:run
@@ -99,13 +99,6 @@ dockerfile in docker := {
       "-XX:MaxRAMFraction=1",
       "-XX:+PreferContainerQuotaForCPUCount", //Added in JDK11. Support for using the cpu_quota instead of cpu_shares for
       // picking the number of cores the JVM uses to makes decisions such as how many compiler theads, GC threads and sizing of the fork join pool
-      s"-Djava.rmi.server.hostname=${System.getenv("HOST")}",
-      s"-Dcom.sun.management.jmxremote.port=${System.getenv("SEED_JMX_PORT")}",
-      s"-Dcom.sun.management.jmxremote.ssl=false",
-      s"-Dcom.sun.management.jmxremote.authenticate=false",
-      s"-Dcom.sun.management.jmxremote.local.only=false",
-      s"-Dcom.sun.management.jmxremote.rmi.port=${System.getenv("SEED_JMX_PORT")}",
-      s"-Dcom.sun.management.jmxremote=true",
       s"-DseedHost=${System.getenv("MASTER_DNS")}",
       s"-DseedPort=${System.getenv("AKKA_PORT")}",
       s"-DhttpPort=${System.getenv("HTTP_PORT")}",
@@ -113,3 +106,13 @@ dockerfile in docker := {
       "-jar", artifactTargetPath)
   }
 }
+
+/*
+s"-Djava.rmi.server.hostname=${System.getenv("HOST")}",
+      s"-Dcom.sun.management.jmxremote.port=${System.getenv("SEED_JMX_PORT")}",
+      s"-Dcom.sun.management.jmxremote.ssl=false",
+      s"-Dcom.sun.management.jmxremote.authenticate=false",
+      s"-Dcom.sun.management.jmxremote.local.only=false",
+      s"-Dcom.sun.management.jmxremote.rmi.port=${System.getenv("SEED_JMX_PORT")}",
+      s"-Dcom.sun.management.jmxremote=true",
+ */

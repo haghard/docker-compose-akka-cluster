@@ -1,12 +1,13 @@
 package demo
 
-import demo.hashing.Rendezvous
+//import demo.hashing.Rendezvous
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.receptionist.ServiceKey
 import akka.actor.typed.scaladsl.{Behaviors, StashBuffer, TimerScheduler}
 
 import scala.concurrent.duration._
 import akka.actor.typed.receptionist.Receptionist
+import akka.routing.ConsistentHash
 
 object Membership {
 
@@ -28,7 +29,7 @@ object Membership {
 
   case class Ping(id: Int) extends Command
 
-  case class ReplicaEntity(h: Rendezvous[String], actors: Set[ActorRef[ShardRegionCmd]])
+  case class ReplicaEntity(hash: ConsistentHash[String] /* Rendezvous[String]*/, actors: Set[ActorRef[ShardRegionCmd]])
 
   case object ToKey
 
@@ -60,8 +61,12 @@ object Membership {
               ctx.self,
               rs.head,
               rs.tail,
-              Rendezvous[String],
-              Map[String, ReplicaEntity](),
+              //Rendezvous[String],
+              akka.routing.ConsistentHash[String](Iterable.empty, 1 << 6),
+              Map[String, ReplicaEntity]()
+                .withDefaultValue(
+                  ReplicaEntity(akka.routing.ConsistentHash[String](Iterable.empty, 1 << 6), Set.empty)
+                ),
               buf
             )
           } else Behaviors.same
@@ -83,7 +88,7 @@ object Membership {
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
-    sh: Rendezvous[String],
+    sh: ConsistentHash[String], //Rendezvous[String],
     m: Map[String, ReplicaEntity],
     stash: StashBuffer[Command]
   ): Behavior[Command] =
@@ -98,7 +103,7 @@ object Membership {
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
-    sh: Rendezvous[String],
+    sh: ConsistentHash[String], //Rendezvous[String],
     m: Map[String, ReplicaEntity],
     buf: StashBuffer[Command],
     timer: TimerScheduler[Command]
@@ -108,21 +113,14 @@ object Membership {
         case ShardInfo(rName, ref, pid) ⇒
           timer.cancel(ToKey)
 
-          val um = if (m.contains(rName)) {
-            val entity = m(rName)
-            entity.h.add(pid)
-            m.updated(rName, entity.copy(actors = entity.actors + ref))
-          } else {
-            val h = Rendezvous[String]
-            h.add(pid)
-            m.updated(rName, ReplicaEntity(h, Set(ref)))
-          }
+          val entity = m(rName)
+          val um     = m.updated(rName, entity.copy(entity.hash.add(pid), entity.actors + ref))
 
-          sh.add(rName)
-          if (rest.nonEmpty) reqClusterInfo(rName, self, rest.head, rest.tail, sh, um, buf)
+          if (rest.nonEmpty)
+            reqClusterInfo(rName, self, rest.head, rest.tail, sh.add(rName), um, buf)
           else {
             val info = um.keySet
-              .map(k ⇒ s"[$k -> ${um(k).h.toString}]")
+              .map(k ⇒ s"[$k -> ${um(k).hash.toString}]")
               .mkString(";")
 
             ctx.log.warning("★ ★ ★ {} - {}", rName, info)
@@ -152,7 +150,7 @@ object Membership {
     }
 
   def stable(
-    sh: Rendezvous[String],
+    sh: ConsistentHash[String], //shard hash //Rendezvous[String],
     m: Map[String, ReplicaEntity],
     shardName: String
   ): Behavior[Command] =
@@ -160,12 +158,12 @@ object Membership {
       msg match {
         case Ping(id) ⇒
           //pick shard and replica
-          val shard    = sh.memberFor(id.toString, 1).head
+          val shard    = sh.nodeFor(id.toString)
           val entity   = m(shard)
-          val replica  = entity.h.memberFor(id.toString, 1).head
+          val replica  = entity.hash.nodeFor(id.toString)
           val replicas = entity.actors
 
-          ctx.log.warning("{}: shard:{} - replica:{}", id, shard, replica)
+          ctx.log.warning("{} goes to [{} - {}:{}]", id, shard, replica, replicas.size)
 
           if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for ${shard}")
           else replicas.head.tell(PingDevice(id, replica))
@@ -177,7 +175,7 @@ object Membership {
             converge(shardName)
           } else Behaviors.same
         case ClusterStateRequest(r) ⇒
-          val info = m.keySet.map(k ⇒ s"[$k -> ${m(k).h.toString}]").mkString(";")
+          val info = m.keySet.map(k ⇒ s"[$k -> ${m(k).hash.toString}]").mkString(";")
           r.tell(ClusterStateResponse(info))
           Behaviors.same
         case other ⇒

@@ -133,7 +133,7 @@ package object hashing {
           writeInt(suffix, i, 0)
           val shardBytes     = toBinary(shard) ++ suffix
           val nodeHash128bit = CassandraHash.hash3_x64_128(ByteBuffer.wrap(shardBytes), 0, shardBytes.length, seed)(1)
-          (acc && (ring.put(nodeHash128bit, shard) == null))
+          acc && (ring.put(nodeHash128bit, shard) == null)
         }
       } else false
 

@@ -28,7 +28,7 @@ export TZ=UTC
   
   * Start one seed node and one worker node `docker-compose -f docker-compose2.yml up -d`
      
-  * Scale up the number of workers `docker-compose -f docker-compose2.yml scale worker=3`
+  * Scale up the number of workers `docker-compose -f docker-compose2.yml scale workerA=3`
    
   * Scale down the number of workers `docker-compose -f docker-compose2.yml scale worker=2`
   
@@ -91,10 +91,18 @@ export TZ=UTC
   Req/Resp `http GET 192.168.77.10:9000/members`
 
   Chunked resp `curl --no-buffer 192.168.77.10:9000/metrics`
+  
+  `http GET 192.168.77.10:9000/device/1`
 
-
-https://doc.akka.io/docs/akka/2.5.23/typed/cluster-sharding.html
 
 ### Sharded replication (Cluster Sharding and DData with roles)
 
-https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0  
+1. Async replication
+2. Tunable/Configurable consistency   
+
+### Akka links
+
+https://doc.akka.io/docs/akka/2.5.23/typed/cluster-sharding.html
+https://doc.akka.io/docs/akka/current/distributed-data.html?_ga=2.28483962.718342592.1562590114-801666185.1515340543
+https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
+https://www.digitalocean.com/community/tutorials/how-to-provision-and-manage-remote-docker-hosts-with-docker-machine-on-ubuntu-16-04  

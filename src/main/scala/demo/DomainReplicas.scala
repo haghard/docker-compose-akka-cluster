@@ -52,7 +52,6 @@ object DomainReplicas {
         case IdentifyShard(r) ⇒
           //if (java.util.concurrent.ThreadLocalRandom.current.nextBoolean)
           r.tell(ShardInfo(shard, ctx.self, hostId))
-
           Behaviors.same
         case cmd: PingDevice ⇒
           shardRegion.tell(cmd)

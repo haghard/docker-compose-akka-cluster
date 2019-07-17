@@ -46,6 +46,8 @@ object Application extends App {
 
   val shardName = System.getenv("shard").trim
 
+  val bufferSize = 1 << 5
+
   val port = sys.props
     .get(sysPropSeedPort)
     .fold(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))(identity)
@@ -161,7 +163,11 @@ object Application extends App {
               membership,
               shardRegion,
               ctx
-                .spawn(ClusterJvmMetrics(), "jvm-metrics", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
+                .spawn(
+                  ClusterJvmMetrics(bufferSize),
+                  "jvm-metrics",
+                  DispatcherSelector.fromConfig("akka.metrics-dispatcher")
+                )
                 .narrow[ClusterJvmMetrics.Confirm],
               cluster.selfMember.address.host.get,
               httpPort.toInt

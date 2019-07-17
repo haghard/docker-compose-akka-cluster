@@ -5,7 +5,20 @@ import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 
 object SharedDomain {
 
+  /**
+    *
+    * The default ShardAllocationStrategy will allocate shards on the least-loaded nodes. See
+    * https://github.com/akka/akka/blob/master/akka-cluster-sharding/src/main/scala/akka/cluster/sharding/ShardCoordinator.scala#L71 and
+    * https://doc.akka.io/docs/akka/current/cluster-sharding.html#shard-location.
+    *
+    * @param replicaName
+    * @param system
+    * @return
+    */
   def apply(replicaName: String, system: ActorSystem): ActorRef =
+    /*val allocStrategy = ClusterSharding(system)
+      .defaultShardAllocationStrategy(ClusterShardingSettings(system).withRememberEntities(false).withRole(replicaName))*/
+
     ClusterSharding(system).start(
       typeName = "devices",
       entityProps = DeviceReplica.props(replicaName),

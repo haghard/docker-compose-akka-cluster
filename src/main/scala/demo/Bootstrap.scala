@@ -18,14 +18,12 @@ object Bootstrap {
 
 class Bootstrap(
   shutdown: CoordinatedShutdown,
-  membersRef: ActorRef[Membership.Command],
-  sr: ActorRef[DeviceCommand],
-  srcRef: ActorRef[ClusterJvmMetrics.Confirm],
+  membership: ActorRef[Membership.Command],
+  shardRegion: ActorRef[DeviceCommand],
+  jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   hostName: String,
   port: Int
-)(
-  implicit sys: ActorSystem
-) {
+)(implicit sys: ActorSystem) {
 
   val termDeadline = 2.seconds
   implicit val mat = ActorMaterializer(ActorMaterializerSettings.create(sys).withDispatcher("akka.cluster-dispatcher"))
@@ -38,7 +36,7 @@ class Bootstrap(
     }).run()*/
 
   Http()
-    .bindAndHandle(new HttpRoutes(membersRef, srcRef, sr).route, hostName, port)
+    .bindAndHandle(new HttpRoutes(membership, jvmMetricsSrc, shardRegion).route, hostName, port)
     .onComplete {
       case Failure(ex) ⇒
         sys.log.error(ex, s"Shutting down because can't bind to $hostName:$port")

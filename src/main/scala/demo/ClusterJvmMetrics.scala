@@ -22,18 +22,18 @@ object ClusterJvmMetrics {
   case class StreamFailure(ex: Throwable)   extends JvmMetrics
   case object Completed                     extends JvmMetrics
 
-  def apply(): Behavior[ClusterMetricsEvent] =
+  def apply(bs: Int): Behavior[ClusterMetricsEvent] =
     Behaviors.receive[ClusterMetricsEvent] {
       case (ctx, _ @Connect(src)) ⇒
         val ex = ClusterMetricsExtension(ctx.system.toUntyped)
         ex.subscribe(ctx.self.toUntyped)
-        active(src, new RingBuffer[ClusterMetrics](1 << 5)) //if you have more than 32 node in the cluster you need to increase this buffer
+        active(src, new RingBuffer[ClusterMetrics](bs)) //if you have more than 32 node in the cluster you need to increase this buffer
       case (ctx, other) ⇒
         ctx.log.warning("Unexpected message: {} in init", other.getClass.getName)
         Behaviors.stopped
     }
 
-  def tryPush(
+  def awaitCnf(
     sourceIn: ActorRef[ClusterJvmMetrics.JvmMetrics],
     rb: RingBuffer[ClusterMetrics]
   ): Behavior[ClusterMetricsEvent] =
@@ -41,7 +41,7 @@ object ClusterJvmMetrics {
       case (_, ClusterJvmMetrics.Confirm) ⇒
         if (rb.size > 0) {
           rb.poll.foreach(sourceIn.tell(_))
-          tryPush(sourceIn, rb)
+          awaitCnf(sourceIn, rb)
         } else active(sourceIn, rb)
       case _ ⇒
         Behaviors.ignore
@@ -81,11 +81,11 @@ object ClusterJvmMetrics {
 
           if (rb.size > 0) {
             rb.poll.foreach(sourceIn.tell(_))
-            tryPush(sourceIn, rb)
+            awaitCnf(sourceIn, rb)
           } else Behaviors.same
         case (ctx, other) ⇒
           ctx.log.warning("Unexpected message: {} active", other.getClass.getName)
-          Behaviors.stopped
+          Behaviors.same
       }
       .receiveSignal {
         case (ctx, PostStop) ⇒
