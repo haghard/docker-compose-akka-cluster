@@ -1,6 +1,5 @@
 package demo
 
-//import demo.hashing.Rendezvous
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.receptionist.ServiceKey
 import akka.actor.typed.scaladsl.{Behaviors, StashBuffer, TimerScheduler}
@@ -29,7 +28,7 @@ object Membership {
 
   case class Ping(id: Int) extends Command
 
-  case class ReplicaEntity(hash: ConsistentHash[String] /* Rendezvous[String]*/, actors: Set[ActorRef[ShardRegionCmd]])
+  case class ReplicaEntity(hash: ConsistentHash[String], actors: Set[ActorRef[ShardRegionCmd]])
 
   case object ToKey
 
@@ -61,7 +60,6 @@ object Membership {
               ctx.self,
               rs.head,
               rs.tail,
-              //Rendezvous[String],
               akka.routing.ConsistentHash[String](Iterable.empty, 1 << 6),
               Map[String, ReplicaEntity]()
                 .withDefaultValue(
@@ -88,7 +86,7 @@ object Membership {
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
-    sh: ConsistentHash[String], //Rendezvous[String],
+    sh: ConsistentHash[String],
     m: Map[String, ReplicaEntity],
     stash: StashBuffer[Command]
   ): Behavior[Command] =
@@ -103,7 +101,7 @@ object Membership {
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
-    sh: ConsistentHash[String], //Rendezvous[String],
+    sh: ConsistentHash[String],
     m: Map[String, ReplicaEntity],
     buf: StashBuffer[Command],
     timer: TimerScheduler[Command]
@@ -150,7 +148,7 @@ object Membership {
     }
 
   def stable(
-    sh: ConsistentHash[String], //shard hash //Rendezvous[String],
+    sh: ConsistentHash[String], //shard hash
     m: Map[String, ReplicaEntity],
     shardName: String
   ): Behavior[Command] =
@@ -166,8 +164,7 @@ object Membership {
           ctx.log.warning("{} goes to [{} - {}:{}]", id, shard, replica, replicas.size)
 
           if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for ${shard}")
-          else replicas.head.tell(PingDevice(id, replica))
-
+          else replicas.headOption.foreach(_.tell(PingDevice(id, replica)))
           Behaviors.same
         case m @ MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {

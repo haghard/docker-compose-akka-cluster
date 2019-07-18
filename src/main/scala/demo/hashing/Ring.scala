@@ -1,4 +1,4 @@
-package demo
+package demo.hashing
 
 import scala.collection.MapView
 import scala.collection.immutable.SortedMap
@@ -35,9 +35,31 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
       Option((Ring(updatedRing, start, end, step) → takeOvers))
     }
 
+  /**
+    * Alias for [[remove]] method
+    */
+  def :-(node: String): Option[Ring] =
+    remove(node)
+
+  def remove(node: String): Option[Ring] =
+    if (!nodes.contains(node))
+      None
+    else {
+      val m = ranges(node) match {
+        case Nil ⇒ ring
+        case h :: t ⇒
+          if (t.size == 0) ring - h
+          else if (t.size == 1) ring - (h, t.head)
+          else if (t.size == 2) ring - (h, t.head, t(1))
+          else ring - (h, t.head, t.tail: _*)
+      }
+
+      Some(Ring(m, start, end, step))
+    }
+
   def lookup(hash: Long, rf: Int = 1): Vector[String] =
     (ring.keysIteratorFrom(hash) ++ ring.keysIteratorFrom(ring.firstKey))
-      .take(rf)
+      .take(Math.min(rf, nodes.size))
       .map(ring(_))
       .toVector
 
@@ -81,7 +103,7 @@ object Ring {
     name: String,
     start: Long = Long.MinValue,
     end: Long = Long.MaxValue,
-    step: Long = 6917529027641080L //2667 partitions
+    step: Long = 6917529027641080L //2667 partitions, change  if you need more
   ): Ring =
     Ring(
       (start until end by step)
