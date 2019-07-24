@@ -79,7 +79,7 @@ class HttpRoutes(
     path("events") {
       handleWebSocketMessages(
         flowWithHeartbeat().mapAsync(1) {
-          case TextMessage.Strict(cmd) ⇒
+          case TextMessage.Strict(_) ⇒
             membership
               .ask[ReplicatedShardCoordinator.CropCircleView](ReplicatedShardCoordinator.GetCropCircle(_))
               .map(r ⇒ TextMessage.Strict(r.json))

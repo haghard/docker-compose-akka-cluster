@@ -37,6 +37,6 @@ case class CropCircle(
       "name"     → JsString(name),
       "type"     → JsString(ClusterType),
       "children" → JsArray(en)
-    ).prettyPrint
+    ).compactPrint
   }
 }

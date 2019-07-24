@@ -2,6 +2,7 @@ package demo.hashing
 
 import scala.collection.MapView
 import scala.collection.immutable.SortedMap
+import spray.json.{JsArray, JsNumber, JsObject, JsString}
 
 /*
   Nodes in the cluster own ranges/buckets of all the possible tokens.
@@ -26,9 +27,8 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
     if (nodes.contains(node))
       None
     else {
-      // this could be improved e.g. we should rely on least taken resources
       val ringStep = nodes.size + 1
-      val takeOvers = ((step * ringStep) until end by (step * ringStep))
+      val takeOvers = (start + (step * nodes.size) until end by (step * ringStep))
         .map(pId ⇒ (pId, lookup(pId).head))
         .toSet
 
@@ -90,6 +90,30 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
     sb.toString
   }
 
+  def toCropCircle: String = {
+    val en = ranges.keySet.toVector.map { k ⇒
+      val entries = ranges(k).toVector.map { i ⇒
+        JsObject(
+          "name"     → JsNumber(i),
+          "type"     → JsString("member"),
+          "children" → JsArray()
+        )
+      }
+
+      JsObject(
+        "name"     → JsString(k),
+        "type"     → JsString("shard"),
+        "children" → JsArray(entries)
+      )
+    }
+
+    JsObject(
+      "name"     → JsString("fsa-ring"),
+      "type"     → JsString("cluster"),
+      "children" → JsArray(en)
+    ).compactPrint
+  }
+
   override def toString: String = {
     val sb   = new StringBuilder
     val iter = ring.keysIteratorFrom(ring.firstKey)
@@ -107,7 +131,7 @@ object Ring {
     name: String,
     start: Long = Long.MinValue,
     end: Long = Long.MaxValue,
-    step: Long = 6917529027641080L //2667 partitions, change  if you need more
+    step: Long = 9223372036854773L //2501 partitions, change  if you need more
   ): Ring =
     Ring(
       (start until end by step)

@@ -7,7 +7,7 @@ import akka.actor.typed.scaladsl.{Behaviors, StashBuffer, TimerScheduler}
 import scala.concurrent.duration._
 import akka.actor.typed.receptionist.Receptionist
 import akka.routing.{ConsistentHash ⇒ AkkaConsistentHash}
-import demo.hashing.{CropCircle}
+import demo.hashing.CropCircle
 
 object ReplicatedShardCoordinator {
 
@@ -64,6 +64,13 @@ object ReplicatedShardCoordinator {
       msg match {
         case MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {
+
+            /*
+            var map = scala.collection.immutable.SortedMultiDict.empty[String, Int]
+            map = map + ("a" → 1) + ("a" → 2)
+            map.get("a")
+             */
+
             //on each cluster state change we rebuild the whole state
             reqClusterInfo(
               shardName,
@@ -124,7 +131,7 @@ object ReplicatedShardCoordinator {
 
           val entity = m(rName)
           val um     = m.updated(rName, entity.copy(entity.hash.add(pid), entity.actors + ref))
-          val ut     = circle.:+(rName, ref.path.toString)
+          val ut     = circle :+ (rName, ref.path.toString)
 
           if (rest.nonEmpty)
             reqClusterInfo(rName, self, rest.head, rest.tail, shardHash.add(rName), um, buf, ut)
@@ -190,6 +197,9 @@ object ReplicatedShardCoordinator {
           r.tell(ClusterStateResponse(info))
           Behaviors.same
         case GetCropCircle(replyTo) ⇒
+          /*val keys = m.keySet
+          val ring = keys.tail.foldLeft(Ring(keys.head))(_.:+(_).get._1)
+          val js   = ring.toCropCircle*/
           val js = circle.toString
           ctx.log.info("{}", js)
           replyTo.tell(CropCircleView(js))

@@ -22,7 +22,7 @@ libraryDependencies ++= Seq(
   //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.98",
   //"com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
   "com.typesafe.akka" %% "akka-slf4j" % Akka,
-  //"org.scala-lang.modules" %% "scala-collection-contrib" % "0.1.0",
+  "org.scala-lang.modules" %% "scala-collection-contrib" % "0.1.0",
 
   //local build for 2.13 /Users/haghard/.ivy2/local/com.github.TanUkkii007/akka-cluster-custom-downing_2.13/0.0.13-SNAPSHOT/jars/akka-cluster-custom-downing_2.13.jar
   "com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT",
