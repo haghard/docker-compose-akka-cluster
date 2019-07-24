@@ -2,7 +2,7 @@ package demo
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import demo.Membership.ShardInfo
+import demo.ReplicatedShardCoordinator.ShardInfo
 import akka.cluster.sharding.ShardRegion
 
 object DomainReplicas {
@@ -46,7 +46,8 @@ object DomainReplicas {
     hostId: String
   ): Behavior[ShardRegionCmd] =
     Behaviors.setup { ctx ⇒
-      ctx.system.receptionist ! akka.actor.typed.receptionist.Receptionist.Register(Membership.domainKey, ctx.self)
+      ctx.system.receptionist ! akka.actor.typed.receptionist.Receptionist
+        .Register(ReplicatedShardCoordinator.domainKey, ctx.self)
 
       Behaviors.receiveMessage {
         case IdentifyShard(r) ⇒

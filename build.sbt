@@ -22,6 +22,7 @@ libraryDependencies ++= Seq(
   //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.98",
   //"com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
   "com.typesafe.akka" %% "akka-slf4j" % Akka,
+  //"org.scala-lang.modules" %% "scala-collection-contrib" % "0.1.0",
 
   //local build for 2.13 /Users/haghard/.ivy2/local/com.github.TanUkkii007/akka-cluster-custom-downing_2.13/0.0.13-SNAPSHOT/jars/akka-cluster-custom-downing_2.13.jar
   "com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT",
@@ -64,6 +65,7 @@ dockerfile in docker := {
 
   val imageAppBaseDir = "/app"
   val configDir = "conf"
+  val d3Dir = baseDir / "src" / "main" / "resources" / "d3"
 
   val artifactTargetPath = s"$imageAppBaseDir/${artifact.name}"
 
@@ -73,6 +75,7 @@ dockerfile in docker := {
 
   val seedConfigTarget = s"${imageAppBaseDir}/${configDir}/master.conf"
   val workerConfigTarget = s"${imageAppBaseDir}/${configDir}/worker.conf"
+  val d3TargetDirPath = s"${imageAppBaseDir}/d3"
 
   new sbtdocker.mutable.Dockerfile {
     //from("openjdk:8-jre")
@@ -91,6 +94,9 @@ dockerfile in docker := {
     copy(artifact, artifactTargetPath)
     copy(seedConfigSrc, seedConfigTarget)
     copy(workerConfigSrc, workerConfigTarget)
+    copy(d3Dir, d3TargetDirPath)
+
+    runRaw(s"cd ${d3TargetDirPath}; ls -la")
 
     //https://docs.docker.com/compose/compose-file/#resources
     entryPoint("java", "-server", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=400", "-XX:ConcGCThreads=2", "-XX:ParallelGCThreads=2",
@@ -98,7 +104,7 @@ dockerfile in docker := {
       "-XshowSettings",
       "-XX:MaxRAMFraction=1",
       "-XX:+PreferContainerQuotaForCPUCount", //Added in JDK11. Support for using the cpu_quota instead of cpu_shares for
-      // picking the number of cores the JVM uses to makes decisions such as how many compiler theads, GC threads and sizing of the fork join pool
+      // picking the number of cores the JVM uses to makes decisions such as how many compiler threads, GC threads and sizing of the fork join pool
       s"-DseedHost=${System.getenv("MASTER_DNS")}",
       s"-DseedPort=${System.getenv("AKKA_PORT")}",
       s"-DhttpPort=${System.getenv("HTTP_PORT")}",

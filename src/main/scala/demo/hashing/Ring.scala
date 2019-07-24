@@ -3,6 +3,10 @@ package demo.hashing
 import scala.collection.MapView
 import scala.collection.immutable.SortedMap
 
+/*
+  Nodes in the cluster own ranges/buckets of all the possible tokens.
+  By default it outputs tokens in the range of -263 to 263 - 1,
+ */
 case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
 
   /**
@@ -24,24 +28,24 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
     else {
       // this could be improved e.g. we should rely on least taken resources
       val ringStep = nodes.size + 1
-      val takeOvers = (start until end by (step * ringStep))
+      val takeOvers = ((step * ringStep) until end by (step * ringStep))
         .map(pId ⇒ (pId, lookup(pId).head))
         .toSet
 
       val updatedRing = takeOvers.foldLeft(ring) {
-        case (acc, (pId, _)) ⇒ acc.updated(pId, node)
+        case (ring, (pId, _)) ⇒ ring.updated(pId, node)
       }
 
-      Option((Ring(updatedRing, start, end, step) → takeOvers))
+      Some((Ring(updatedRing, start, end, step) → takeOvers))
     }
 
   /**
     * Alias for [[remove]] method
     */
-  def :-(node: String): Option[Ring] =
+  def :-(node: String): Option[(Ring, List[Long])] =
     remove(node)
 
-  def remove(node: String): Option[Ring] =
+  def remove(node: String): Option[(Ring, List[Long])] =
     if (!nodes.contains(node))
       None
     else {
@@ -54,7 +58,7 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
           else ring - (h, t.head, t.tail: _*)
       }
 
-      Some(Ring(m, start, end, step))
+      Some((Ring(m, start, end, step) → ranges(node)))
     }
 
   def lookup(hash: Long, rf: Int = 1): Vector[String] =

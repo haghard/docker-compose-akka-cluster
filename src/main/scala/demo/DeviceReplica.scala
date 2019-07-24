@@ -22,6 +22,7 @@ class DeviceReplica(replicaName: String) extends Actor with ActorLogging {
   override val receive: Receive = {
     case PingDevice(id, _) ⇒
       log.info("ping device {}", id)
+
   }
 
   /*def withPassivation(r: Receive): Receive =

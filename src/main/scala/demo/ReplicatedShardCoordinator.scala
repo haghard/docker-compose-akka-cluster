@@ -6,9 +6,10 @@ import akka.actor.typed.scaladsl.{Behaviors, StashBuffer, TimerScheduler}
 
 import scala.concurrent.duration._
 import akka.actor.typed.receptionist.Receptionist
-import akka.routing.ConsistentHash
+import akka.routing.{ConsistentHash ⇒ AkkaConsistentHash}
+import demo.hashing.{CropCircle}
 
-object Membership {
+object ReplicatedShardCoordinator {
 
   val domainKey = ServiceKey[ShardRegionCmd]("domain")
 
@@ -26,9 +27,15 @@ object Membership {
   case class RolesInfo(m: Map[String, Set[ActorRef[ShardRegionCmd]]]) extends Command
   case object ReplyTimeout                                            extends Command
 
-  case class Ping(id: Int) extends Command
+  case class GetCropCircle(replyTo: ActorRef[ReplicatedShardCoordinator.CropCircleView]) extends Command
+  case class CropCircleView(json: String)                                                extends Command
 
-  case class ReplicaEntity(hash: ConsistentHash[String], actors: Set[ActorRef[ShardRegionCmd]])
+  case class Ping(id: Long) extends Command
+
+  case class ReplicaEntity(
+    hash: AkkaConsistentHash[String],
+    actors: Set[ActorRef[ShardRegionCmd]]
+  )
 
   case object ToKey
 
@@ -42,14 +49,17 @@ object Membership {
 
   def apply(replicaName: String): Behavior[Command] =
     Behaviors.setup { ctx ⇒
-      ctx.system.receptionist ! Receptionist.Subscribe(Membership.domainKey, ctx.messageAdapter[Receptionist.Listing] {
-        case Membership.domainKey.Listing(replicas) ⇒
-          MembershipChanged(replicas)
-      })
+      ctx.system.receptionist ! Receptionist.Subscribe(
+        ReplicatedShardCoordinator.domainKey,
+        ctx.messageAdapter[Receptionist.Listing] {
+          case ReplicatedShardCoordinator.domainKey.Listing(replicas) ⇒
+            MembershipChanged(replicas)
+        }
+      )
       converge(replicaName)
     }
 
-  def converge(shardName: String, buf: StashBuffer[Command] = StashBuffer[Command](1 << 5)): Behavior[Command] =
+  def converge(shardName: String, buf: StashBuffer[Command] = StashBuffer[Command](1 << 6)): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
         case MembershipChanged(rs) ⇒
@@ -60,18 +70,17 @@ object Membership {
               ctx.self,
               rs.head,
               rs.tail,
-              akka.routing.ConsistentHash[String](Iterable.empty, 1 << 6),
-              Map[String, ReplicaEntity]()
-                .withDefaultValue(
-                  ReplicaEntity(akka.routing.ConsistentHash[String](Iterable.empty, 1 << 6), Set.empty)
-                ),
-              buf
+              AkkaConsistentHash[String](Iterable.empty, 1 << 6), //hash ring for shards
+              Map[String, ReplicaEntity]()                        //grouped replicas by shard
+                .withDefaultValue(ReplicaEntity(AkkaConsistentHash[String](Iterable.empty, 1 << 6), Set.empty)),
+              buf,
+              CropCircle("fsa")
             )
           } else Behaviors.same
 
         case ReplyTimeout ⇒
           Behaviors.same
-        case cmd: Ping ⇒
+        case cmd: PingDevice ⇒
           //TODO: respond fast, because we're not ready yet
           ctx.log.warning("{} respond fast, because we're not ready yet", cmd)
           Behaviors.same
@@ -86,14 +95,15 @@ object Membership {
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
-    sh: ConsistentHash[String],
+    shardHash: AkkaConsistentHash[String],
     m: Map[String, ReplicaEntity],
-    stash: StashBuffer[Command]
+    stash: StashBuffer[Command],
+    circle: CropCircle
   ): Behavior[Command] =
     Behaviors.withTimers { ctx ⇒
       ctx.startSingleTimer(ToKey, ReplyTimeout, replyTimeout)
       current.tell(IdentifyShard(self))
-      awaitInfo(shardName, self, current, rest, sh, m, stash, ctx)
+      awaitInfo(shardName, self, current, rest, shardHash, m, stash, ctx, circle)
     }
 
   def awaitInfo(
@@ -101,10 +111,11 @@ object Membership {
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
-    sh: ConsistentHash[String],
+    shardHash: AkkaConsistentHash[String],
     m: Map[String, ReplicaEntity],
     buf: StashBuffer[Command],
-    timer: TimerScheduler[Command]
+    timer: TimerScheduler[Command],
+    circle: CropCircle
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
@@ -113,28 +124,29 @@ object Membership {
 
           val entity = m(rName)
           val um     = m.updated(rName, entity.copy(entity.hash.add(pid), entity.actors + ref))
+          val ut     = circle.:+(rName, ref.path.toString)
 
           if (rest.nonEmpty)
-            reqClusterInfo(rName, self, rest.head, rest.tail, sh.add(rName), um, buf)
+            reqClusterInfo(rName, self, rest.head, rest.tail, shardHash.add(rName), um, buf, ut)
           else {
             val info = um.keySet
-              .map(k ⇒ s"[$k -> ${um(k).hash.toString}]")
+              .map(k ⇒ s"[$k -> ${um(k).actors.mkString(",")}]")
               .mkString(";")
 
             ctx.log.warning("★ ★ ★ {} - {}", rName, info)
 
-            if (buf.isEmpty) stable(sh, um, rName)
+            if (buf.isEmpty) stable(shardHash, um, rName, ut)
             else buf.unstashAll(ctx, converge(rName, buf))
           }
         case ReplyTimeout ⇒
           ctx.log.warning(s"No response within ${replyTimeout}. Retry {} ", current)
           //TODO: Limit number of retries because the target node might die in the middle of the process,
           // therefore we won't get the reply back. Moreover, we could step into infinite loop
-          reqClusterInfo(shardName, self, current, rest, sh, m, buf)
+          reqClusterInfo(shardName, self, current, rest, shardHash, m, buf, circle)
         case m @ MembershipChanged(rs) if rs.nonEmpty ⇒
           buf.stash(m)
           Behaviors.same
-        case cmd: Ping ⇒
+        case cmd: PingDevice ⇒
           //TODO: respond false, because we're not ready yet
           ctx.log.warning("{} respond fast, because we're not ready yet", cmd)
           Behaviors.same
@@ -148,21 +160,23 @@ object Membership {
     }
 
   def stable(
-    sh: ConsistentHash[String], //shard hash
+    shardHash: AkkaConsistentHash[String],
     m: Map[String, ReplicaEntity],
-    shardName: String
+    shardName: String,
+    circle: CropCircle
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
         case Ping(id) ⇒
-          //pick shard and replica
-          val shard    = sh.nodeFor(id.toString)
-          val entity   = m(shard)
-          val replica  = entity.hash.nodeFor(id.toString)
-          val replicas = entity.actors
+          //pick shard
+          val shard = shardHash.nodeFor(id.toString)
+
+          //pick replica
+          val replicaEntity = m(shard)
+          val replica       = replicaEntity.hash.nodeFor(id.toString)
+          val replicas      = replicaEntity.actors
 
           ctx.log.warning("{} goes to [{} - {}:{}]", id, shard, replica, replicas.size)
-
           if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for ${shard}")
           else replicas.headOption.foreach(_.tell(PingDevice(id, replica)))
           Behaviors.same
@@ -172,8 +186,13 @@ object Membership {
             converge(shardName)
           } else Behaviors.same
         case ClusterStateRequest(r) ⇒
-          val info = m.keySet.map(k ⇒ s"[$k -> ${m(k).hash.toString}]").mkString(";")
+          val info = m.keySet.map(k ⇒ s"[$k -> ${m(k).actors.mkString(",")}]").mkString(";")
           r.tell(ClusterStateResponse(info))
+          Behaviors.same
+        case GetCropCircle(replyTo) ⇒
+          val js = circle.toString
+          ctx.log.info("{}", js)
+          replyTo.tell(CropCircleView(js))
           Behaviors.same
         case other ⇒
           ctx.log.warning("Unexpected message in convergence: {}", other)

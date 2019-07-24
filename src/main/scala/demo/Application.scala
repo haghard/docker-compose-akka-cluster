@@ -46,7 +46,7 @@ object Application extends App {
 
   val shardName = System.getenv("shard").trim
 
-  val bufferSize = 1 << 5
+  val BufferSize = 1 << 5
 
   val port = sys.props
     .get(sysPropSeedPort)
@@ -106,7 +106,11 @@ object Application extends App {
               SharedDomain(shardName, ctx.system.toUntyped).toTyped[DeviceCommand]
 
             val membership =
-              ctx.spawn(Membership(shardName), "members", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
+              ctx.spawn(
+                ReplicatedShardCoordinator(shardName),
+                "members",
+                DispatcherSelector.fromConfig("akka.metrics-dispatcher")
+              )
 
             val hostAddress = cluster.selfMember.address.host
               .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-${p}"))
@@ -154,7 +158,11 @@ object Application extends App {
               SharedDomain(shardName, ctx.system.toUntyped).toTyped[DeviceCommand]
 
             val membership =
-              ctx.spawn(Membership(shardName), "members", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
+              ctx.spawn(
+                ReplicatedShardCoordinator(shardName),
+                "members",
+                DispatcherSelector.fromConfig("akka.metrics-dispatcher")
+              )
 
             ctx.watch(membership)
 
@@ -164,7 +172,7 @@ object Application extends App {
               shardRegion,
               ctx
                 .spawn(
-                  ClusterJvmMetrics(bufferSize),
+                  ClusterJvmMetrics(BufferSize),
                   "jvm-metrics",
                   DispatcherSelector.fromConfig("akka.metrics-dispatcher")
                 )

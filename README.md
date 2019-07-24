@@ -88,7 +88,10 @@ export TZ=UTC
 
 #### Available urls ####
 
-  Req/Resp `http GET 192.168.77.10:9000/members`
+  `http GET 192.168.77.10:9000/members`
+  `http GET 192.168.77.10:9000/shards`
+  `http GET 192.168.77.10:9000/circle`
+  `http GET 192.168.77.10:9000/circle1`
 
   Chunked resp `curl --no-buffer 192.168.77.10:9000/metrics`
   
@@ -105,4 +108,7 @@ export TZ=UTC
 https://doc.akka.io/docs/akka/2.5.23/typed/cluster-sharding.html
 https://doc.akka.io/docs/akka/current/distributed-data.html?_ga=2.28483962.718342592.1562590114-801666185.1515340543
 https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
-https://www.digitalocean.com/community/tutorials/how-to-provision-and-manage-remote-docker-hosts-with-docker-machine-on-ubuntu-16-04  
+https://www.digitalocean.com/community/tutorials/how-to-provision-and-manage-remote-docker-hosts-with-docker-machine-on-ubuntu-16-04
+
+https://github.com/mckeeh3/akka-java-cluster-kubernetes/tree/d714ad5651ee4dc84464d1995be3c2d3ae9ca684
+Type persistence example: https://github.com/IainHull/akka-persistence-message-bug  

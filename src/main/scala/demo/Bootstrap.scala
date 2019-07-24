@@ -18,7 +18,7 @@ object Bootstrap {
 
 class Bootstrap(
   shutdown: CoordinatedShutdown,
-  membership: ActorRef[Membership.Command],
+  membership: ActorRef[ReplicatedShardCoordinator.Command],
   shardRegion: ActorRef[DeviceCommand],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   hostName: String,
