@@ -1,5 +1,7 @@
 package demo
 
+import java.nio.ByteBuffer
+
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.receptionist.ServiceKey
 import akka.actor.typed.scaladsl.{Behaviors, StashBuffer, TimerScheduler}
@@ -7,7 +9,9 @@ import akka.actor.typed.scaladsl.{Behaviors, StashBuffer, TimerScheduler}
 import scala.concurrent.duration._
 import akka.actor.typed.receptionist.Receptionist
 import akka.routing.{ConsistentHash ⇒ AkkaConsistentHash}
-import demo.hashing.CropCircle
+import demo.hashing.{CassandraHash, CropCircle, Ring}
+
+import scala.collection.immutable.MultiDict
 
 object ReplicatedShardCoordinator {
 
@@ -59,29 +63,22 @@ object ReplicatedShardCoordinator {
       converge(replicaName)
     }
 
+  case class Elem(a: ActorRef[ShardRegionCmd], histId: String)
+
   def converge(shardName: String, buf: StashBuffer[Command] = StashBuffer[Command](1 << 6)): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
         case MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {
-
-            /*
-            var map = scala.collection.immutable.SortedMultiDict.empty[String, Int]
-            map = map + ("a" → 1) + ("a" → 2)
-            map.get("a")
-             */
-
             //on each cluster state change we rebuild the whole state
             reqClusterInfo(
               shardName,
               ctx.self,
               rs.head,
               rs.tail,
-              AkkaConsistentHash[String](Iterable.empty, 1 << 6), //hash ring for shards
-              Map[String, ReplicaEntity]()                        //grouped replicas by shard
-                .withDefaultValue(ReplicaEntity(AkkaConsistentHash[String](Iterable.empty, 1 << 6), Set.empty)),
-              buf,
-              CropCircle("fsa")
+              None,                          //hash ring for shards
+              MultiDict.empty[String, Elem], //grouped replicas by shard
+              buf
             )
           } else Behaviors.same
 
@@ -102,15 +99,14 @@ object ReplicatedShardCoordinator {
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
-    shardHash: AkkaConsistentHash[String],
-    m: Map[String, ReplicaEntity],
-    stash: StashBuffer[Command],
-    circle: CropCircle
+    shardHash: Option[Ring],
+    m: MultiDict[String, Elem],
+    stash: StashBuffer[Command]
   ): Behavior[Command] =
     Behaviors.withTimers { ctx ⇒
       ctx.startSingleTimer(ToKey, ReplyTimeout, replyTimeout)
       current.tell(IdentifyShard(self))
-      awaitInfo(shardName, self, current, rest, shardHash, m, stash, ctx, circle)
+      awaitInfo(shardName, self, current, rest, shardHash, m, stash, ctx)
     }
 
   def awaitInfo(
@@ -118,38 +114,44 @@ object ReplicatedShardCoordinator {
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
-    shardHash: AkkaConsistentHash[String],
-    m: Map[String, ReplicaEntity],
+    shardHash: Option[Ring],
+    replicas: MultiDict[String, Elem],
     buf: StashBuffer[Command],
-    timer: TimerScheduler[Command],
-    circle: CropCircle
+    timer: TimerScheduler[Command]
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
-        case ShardInfo(rName, ref, pid) ⇒
+        case ShardInfo(rName, ref, hostId) ⇒
           timer.cancel(ToKey)
 
-          val entity = m(rName)
-          val um     = m.updated(rName, entity.copy(entity.hash.add(pid), entity.actors + ref))
-          val ut     = circle :+ (rName, ref.path.toString)
+          val uHash = shardHash match {
+            case None ⇒
+              Ring(rName)
+            case Some(r) ⇒
+              (r :+ rName).map(_._1).getOrElse(r)
+          }
+          val um = replicas.add(rName, Elem(ref, hostId))
+
+          if (ctx.self.path.address == ref.path.address)
+            ref.tell(WakeUpDevice(hostId))
 
           if (rest.nonEmpty)
-            reqClusterInfo(rName, self, rest.head, rest.tail, shardHash.add(rName), um, buf, ut)
+            reqClusterInfo(rName, self, rest.head, rest.tail, Some(uHash), um, buf)
           else {
             val info = um.keySet
-              .map(k ⇒ s"[$k -> ${um(k).actors.mkString(",")}]")
+              .map(k ⇒ s"[$k -> ${um.get(k).map(_.a).mkString(",")}]")
               .mkString(";")
 
             ctx.log.warning("★ ★ ★ {} - {}", rName, info)
 
-            if (buf.isEmpty) stable(shardHash, um, rName, ut)
+            if (buf.isEmpty) stable(uHash, um, rName)
             else buf.unstashAll(ctx, converge(rName, buf))
           }
         case ReplyTimeout ⇒
           ctx.log.warning(s"No response within ${replyTimeout}. Retry {} ", current)
           //TODO: Limit number of retries because the target node might die in the middle of the process,
           // therefore we won't get the reply back. Moreover, we could step into infinite loop
-          reqClusterInfo(shardName, self, current, rest, shardHash, m, buf, circle)
+          reqClusterInfo(shardName, self, current, rest, shardHash, replicas, buf)
         case m @ MembershipChanged(rs) if rs.nonEmpty ⇒
           buf.stash(m)
           Behaviors.same
@@ -167,25 +169,28 @@ object ReplicatedShardCoordinator {
     }
 
   def stable(
-    shardHash: AkkaConsistentHash[String],
-    m: Map[String, ReplicaEntity],
-    shardName: String,
-    circle: CropCircle
+    shardHash: Ring,
+    replicas: MultiDict[String, Elem],
+    shardName: String
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
         case Ping(id) ⇒
           //pick shard
-          val shard = shardHash.nodeFor(id.toString)
+          val shard = shardHash.lookup(id).head
 
           //pick replica
-          val replicaEntity = m(shard)
-          val replica       = replicaEntity.hash.nodeFor(id.toString)
-          val replicas      = replicaEntity.actors
+          val rs      = replicas.get(shard)
+          val replica = rs.head.a //always pick the first
+          val pid     = rs.head.histId
 
           ctx.log.warning("{} goes to [{} - {}:{}]", id, shard, replica, replicas.size)
-          if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for ${shard}")
-          else replicas.headOption.foreach(_.tell(PingDevice(id, replica)))
+
+          if (rs.isEmpty)
+            ctx.log.error(s"Critical error: Couldn't find actorRefs for ${shard}")
+          else
+            replica.tell(PingDevice(id, pid))
+
           Behaviors.same
         case m @ MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {
@@ -193,15 +198,18 @@ object ReplicatedShardCoordinator {
             converge(shardName)
           } else Behaviors.same
         case ClusterStateRequest(r) ⇒
-          val info = m.keySet.map(k ⇒ s"[$k -> ${m(k).actors.mkString(",")}]").mkString(";")
+          val info = replicas.keySet.map(k ⇒ s"[$k -> ${replicas.get(k).mkString(",")}]").mkString(";")
           r.tell(ClusterStateResponse(info))
           Behaviors.same
         case GetCropCircle(replyTo) ⇒
-          /*val keys = m.keySet
-          val ring = keys.tail.foldLeft(Ring(keys.head))(_.:+(_).get._1)
-          val js   = ring.toCropCircle*/
+          //
+          val circle = replicas.keySet.foldLeft(CropCircle("fsa")) { (circle, c) ⇒
+            replicas.get(c).map(_.a.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
+              circle :+ (c, actorPath)
+            }
+          }
           val js = circle.toString
-          ctx.log.info("{}", js)
+          //ctx.log.info("{}", js)
           replyTo.tell(CropCircleView(js))
           Behaviors.same
         case other ⇒

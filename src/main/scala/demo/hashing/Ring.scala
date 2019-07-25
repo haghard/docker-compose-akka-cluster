@@ -131,7 +131,7 @@ object Ring {
     name: String,
     start: Long = Long.MinValue,
     end: Long = Long.MaxValue,
-    step: Long = 9223372036854773L //2501 partitions, change  if you need more
+    step: Long = 9223372036854773L //2501 partitions, change if you need more
   ): Ring =
     Ring(
       (start until end by step)

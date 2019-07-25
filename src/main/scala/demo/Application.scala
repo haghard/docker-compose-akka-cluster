@@ -12,7 +12,7 @@ import akka.cluster.typed.{Cluster, Join, SelfUp, Subscribe, Unsubscribe}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import akka.actor.typed.scaladsl.adapter._
 import akka.cluster.MemberStatus
 
@@ -115,6 +115,7 @@ object Application extends App {
             val hostAddress = cluster.selfMember.address.host
               .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-${p}"))
               .getOrElse("none")
+
             ctx.spawn(DomainReplicas(shardRegion, shardName, hostAddress), Name)
 
             shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
@@ -181,7 +182,6 @@ object Application extends App {
               httpPort.toInt
             )
 
-            //dockerInternalAddress.getHostAddress
             val hostAddress = cluster.selfMember.address.host
               .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-${p}"))
               .getOrElse("none")

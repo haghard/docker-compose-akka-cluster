@@ -73,8 +73,8 @@ class HttpRoutes(
     )
 
   val cropCircleRoute =
-    path("circle")(get(encodeResponse(getFromFile(folderName + "/" + circlePage)))) ~
-    path("circle1")(get(encodeResponse(getFromFile(folderName + "/" + circlePage1)))) ~
+    path("cluster")(get(encodeResponse(getFromFile(folderName + "/" + circlePage)))) ~
+    path("cluster1")(get(encodeResponse(getFromFile(folderName + "/" + circlePage1)))) ~
     pathPrefix("d3" / Remaining)(file ⇒ encodeResponse(getFromFile(folderName + "/" + file))) ~
     path("events") {
       handleWebSocketMessages(

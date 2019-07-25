@@ -7,8 +7,8 @@ sealed trait ShardRegionCmd
 case class IdentifyShard(replyTo: ActorRef[Command]) extends ShardRegionCmd
 
 sealed trait DeviceCommand extends ShardRegionCmd {
-  def id: Long
   def replica: String
 }
 
+case class WakeUpDevice(replica: String)         extends DeviceCommand
 case class PingDevice(id: Long, replica: String) extends DeviceCommand
