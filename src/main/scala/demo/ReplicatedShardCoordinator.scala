@@ -1,6 +1,5 @@
 package demo
 
-import java.nio.ByteBuffer
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.receptionist.ServiceKey
@@ -8,8 +7,7 @@ import akka.actor.typed.scaladsl.{Behaviors, StashBuffer, TimerScheduler}
 
 import scala.concurrent.duration._
 import akka.actor.typed.receptionist.Receptionist
-import akka.routing.{ConsistentHash ⇒ AkkaConsistentHash}
-import demo.hashing.{CassandraHash, CropCircle, Ring}
+import demo.hashing.{CropCircle, Ring}
 
 import scala.collection.immutable.MultiDict
 
@@ -35,11 +33,6 @@ object ReplicatedShardCoordinator {
   case class CropCircleView(json: String)                                                extends Command
 
   case class Ping(id: Long) extends Command
-
-  case class ReplicaEntity(
-    hash: AkkaConsistentHash[String],
-    actors: Set[ActorRef[ShardRegionCmd]]
-  )
 
   case object ToKey
 
@@ -186,11 +179,8 @@ object ReplicatedShardCoordinator {
 
           ctx.log.warning("{} goes to [{} - {}:{}]", id, shard, replica, replicas.size)
 
-          if (rs.isEmpty)
-            ctx.log.error(s"Critical error: Couldn't find actorRefs for ${shard}")
-          else
-            replica.tell(PingDevice(id, pid))
-
+          if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for ${shard}")
+          else replica.tell(PingDevice(id, pid))
           Behaviors.same
         case m @ MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {
