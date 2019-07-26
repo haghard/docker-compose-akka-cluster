@@ -82,12 +82,10 @@ object Application extends App {
 
   val Name = "domain"
 
-  def worker(config: Config, shardName: String, runtimeInfo: String): Behavior[Nothing] =
+  def worker(config: Config, seedAddress: Address, shardName: String, runtimeInfo: String): Behavior[Nothing] =
     Behaviors
       .setup[SelfUp] { ctx ⇒
-        implicit val sys = ctx.system.toUntyped
-        val cluster      = Cluster(ctx.system)
-        val seedAddress  = Address("akka", SystemName, seedHostAddress, port.toInt)
+        val cluster = Cluster(ctx.system)
         cluster.manager tell Join(seedAddress)
         cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
 
@@ -140,14 +138,11 @@ object Application extends App {
       }
       .narrow
 
-  def master(config: Config, shardName: String, runtimeInfo: String): Behavior[Nothing] =
+  def master(config: Config, seedAddress: Address, shardName: String, runtimeInfo: String): Behavior[Nothing] =
     Behaviors
       .setup[SelfUp] { ctx ⇒
-        implicit val sys = ctx.system.toUntyped
-        val cluster      = Cluster(ctx.system)
-        val address      = Address("akka", SystemName, seedHostAddress, port.toInt)
-
-        cluster.manager tell Join(address)
+        val cluster = Cluster(ctx.system)
+        cluster.manager tell Join(seedAddress)
         cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
 
         Behaviors.receive[SelfUp] {
@@ -191,7 +186,7 @@ object Application extends App {
               jvmMetrics,
               cluster.selfMember.address.host.get,
               httpPort.toInt
-            )
+            )(ctx.system.toUntyped)
 
             ctx.spawn(
               DomainReplicas(
@@ -232,9 +227,11 @@ object Application extends App {
     .append("=================================================================================================")
     .toString()
 
+  val address = Address("akka", SystemName, seedHostAddress, port.toInt)
+
   if (isMasterNode)
-    ActorSystem[Nothing](master(cfg, shardName, runtimeInfo), SystemName, cfg)
+    ActorSystem[Nothing](master(cfg, address, shardName, runtimeInfo), SystemName, cfg)
   else
-    ActorSystem[Nothing](worker(cfg, shardName, runtimeInfo), SystemName, cfg)
+    ActorSystem[Nothing](worker(cfg, address, shardName, runtimeInfo), SystemName, cfg)
 
 }

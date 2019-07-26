@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 import akka.actor.typed.receptionist.Receptionist
 import demo.hashing.{CropCircle, Ring}
 
-import scala.collection.immutable.MultiDict
+import scala.collection.immutable.SortedMultiDict
 
 object ReplicatedShardCoordinator {
 
@@ -68,8 +68,8 @@ object ReplicatedShardCoordinator {
               ctx.self,
               rs.head,
               rs.tail,
-              None,                             //hash ring for shards
-              MultiDict.empty[String, Replica], //grouped replicas by shard
+              None,                                   //hash ring for shards
+              SortedMultiDict.empty[String, Replica], //grouped replicas by shard
               buf
             )
           } else Behaviors.same
@@ -92,7 +92,7 @@ object ReplicatedShardCoordinator {
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
     shardHash: Option[Ring],
-    m: MultiDict[String, Replica],
+    m: SortedMultiDict[String, Replica],
     stash: StashBuffer[Command]
   ): Behavior[Command] =
     Behaviors.withTimers { ctx ⇒
@@ -107,7 +107,7 @@ object ReplicatedShardCoordinator {
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
     shardHash: Option[Ring],
-    replicas: MultiDict[String, Replica],
+    replicas: SortedMultiDict[String, Replica],
     buf: StashBuffer[Command],
     timer: TimerScheduler[Command]
   ): Behavior[Command] =
@@ -131,7 +131,7 @@ object ReplicatedShardCoordinator {
             reqClusterInfo(rName, self, rest.head, rest.tail, Some(uHash), um, buf)
           else {
             val info = um.keySet
-              .map(k ⇒ s"[$k -> ${um.get(k).map(_.a).mkString(",")}]")
+              .map(k ⇒ s"[$k -> ${um.get(k).map(_.memberId).mkString(",")}]")
               .mkString(";")
 
             ctx.log.warning("★ ★ ★ {} - {}", rName, info)
@@ -162,7 +162,7 @@ object ReplicatedShardCoordinator {
 
   def stable(
     shardHash: Ring,
-    replicas: MultiDict[String, Replica],
+    replicas: SortedMultiDict[String, Replica],
     shardName: String
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
