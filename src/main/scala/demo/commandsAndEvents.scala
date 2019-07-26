@@ -4,7 +4,7 @@ import akka.actor.typed.ActorRef
 import demo.ReplicatedShardCoordinator.Command
 
 sealed trait ShardRegionCmd
-case class IdentifyShard(replyTo: ActorRef[Command]) extends ShardRegionCmd
+case class GetShardInfo(replyTo: ActorRef[Command]) extends ShardRegionCmd
 
 sealed trait DeviceCommand extends ShardRegionCmd {
   def replica: String

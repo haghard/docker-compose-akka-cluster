@@ -1,6 +1,5 @@
 package demo
 
-
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.receptionist.ServiceKey
 import akka.actor.typed.scaladsl.{Behaviors, StashBuffer, TimerScheduler}
@@ -29,12 +28,14 @@ object ReplicatedShardCoordinator {
   case class RolesInfo(m: Map[String, Set[ActorRef[ShardRegionCmd]]]) extends Command
   case object ReplyTimeout                                            extends Command
 
-  case class GetCropCircle(replyTo: ActorRef[ReplicatedShardCoordinator.CropCircleView]) extends Command
-  case class CropCircleView(json: String)                                                extends Command
+  case class GetCropCircle(replyTo: ActorRef[CropCircleView]) extends Command
+  case class CropCircleView(json: String)                     extends Command
 
   case class Ping(id: Long) extends Command
 
   case object ToKey
+
+  case class Replica(a: ActorRef[ShardRegionCmd], memberId: String)
 
   /*val onTerminate: PartialFunction[(ActorContext[ClusterDomainEvent], Signal), Behavior[ClusterDomainEvent]] = {
     case (ctx, Terminated(actor)) ⇒
@@ -56,8 +57,6 @@ object ReplicatedShardCoordinator {
       converge(replicaName)
     }
 
-  case class Elem(a: ActorRef[ShardRegionCmd], histId: String)
-
   def converge(shardName: String, buf: StashBuffer[Command] = StashBuffer[Command](1 << 6)): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
@@ -69,8 +68,8 @@ object ReplicatedShardCoordinator {
               ctx.self,
               rs.head,
               rs.tail,
-              None,                          //hash ring for shards
-              MultiDict.empty[String, Elem], //grouped replicas by shard
+              None,                             //hash ring for shards
+              MultiDict.empty[String, Replica], //grouped replicas by shard
               buf
             )
           } else Behaviors.same
@@ -93,12 +92,12 @@ object ReplicatedShardCoordinator {
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
     shardHash: Option[Ring],
-    m: MultiDict[String, Elem],
+    m: MultiDict[String, Replica],
     stash: StashBuffer[Command]
   ): Behavior[Command] =
     Behaviors.withTimers { ctx ⇒
       ctx.startSingleTimer(ToKey, ReplyTimeout, replyTimeout)
-      current.tell(IdentifyShard(self))
+      current.tell(GetShardInfo(self))
       awaitInfo(shardName, self, current, rest, shardHash, m, stash, ctx)
     }
 
@@ -108,7 +107,7 @@ object ReplicatedShardCoordinator {
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
     shardHash: Option[Ring],
-    replicas: MultiDict[String, Elem],
+    replicas: MultiDict[String, Replica],
     buf: StashBuffer[Command],
     timer: TimerScheduler[Command]
   ): Behavior[Command] =
@@ -123,7 +122,7 @@ object ReplicatedShardCoordinator {
             case Some(r) ⇒
               (r :+ rName).map(_._1).getOrElse(r)
           }
-          val um = replicas.add(rName, Elem(ref, hostId))
+          val um = replicas.add(rName, Replica(ref, hostId))
 
           if (ctx.self.path.address == ref.path.address)
             ref.tell(WakeUpDevice(hostId))
@@ -163,7 +162,7 @@ object ReplicatedShardCoordinator {
 
   def stable(
     shardHash: Ring,
-    replicas: MultiDict[String, Elem],
+    replicas: MultiDict[String, Replica],
     shardName: String
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
@@ -175,7 +174,7 @@ object ReplicatedShardCoordinator {
           //pick replica
           val rs      = replicas.get(shard)
           val replica = rs.head.a //always pick the first
-          val pid     = rs.head.histId
+          val pid     = rs.head.memberId
 
           ctx.log.warning("{} goes to [{} - {}:{}]", id, shard, replica, replicas.size)
 
@@ -192,15 +191,12 @@ object ReplicatedShardCoordinator {
           r.tell(ClusterStateResponse(info))
           Behaviors.same
         case GetCropCircle(replyTo) ⇒
-          //
           val circle = replicas.keySet.foldLeft(CropCircle("fsa")) { (circle, c) ⇒
             replicas.get(c).map(_.a.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
               circle :+ (c, actorPath)
             }
           }
-          val js = circle.toString
-          //ctx.log.info("{}", js)
-          replyTo.tell(CropCircleView(js))
+          replyTo.tell(CropCircleView(circle.toString))
           Behaviors.same
         case other ⇒
           ctx.log.warning("Unexpected message in convergence: {}", other)

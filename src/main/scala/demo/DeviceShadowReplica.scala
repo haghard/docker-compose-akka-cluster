@@ -31,7 +31,7 @@ class DeviceShadowReplica(replicaName: String) extends Actor with ActorLogging {
     case PingDevice(id, _) ⇒
       log.info("ping device {}", id)
     case WakeUpDevice(_) ⇒
-    //log.info("ignore rerun wake up device")
+      log.warning("ignore rerun wake up device")
   }
 
   def await: Receive = {

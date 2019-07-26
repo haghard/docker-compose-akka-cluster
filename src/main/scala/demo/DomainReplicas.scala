@@ -16,7 +16,7 @@ object DomainReplicas {
         .Register(ReplicatedShardCoordinator.domainKey, ctx.self)
 
       Behaviors.receiveMessage {
-        case IdentifyShard(r) ⇒
+        case GetShardInfo(r) ⇒
           //if (java.util.concurrent.ThreadLocalRandom.current.nextBoolean)
           r.tell(ShardInfo(shard, ctx.self, hostId))
           Behaviors.same

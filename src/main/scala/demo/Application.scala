@@ -48,13 +48,17 @@ object Application extends App {
 
   val BufferSize = 1 << 5
 
-  val port = sys.props
+  val sysProps = sys.props
+
+  val port = sysProps
     .get(sysPropSeedPort)
     .fold(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))(identity)
-  val seedHostAddress = sys.props
+
+  val seedHostAddress = sysProps
     .get(sysPropsSeedHost)
     .fold(throw new Exception(s"Couldn't find $sysPropSeedPort system property"))(identity)
-  val httpPort = sys.props
+
+  val httpPort = sysProps
     .get(sysPropsHttpPort)
     .fold(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))(identity)
 
@@ -112,11 +116,16 @@ object Application extends App {
                 DispatcherSelector.fromConfig("akka.metrics-dispatcher")
               )
 
-            val hostAddress = cluster.selfMember.address.host
-              .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-${p}"))
-              .getOrElse("none")
-
-            ctx.spawn(DomainReplicas(shardRegion, shardName, hostAddress), Name)
+            ctx.spawn(
+              DomainReplicas(
+                shardRegion,
+                shardName,
+                cluster.selfMember.address.host
+                  .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"$h-$p"))
+                  .getOrElse("none")
+              ),
+              Name
+            )
 
             shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
               Future.successful(ctx.log.info("after.cluster-exiting-done")).map(_ ⇒ akka.Done)(ExecutionContext.global)
@@ -167,28 +176,35 @@ object Application extends App {
 
             ctx.watch(membership)
 
+            val jvmMetrics = ctx
+              .spawn(
+                ClusterJvmMetrics(BufferSize),
+                "jvm-metrics",
+                DispatcherSelector.fromConfig("akka.metrics-dispatcher")
+              )
+              .narrow[ClusterJvmMetrics.Confirm]
+
             new Bootstrap(
               shutdown,
               membership,
               shardRegion,
-              ctx
-                .spawn(
-                  ClusterJvmMetrics(BufferSize),
-                  "jvm-metrics",
-                  DispatcherSelector.fromConfig("akka.metrics-dispatcher")
-                )
-                .narrow[ClusterJvmMetrics.Confirm],
+              jvmMetrics,
               cluster.selfMember.address.host.get,
               httpPort.toInt
             )
 
-            val hostAddress = cluster.selfMember.address.host
-              .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"${h}-${p}"))
-              .getOrElse("none")
+            ctx.spawn(
+              DomainReplicas(
+                shardRegion,
+                shardName,
+                cluster.selfMember.address.host
+                  .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"$h-$p"))
+                  .getOrElse("none")
+              ),
+              Name
+            )
 
-            ctx.spawn(DomainReplicas(shardRegion, shardName, hostAddress), Name)
-
-            Behaviors.receiveSignal {
+            Behaviors.receiveSignal[SelfUp] {
               case (_, Terminated(`membership`)) ⇒
                 ctx.log.error("Membership failure detected !!!")
                 Behaviors.stopped
