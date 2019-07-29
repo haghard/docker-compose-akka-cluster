@@ -6,7 +6,7 @@ import akka.actor.typed.scaladsl.{Behaviors, StashBuffer, TimerScheduler}
 
 import scala.concurrent.duration._
 import akka.actor.typed.receptionist.Receptionist
-import demo.hashing.{CropCircle, Ring}
+import demo.hashing.{CropCircle, HashRing}
 
 import scala.collection.immutable.SortedMultiDict
 
@@ -91,7 +91,7 @@ object ReplicatedShardCoordinator {
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
-    shardHash: Option[Ring],
+    shardHash: Option[HashRing],
     m: SortedMultiDict[String, Replica],
     stash: StashBuffer[Command]
   ): Behavior[Command] =
@@ -106,7 +106,7 @@ object ReplicatedShardCoordinator {
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
-    shardHash: Option[Ring],
+    shardHash: Option[HashRing],
     replicas: SortedMultiDict[String, Replica],
     buf: StashBuffer[Command],
     timer: TimerScheduler[Command]
@@ -118,7 +118,7 @@ object ReplicatedShardCoordinator {
 
           val uHash = shardHash match {
             case None ⇒
-              Ring(rName)
+              HashRing(rName)
             case Some(r) ⇒
               (r :+ rName).map(_._1).getOrElse(r)
           }
@@ -161,7 +161,7 @@ object ReplicatedShardCoordinator {
     }
 
   def stable(
-    shardHash: Ring,
+    shardHash: HashRing,
     replicas: SortedMultiDict[String, Replica],
     shardName: String
   ): Behavior[Command] =

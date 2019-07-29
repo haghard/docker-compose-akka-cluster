@@ -8,12 +8,12 @@ import spray.json.{JsArray, JsNumber, JsObject, JsString}
   Nodes in the cluster own ranges/buckets of all the possible tokens.
   By default it outputs tokens in the range of -263 to 263 - 1,
  */
-case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
+case class HashRing(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
 
   /**
     * Alias for [[add]] method
     */
-  def :+(node: String): Option[(Ring, Set[(Long, String)])] =
+  def :+(node: String): Option[(HashRing, Set[(Long, String)])] =
     add(node)
 
   /**
@@ -23,7 +23,7 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
     *
     * When we add new node, it changes the ownership of some ranges by splitting it up.
     */
-  def add(node: String): Option[(Ring, Set[(Long, String)])] =
+  def add(node: String): Option[(HashRing, Set[(Long, String)])] =
     if (nodes.contains(node))
       None
     else {
@@ -36,16 +36,16 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
         case (ring, (pId, _)) ⇒ ring.updated(pId, node)
       }
 
-      Some((Ring(updatedRing, start, end, step) → takeOvers))
+      Some(HashRing(updatedRing, start, end, step) → takeOvers)
     }
 
   /**
     * Alias for [[remove]] method
     */
-  def :-(node: String): Option[(Ring, List[Long])] =
+  def :-(node: String): Option[(HashRing, List[Long])] =
     remove(node)
 
-  def remove(node: String): Option[(Ring, List[Long])] =
+  def remove(node: String): Option[(HashRing, List[Long])] =
     if (!nodes.contains(node))
       None
     else {
@@ -58,7 +58,7 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
           else ring - (h, t.head, t.tail: _*)
       }
 
-      Some((Ring(m, start, end, step) → ranges(node)))
+      Some(HashRing(m, start, end, step) → ranges(node))
     }
 
   def lookup(hash: Long, rf: Int = 1): Vector[String] =
@@ -125,15 +125,15 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
   }
 }
 
-object Ring {
+object HashRing {
 
   def apply(
     name: String,
     start: Long = Long.MinValue,
     end: Long = Long.MaxValue,
     step: Long = 9223372036854773L //2501 partitions, change if you need more
-  ): Ring =
-    Ring(
+  ): HashRing =
+    HashRing(
       (start until end by step)
         .foldLeft(SortedMap[Long, String]()) { (acc, c) ⇒
           acc + (c → name)

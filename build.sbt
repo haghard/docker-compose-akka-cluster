@@ -24,6 +24,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-slf4j" % Akka,
   "org.scala-lang.modules" %% "scala-collection-contrib" % "0.1.0",
 
+  //custom build for 2.13
+  //"io.moia" %% "streamee" % "5.0.0-M1+1-691a3938+20190726-1217",
+
   //local build for 2.13 /Users/haghard/.ivy2/local/com.github.TanUkkii007/akka-cluster-custom-downing_2.13/0.0.13-SNAPSHOT/jars/akka-cluster-custom-downing_2.13.jar
   "com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT",
   "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
