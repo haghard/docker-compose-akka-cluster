@@ -28,7 +28,7 @@ LocalDateTime.now()
  */
 
 object Application extends App {
-  val SystemName = "dc-cluster"
+  val SystemName = "dc"
 
   val AKKA_PORT = "akka.remote.artery.canonical.port"
   val AKKA_HOST = "akka.remote.artery.canonical.hostname"

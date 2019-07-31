@@ -1,9 +1,8 @@
-
-### The project shows you how to scale the number of workers on one machine using `docker-compose`. ###
+### The project shows how to run akka cluster using `docker-compose`.
 
 #### A sequence of docker commands ####
   
-  * To set env vars we need
+  * First of all we need to export these env vars
     
     `export MASTER_DNS=master`
 
@@ -11,18 +10,9 @@
     
     `export AKKA_PORT=2551`
     
-    `export SEED_JMX_PORT=1089`
-    
     `export HOST=192.168.77.10`
     
     `export TZ=UTC`
-
-export MASTER_DNS=master
-export HTTP_PORT=9000 
-export AKKA_PORT=2551    
-export SEED_JMX_PORT=1089    
-export HOST=192.168.77.10
-export TZ=UTC
     
   * Build and publish the image `sbt docker`
   
@@ -30,43 +20,27 @@ export TZ=UTC
      
   * Scale up the number of workers `docker-compose -f docker-compose2.yml scale workerA=3`
    
-  * Scale down the number of workers `docker-compose -f docker-compose2.yml scale worker=2`
+  * Scale down the number of workers `docker-compose -f docker-compose2.yml scale workerA=2`
   
   * Stop all processes `docker-compose -f docker-compose2.yml stop`
-
-  * Delete images
-      docker-compose -f docker-compose2.yml rm seed & docker-compose -f docker-compose2.yml rm worker
-    
-  * Now you can build image again                
-         
-         
-#### A sequence of docker commands to run on static network ####
   
-  * To set env vars we need
+  * Delete all processes `docker-compose -f docker-compose2.yml rm`
     
-    `export SEED_NODE=172.16.2.2`
+  * Now you can build the image again
 
-    `export HTTP_PORT=9000`
-    
-    `export AKKA_PORT=2551`
-    
-    `export SEED_JMX_PORT=1089`
-    
-    `export HOST=192.168.77.10`
-  
-  * To build and publish the image `sbt docker`
+### Crop circle cluster view
 
-  * To start one seed node and one worker node `docker-compose -f docker-compose.yml up -d`
-     
-  * To scale up the number of workers `docker-compose scale worker=3`
-   
-  * To scale down the number of workers `docker-compose scale worker=2`
-  
-  * To stop all processes `docker-compose stop`
+  `http GET 192.168.77.10:9000/cluster`
 
-  * To clean images `docker rm $(docker ps -a -q)`
+  `http GET 192.168.77.10:9000/cluster1`
+
+### Jvm metrics 
+  `curl --no-buffer 192.168.77.10:9000/metrics`
+
+### Ping device
   
-  * Now you can build image again
+  `http GET 192.168.77.10:9000/device/1`  
+
 
 #### Docker commands, utils ####
   
@@ -86,29 +60,20 @@ export TZ=UTC
 
   docker pause asdgfasd 
 
-#### Available urls ####
-
-  `http GET 192.168.77.10:9000/members`
-  `http GET 192.168.77.10:9000/shards`
-  `http GET 192.168.77.10:9000/circle`
-  `http GET 192.168.77.10:9000/circle1`
-
-  Chunked resp `curl --no-buffer 192.168.77.10:9000/metrics`
-  
-  `http GET 192.168.77.10:9000/device/1`
-
-
-### Sharded replication (Cluster Sharding and DData with roles)
-
-1. Async replication
-2. Tunable/Configurable consistency   
-
-### Akka links
+##  Links
+ 
+### Akka
 
 https://doc.akka.io/docs/akka/2.5.23/typed/cluster-sharding.html
 https://doc.akka.io/docs/akka/current/distributed-data.html?_ga=2.28483962.718342592.1562590114-801666185.1515340543
 https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
 https://www.digitalocean.com/community/tutorials/how-to-provision-and-manage-remote-docker-hosts-with-docker-machine-on-ubuntu-16-04
-
 https://github.com/mckeeh3/akka-java-cluster-kubernetes/tree/d714ad5651ee4dc84464d1995be3c2d3ae9ca684
-Type persistence example: https://github.com/IainHull/akka-persistence-message-bug  
+
+
+### Docker  
+
+https://docs.docker.com/compose/compose-file/#resources
+https://github.com/chbatey/docker-jvm-akka/blob/master/docker-compose.yml
+https://dzone.com/articles/docker-container-resource-management-cpu-ram-and-i
+http://www.batey.info/docker-jvm-k8s.html

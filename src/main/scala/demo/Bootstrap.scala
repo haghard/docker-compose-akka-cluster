@@ -25,7 +25,7 @@ class Bootstrap(
   port: Int
 )(implicit sys: ActorSystem) {
 
-  val termDeadline = 2.seconds
+  val terminationDeadline = 2.seconds
   implicit val mat = ActorMaterializer(ActorMaterializerSettings.create(sys).withDispatcher("akka.cluster-dispatcher"))
 
   /*Http().bind(hostName, port)
@@ -53,8 +53,8 @@ class Bootstrap(
 
         shutdown.addTask(PhaseServiceRequestsDone, "api.terminate") { () ⇒
           sys.log.info("api.terminate")
-          //graceful termination request being handled on this connection
-          binding.terminate(termDeadline).map(_ ⇒ Done)(ExecutionContext.global)
+          //graceful termination requests being handled on this connection
+          binding.terminate(terminationDeadline).map(_ ⇒ Done)(ExecutionContext.global)
         }
     }(ExecutionContext.global)
 }

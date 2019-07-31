@@ -40,7 +40,7 @@ object ClusterJvmMetrics {
     Behaviors.receive[ClusterMetricsEvent] {
       case (_, ClusterJvmMetrics.Confirm) ⇒
         if (rb.size > 0) {
-          rb.poll.foreach(sourceIn.tell(_))
+          rb.poll.foreach(sourceIn ! _)
           awaitCnf(sourceIn, rb)
         } else active(sourceIn, rb)
       case _ ⇒

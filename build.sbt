@@ -3,7 +3,10 @@ import sbt._
 import sbtdocker.ImageName
 
 val scalaV = "2.13.0"
-val Akka = "2.5.23" //"2.6.0-M4"
+val Akka = "2.5.23"
+
+//"2.6.0-M4"
+
 val akkaHttpVersion = "10.1.9"
 
 val Version = "0.3"
@@ -17,10 +20,10 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-typed" % Akka,
   "com.typesafe.akka" %% "akka-cluster-metrics" % Akka,
   "com.typesafe.akka" %% "akka-stream-typed" % Akka,
-  "com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
   "com.typesafe.akka" %% "akka-cluster-sharding" % Akka,
   //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.98",
   //"com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
+  //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
   "com.typesafe.akka" %% "akka-slf4j" % Akka,
   "org.scala-lang.modules" %% "scala-collection-contrib" % "0.1.0",
 
@@ -99,7 +102,7 @@ dockerfile in docker := {
     copy(workerConfigSrc, workerConfigTarget)
     copy(d3Dir, d3TargetDirPath)
 
-    runRaw(s"cd ${d3TargetDirPath}; ls -la")
+    runRaw(s"cd $d3TargetDirPath; ls -la")
 
     //https://docs.docker.com/compose/compose-file/#resources
     entryPoint("java", "-server", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=400", "-XX:ConcGCThreads=2", "-XX:ParallelGCThreads=2",

@@ -73,7 +73,6 @@ object ReplicatedShardCoordinator {
               buf
             )
           } else Behaviors.same
-
         case ReplyTimeout ⇒
           Behaviors.same
         case cmd: PingDevice ⇒
@@ -122,27 +121,26 @@ object ReplicatedShardCoordinator {
             case Some(r) ⇒
               (r :+ rName).map(_._1).getOrElse(r)
           }
-          val um = replicas.add(rName, Replica(ref, hostId))
+          val updatedReplicas = replicas.add(rName, Replica(ref, hostId))
 
           if (ctx.self.path.address == ref.path.address)
             ref.tell(WakeUpDevice(hostId))
 
           if (rest.nonEmpty)
-            reqClusterInfo(rName, self, rest.head, rest.tail, Some(uHash), um, buf)
+            reqClusterInfo(rName, self, rest.head, rest.tail, Some(uHash), updatedReplicas, buf)
           else {
-            val info = um.keySet
-              .map(k ⇒ s"[$k -> ${um.get(k).map(_.memberId).mkString(",")}]")
-              .mkString(";")
-
-            ctx.log.warning("★ ★ ★ {} - {}", rName, info)
-
-            if (buf.isEmpty) stable(uHash, um, rName)
-            else buf.unstashAll(ctx, converge(rName, buf))
+            if (buf.isEmpty) {
+              val info = updatedReplicas.keySet
+                .map(k ⇒ s"[$k -> ${updatedReplicas.get(k).map(_.memberId).mkString(",")}]")
+                .mkString(";")
+              ctx.log.info("★ ★ ★   Forming ring {}   ★ ★ ★", info)
+              converged(uHash, updatedReplicas, rName)
+            } else buf.unstashAll(ctx, converge(rName, buf))
           }
         case ReplyTimeout ⇒
           ctx.log.warning(s"No response within ${replyTimeout}. Retry {} ", current)
-          //TODO: Limit number of retries because the target node might die in the middle of the process,
-          // therefore we won't get the reply back. Moreover, we could step into infinite loop
+          //TODO: Limit number of retries because the target node might die in the middle of the process
+          // therefore, we won't get the reply back. Moreover, we could step into infinite loop
           reqClusterInfo(shardName, self, current, rest, shardHash, replicas, buf)
         case m @ MembershipChanged(rs) if rs.nonEmpty ⇒
           buf.stash(m)
@@ -160,7 +158,7 @@ object ReplicatedShardCoordinator {
       }
     }
 
-  def stable(
+  def converged(
     shardHash: HashRing,
     replicas: SortedMultiDict[String, Replica],
     shardName: String
@@ -170,14 +168,11 @@ object ReplicatedShardCoordinator {
         case Ping(id) ⇒
           //pick shard
           val shard = shardHash.lookup(id).head
-
           //pick replica
           val rs      = replicas.get(shard)
           val replica = rs.head.a //always pick the first
           val pid     = rs.head.memberId
-
           ctx.log.warning("{} goes to [{} - {}:{}]", id, shard, replica, replicas.size)
-
           if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for ${shard}")
           else replica.tell(PingDevice(id, pid))
           Behaviors.same
@@ -191,7 +186,7 @@ object ReplicatedShardCoordinator {
           r.tell(ClusterStateResponse(info))
           Behaviors.same
         case GetCropCircle(replyTo) ⇒
-          val circle = replicas.keySet.foldLeft(CropCircle("fsa")) { (circle, c) ⇒
+          val circle = replicas.keySet.foldLeft(CropCircle("circle")) { (circle, c) ⇒
             replicas.get(c).map(_.a.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
               circle :+ (c, actorPath)
             }

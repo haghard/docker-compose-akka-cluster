@@ -108,7 +108,7 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
     }
 
     JsObject(
-      "name"     → JsString("fsa-ring"),
+      "name"     → JsString("ring"),
       "type"     → JsString("cluster"),
       "children" → JsArray(en)
     ).compactPrint
@@ -119,7 +119,7 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
     val iter = ring.keysIteratorFrom(ring.firstKey)
     while (iter.hasNext) {
       val key = iter.next
-      sb.append(s"[${ring(key)}:${key}]").append("->")
+      sb.append(s"[${ring(key)}:$key]").append("->")
     }
     sb.toString
   }

@@ -21,26 +21,27 @@ object DeviceShadowReplica {
 
 class DeviceShadowReplica(replicaName: String) extends Actor with ActorLogging {
 
-  override def preStart(): Unit =
+  /*override def preStart(): Unit =
     log.warning("* * *   preStart: {} * * * ", replicaName)
 
   override def postStop(): Unit =
     log.warning("* * *   postStop: {} * * * ", replicaName)
+  */
 
   def active: Receive = {
     case PingDevice(id, _) ⇒
       log.info("ping device {}", id)
     case WakeUpDevice(_) ⇒
-      log.warning("ignore rerun wake up device") //cluster membership changed
+      //Ignore rerun wake up device because cluster membership has changed
   }
 
   def await: Receive = {
     case WakeUpDevice(_) ⇒
       log.warning("* * *  Wake up device: {}  * * *", replicaName)
-      //TODO: start replicator for the replicaName here !!!
+      //TODO: start replicator for replicaName here !!!
       context.become(active)
     case other ⇒
-    //
+    //IGNORE
 
   }
 

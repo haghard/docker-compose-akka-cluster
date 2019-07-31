@@ -45,7 +45,6 @@ class RingBuffer[T: scala.reflect.ClassTag] private (capacity: Int, mask: Int, b
       Some(buffer(index))
     }
 
-  //returns a copy of available elements
   def entries: Array[T] = {
     var head0 = head
     val copy  = if (tail > capacity) Array.ofDim[T](capacity) else Array.ofDim[T](tail.toInt - head.toInt)
