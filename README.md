@@ -56,7 +56,7 @@ All replicas that have the same shard name should be responsible to the same ran
   `http GET 192.168.77.10:9000/device/1`  
 
 
-#### Docker commands, utils ####
+#### Docker commands ####
   
   For docker to show all ips `docker inspect -f '{{.Name}} - {{.NetworkSettings.IPAddress }}' $(docker ps -aq)`
   
@@ -88,6 +88,9 @@ https://github.com/mckeeh3/akka-java-cluster-kubernetes/tree/d714ad5651ee4dc8446
 ### Docker  
 
 https://docs.docker.com/compose/compose-file/#resources
+
 https://github.com/chbatey/docker-jvm-akka/blob/master/docker-compose.yml
+
 https://dzone.com/articles/docker-container-resource-management-cpu-ram-and-i
+
 http://www.batey.info/docker-jvm-k8s.html
