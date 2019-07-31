@@ -1,5 +1,19 @@
 ### The project shows how to run akka cluster using `docker-compose`.
 
+##  Ideas
+
+We have shards: alpha, betta or gamma
+Each node starts knowing what shard it belong to (alpha, betta or gamma). 
+
+The docker-compose2.yml by default runs 
+ * 2 replicas for alpha
+ * 1 replica for betta
+ * 1 replica for gamma
+
+Later you can scale up and down the number of replicas for these shards.
+All replicas that have the same shard name should be responsible to the same range of keys and should have independent replicators on it.
+     
+
 #### A sequence of docker commands ####
   
   * First of all we need to export these env vars
