@@ -2,10 +2,9 @@
 
 ##  Ideas
 
-We have shards: alpha, betta or gamma
-Each node starts knowing what shard it belong to (alpha, betta or gamma). 
+We have 3 shards: alpha, betta and gamma. Each cluster node starts knowing its shard name.
 
-The docker-compose2.yml by default runs 
+The docker-compose2.yml by default runs: 
  * 2 replicas for alpha
  * 1 replica for betta
  * 1 replica for gamma
