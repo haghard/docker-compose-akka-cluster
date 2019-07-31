@@ -96,6 +96,7 @@ class HttpRoutes(
     }
 
   val route: Route =
+    /*
     path("members")(get(complete(queryForMembers))) ~
     path("shards") {
       get {
@@ -108,6 +109,7 @@ class HttpRoutes(
         }
       }
     } ~
+    */
     path("device" / LongNumber) { deviceId ⇒
       get {
         membership.tell(Ping(deviceId))
@@ -117,7 +119,7 @@ class HttpRoutes(
       get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
     ) ~ cropCircleRoute
 
-  private def queryForMembers: Future[HttpResponse] =
+  def queryForMembers: Future[HttpResponse] =
     membership
       .ask[ReplicatedShardCoordinator.ClusterStateResponse](ReplicatedShardCoordinator.ClusterStateRequest(_))
       .map { reply ⇒
