@@ -3,7 +3,7 @@ package demo
 import akka.cluster.sharding.ShardRegion
 import akka.actor.{Actor, ActorLogging, Props}
 
-object DeviceShadowReplica {
+object DeviceShadow {
 
   val entityId: ShardRegion.ExtractEntityId = {
     case cmd: DeviceCommand ⇒
@@ -16,23 +16,23 @@ object DeviceShadowReplica {
   }
 
   def props(replicaName: String) =
-    Props(new DeviceShadowReplica(replicaName)).withDispatcher("akka.shard-dispatcher")
+    Props(new DeviceShadow(replicaName)).withDispatcher("akka.shard-dispatcher")
 }
 
-class DeviceShadowReplica(replicaName: String) extends Actor with ActorLogging {
+class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
 
   /*override def preStart(): Unit =
     log.warning("* * *   preStart: {} * * * ", replicaName)
 
   override def postStop(): Unit =
     log.warning("* * *   postStop: {} * * * ", replicaName)
-  */
+   */
 
   def active: Receive = {
     case PingDevice(id, _) ⇒
       log.info("ping device {}", id)
     case WakeUpDevice(_) ⇒
-      //Ignore rerun wake up device because cluster membership has changed
+    //Ignore rerun wake up device because cluster membership has changed
   }
 
   def await: Receive = {

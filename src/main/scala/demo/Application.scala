@@ -109,7 +109,7 @@ object Application extends App {
 
             val membership =
               ctx.spawn(
-                ReplicatedShardCoordinator(shardName),
+                ReBalancer(shardName),
                 "members",
                 DispatcherSelector.fromConfig("akka.metrics-dispatcher")
               )
@@ -164,7 +164,7 @@ object Application extends App {
 
             val membership =
               ctx.spawn(
-                ReplicatedShardCoordinator(shardName),
+                ReBalancer(shardName),
                 "members",
                 DispatcherSelector.fromConfig("akka.metrics-dispatcher")
               )

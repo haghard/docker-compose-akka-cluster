@@ -2,7 +2,7 @@ package demo
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
-import demo.ReplicatedShardCoordinator.ShardInfo
+import demo.ReBalancer.ShardInfo
 
 object DomainReplicas {
 
@@ -13,7 +13,7 @@ object DomainReplicas {
   ): Behavior[ShardRegionCmd] =
     Behaviors.setup { ctx ⇒
       ctx.system.receptionist ! akka.actor.typed.receptionist.Receptionist
-        .Register(ReplicatedShardCoordinator.domainKey, ctx.self)
+        .Register(ReBalancer.domainKey, ctx.self)
 
       Behaviors.receiveMessage {
         case GetShardInfo(r) ⇒

@@ -59,7 +59,7 @@ class RingBuffer[T: scala.reflect.ClassTag] private (capacity: Int, mask: Int, b
     copy
   }
 
-  def size = (tail - head).toInt
+  def size: Int = (tail - head).toInt
 
   override def toString =
     s"nextHead: [$head/${head.toInt & mask}] nextTail:[$tail/${tail.toInt & mask}] buffer: ${buffer.mkString(",")}"

@@ -18,7 +18,7 @@ object Bootstrap {
 
 class Bootstrap(
   shutdown: CoordinatedShutdown,
-  membership: ActorRef[ReplicatedShardCoordinator.Command],
+  membership: ActorRef[ReBalancer.Command],
   shardRegion: ActorRef[DeviceCommand],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   hostName: String,
@@ -26,7 +26,7 @@ class Bootstrap(
 )(implicit sys: ActorSystem) {
 
   val terminationDeadline = 2.seconds
-  implicit val mat = ActorMaterializer(ActorMaterializerSettings.create(sys).withDispatcher("akka.cluster-dispatcher"))
+  implicit val mat        = ActorMaterializer(ActorMaterializerSettings.create(sys).withDispatcher("akka.cluster-dispatcher"))
 
   /*Http().bind(hostName, port)
     .to(akka.stream.scaladsl.Sink.foreach { con =>

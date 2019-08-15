@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.{Route, _}
 import akka.stream.scaladsl._
 import akka.stream._
 import akka.util.ByteString
-import demo.ReplicatedShardCoordinator.Ping
+import demo.ReBalancer.Ping
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
@@ -19,7 +19,7 @@ import akka.cluster.sharding.ShardRegion.{ClusterShardingStats, GetClusterShardi
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 
 class HttpRoutes(
-  membership: ActorRef[ReplicatedShardCoordinator.Command],
+  membership: ActorRef[ReBalancer.Command],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   shardRegion: ActorRef[DeviceCommand]
 )(implicit sys: ActorSystem)
@@ -81,10 +81,10 @@ class HttpRoutes(
         flowWithHeartbeat().mapAsync(1) {
           case TextMessage.Strict(_) ⇒
             membership
-              .ask[ReplicatedShardCoordinator.CropCircleView](ReplicatedShardCoordinator.GetCropCircle(_))
+              .ask[ReBalancer.CropCircleView](ReBalancer.GetCropCircle(_))
               .map(r ⇒ TextMessage.Strict(r.json))
           case other ⇒
-            throw new Exception(s"Unexpected message ${other} !!!")
+            throw new Exception(s"Unexpected message $other !!!")
         }
         /*flowWithHeartbeat().collect {
           case TextMessage.Strict(cmd) ⇒
@@ -109,7 +109,7 @@ class HttpRoutes(
         }
       }
     } ~
-    */
+     */
     path("device" / LongNumber) { deviceId ⇒
       get {
         membership.tell(Ping(deviceId))
@@ -121,7 +121,7 @@ class HttpRoutes(
 
   def queryForMembers: Future[HttpResponse] =
     membership
-      .ask[ReplicatedShardCoordinator.ClusterStateResponse](ReplicatedShardCoordinator.ClusterStateRequest(_))
+      .ask[ReBalancer.ClusterStateResponse](ReBalancer.ClusterStateRequest(_))
       .map { reply ⇒
         HttpResponse(
           status = StatusCodes.OK,

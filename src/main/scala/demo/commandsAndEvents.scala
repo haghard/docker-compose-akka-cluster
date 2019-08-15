@@ -1,7 +1,7 @@
 package demo
 
 import akka.actor.typed.ActorRef
-import demo.ReplicatedShardCoordinator.Command
+import demo.ReBalancer.Command
 
 sealed trait ShardRegionCmd
 case class GetShardInfo(replyTo: ActorRef[Command]) extends ShardRegionCmd

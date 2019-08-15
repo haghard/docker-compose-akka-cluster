@@ -21,7 +21,7 @@ object SharedDomain {
 
     ClusterSharding(system).start(
       typeName = "devices",
-      entityProps = DeviceShadowReplica.props(replicaName),
+      entityProps = DeviceShadow.props(replicaName),
       /*
       rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
       a different `ShardRegion` due to rebalance, crash or graceful exit. That is exactly what we want.
@@ -29,7 +29,7 @@ object SharedDomain {
       if u need to load massive amount of date, it could be problematic.
        */
       settings = ClusterShardingSettings(system).withRememberEntities(false).withRole(replicaName),
-      extractShardId = DeviceShadowReplica.shardId,
-      extractEntityId = DeviceShadowReplica.entityId
+      extractShardId = DeviceShadow.shardId,
+      extractEntityId = DeviceShadow.entityId
     )
 }

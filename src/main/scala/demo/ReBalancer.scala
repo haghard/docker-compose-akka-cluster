@@ -10,7 +10,7 @@ import demo.hashing.{CropCircle, HashRing}
 
 import scala.collection.immutable.SortedMultiDict
 
-object ReplicatedShardCoordinator {
+object ReBalancer {
 
   val domainKey = ServiceKey[ShardRegionCmd]("domain")
 
@@ -48,9 +48,9 @@ object ReplicatedShardCoordinator {
   def apply(replicaName: String): Behavior[Command] =
     Behaviors.setup { ctx ⇒
       ctx.system.receptionist ! Receptionist.Subscribe(
-        ReplicatedShardCoordinator.domainKey,
+        ReBalancer.domainKey,
         ctx.messageAdapter[Receptionist.Listing] {
-          case ReplicatedShardCoordinator.domainKey.Listing(replicas) ⇒
+          case ReBalancer.domainKey.Listing(replicas) ⇒
             MembershipChanged(replicas)
         }
       )
@@ -178,6 +178,7 @@ object ReplicatedShardCoordinator {
           Behaviors.same
         case m @ MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {
+            ctx.log.error("!!!!!!! converged -> converge")
             ctx.self.tell(m)
             converge(shardName)
           } else Behaviors.same
