@@ -10,8 +10,7 @@ The docker-compose2.yml by default runs:
  * 1 replica for gamma
 
 Later you can scale up and down the number of replicas for these shards.
-All replicas that have the same shard name should be responsible to the same range of keys and should have independent replicators on it.
-     
+All replicas that have the same shard name should be responsible to the same range of keys and should have independent replicators on it.     
 
 #### A sequence of docker commands ####
   
@@ -27,7 +26,7 @@ All replicas that have the same shard name should be responsible to the same ran
     
     `export TZ=UTC`
     
-  * Build and publish the image `sbt docker`
+  * Build and publish the image `sbt -DSHARD=docker && docker`
   
   * Start one seed node and one worker node `docker-compose -f docker-compose2.yml up -d`
      
@@ -41,11 +40,18 @@ All replicas that have the same shard name should be responsible to the same ran
     
   * Now you can build the image again
 
-### Crop circle cluster view
+### Crop circle
 
   `http GET 192.168.77.10:9000/cluster`
 
   `http GET 192.168.77.10:9000/cluster1`
+
+  `http GET 192.168.77.10:9000/members`
+
+### Cluster members
+
+   `http GET 192.168.77.10:9000/cluster/members`
+    
 
 ### Jvm metrics 
   `curl --no-buffer 192.168.77.10:9000/metrics`
@@ -74,6 +80,8 @@ All replicas that have the same shard name should be responsible to the same ran
   docker pause asdgfasd 
 
 ##  Links
+
+https://speedcom.github.io/dsp2017/2017/04/13/justindb-replication-and-partitioning.html
  
 ### Akka
 

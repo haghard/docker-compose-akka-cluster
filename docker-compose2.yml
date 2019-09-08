@@ -10,14 +10,14 @@ services:
     mem_reservation: 200m
     cpu_shares: 3072  #3 -cores
     environment:
-      node.type: master
-      shard: alpha
+      NODE_TYPE: master
+      SHARD: alpha
 
   workerA:
     image: haghard/docker-cluster:0.3
     environment:
-      node.type: worker
-      shard: alpha
+      NODE_TYPE: worker
+      SHARD: alpha
     mem_limit: 250m
     mem_reservation: 200m
     cpu_shares: 1048  #1 -core
@@ -29,8 +29,8 @@ services:
   workerB:
     image: haghard/docker-cluster:0.3
     environment:
-      node.type: worker
-      shard: betta
+      NODE_TYPE: worker
+      SHARD: betta
     mem_limit: 250m
     mem_reservation: 200m
     cpu_shares: 1048  #1 -core
@@ -42,8 +42,8 @@ services:
   workerG:
     image: haghard/docker-cluster:0.3
     environment:
-      node.type: worker
-      shard: gamma
+      NODE_TYPE: worker
+      SHARD: gamma
     mem_limit: 250m
     mem_reservation: 200m
     cpu_shares: 1048  #1 -core

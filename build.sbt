@@ -3,7 +3,7 @@ import sbt._
 import sbtdocker.ImageName
 
 val scalaV = "2.13.0"
-val Akka = "2.5.25"
+val Akka   = "2.5.25"
 
 //"2.6.0-M4"
 
@@ -13,28 +13,29 @@ val Version = "0.3"
 
 name := "docker-cluster"
 version := Version
-scalacOptions in(Compile, console) := Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked")
+scalacOptions in (Compile, console) := Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked")
 scalaVersion := scalaV
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-cluster-typed" % Akka,
-  "com.typesafe.akka" %% "akka-cluster-metrics" % Akka,
-  "com.typesafe.akka" %% "akka-stream-typed" % Akka,
+  "com.typesafe.akka" %% "akka-cluster-typed"    % Akka,
+  "com.typesafe.akka" %% "akka-cluster-metrics"  % Akka,
+  "com.typesafe.akka" %% "akka-stream-typed"     % Akka,
   "com.typesafe.akka" %% "akka-cluster-sharding" % Akka,
+  //a module that provides HTTP endpoints for introspecting and managing Akka clusters
+  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.3",
   //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.98",
   //"com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
   //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
-  "com.typesafe.akka" %% "akka-slf4j" % Akka,
+  "com.typesafe.akka"      %% "akka-slf4j"               % Akka,
   "org.scala-lang.modules" %% "scala-collection-contrib" % "0.1.0",
-
   //custom build for 2.13
   //"io.moia" %% "streamee" % "5.0.0-M1+1-691a3938+20190726-1217",
 
   //local build for 2.13 /Users/haghard/.ivy2/local/com.github.TanUkkii007/akka-cluster-custom-downing_2.13/0.0.13-SNAPSHOT/jars/akka-cluster-custom-downing_2.13.jar
   "com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT",
-  "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-  "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
-  "ch.qos.logback" % "logback-classic" % "1.2.3",
+  "com.typesafe.akka"      %% "akka-http"                   % akkaHttpVersion,
+  "com.typesafe.akka"      %% "akka-http-spray-json"        % akkaHttpVersion,
+  "ch.qos.logback"         % "logback-classic"              % "1.2.3",
   ("com.lihaoyi" % "ammonite" % "1.6.9" % "test").cross(CrossVersion.full)
 )
 
@@ -55,33 +56,34 @@ assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
 
 // Resolve duplicates for Sbt Assembly
 assemblyMergeStrategy in assembly := {
-  case PathList(xs @ _*) if xs.last == "io.netty.versions.properties" => MergeStrategy.rename
-  case other => (assemblyMergeStrategy in assembly).value(other)
+  case PathList(xs @ _*) if xs.last == "io.netty.versions.properties" ⇒ MergeStrategy.rename
+  case other                                                          ⇒ (assemblyMergeStrategy in assembly).value(other)
 }
 
 imageNames in docker := Seq(ImageName(namespace = Some("haghard"), repository = name.value, tag = Some(version.value)))
 
-buildOptions in docker := BuildOptions(cache = false,
+buildOptions in docker := BuildOptions(
+  cache = false,
   removeIntermediateContainers = BuildOptions.Remove.Always,
-  pullBaseImage = BuildOptions.Pull.Always)
+  pullBaseImage = BuildOptions.Pull.Always
+)
 
 dockerfile in docker := {
-  val baseDir = baseDirectory.value
+  val baseDir        = baseDirectory.value
   val artifact: File = assembly.value
 
   val imageAppBaseDir = "/app"
-  val configDir = "conf"
-  val d3Dir = baseDir / "src" / "main" / "resources" / "d3"
+  val configDir       = "conf"
+  val d3Dir           = baseDir / "src" / "main" / "resources" / "d3"
 
   val artifactTargetPath = s"$imageAppBaseDir/${artifact.name}"
 
-  val seedConfigSrc = baseDir / "src" / "main" / "resources" / "master.conf"
+  val seedConfigSrc   = baseDir / "src" / "main" / "resources" / "master.conf"
   val workerConfigSrc = baseDir / "src" / "main" / "resources" / "worker.conf"
 
-
-  val seedConfigTarget = s"${imageAppBaseDir}/${configDir}/master.conf"
+  val seedConfigTarget   = s"${imageAppBaseDir}/${configDir}/master.conf"
   val workerConfigTarget = s"${imageAppBaseDir}/${configDir}/worker.conf"
-  val d3TargetDirPath = s"${imageAppBaseDir}/d3"
+  val d3TargetDirPath    = s"${imageAppBaseDir}/d3"
 
   new sbtdocker.mutable.Dockerfile {
     //from("openjdk:8-jre")
@@ -105,7 +107,13 @@ dockerfile in docker := {
     runRaw(s"cd $d3TargetDirPath; ls -la")
 
     //https://docs.docker.com/compose/compose-file/#resources
-    entryPoint("java", "-server", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=400", "-XX:ConcGCThreads=2", "-XX:ParallelGCThreads=2",
+    entryPoint(
+      "java",
+      "-server",
+      "-XX:+UseG1GC",
+      "-XX:MaxGCPauseMillis=400",
+      "-XX:ConcGCThreads=2",
+      "-XX:ParallelGCThreads=2",
       //"-XX:+PrintFlagsFinal",
       "-XshowSettings",
       "-XX:MaxRAMFraction=1",
@@ -115,16 +123,125 @@ dockerfile in docker := {
       s"-DseedPort=${System.getenv("AKKA_PORT")}",
       s"-DhttpPort=${System.getenv("HTTP_PORT")}",
       s"-Duser.timezone=${System.getenv("TZ")}",
-      "-jar", artifactTargetPath)
+      "-jar",
+      artifactTargetPath
+    )
+  }
+}
+
+ThisBuild / turbo := true
+
+fork in run := true
+
+//sbt -DSHARD=a and runA
+//sbt -DSHARD=b and runB
+//sbt -DSHARD=g and runG
+//sbt -DSHARD=docker
+
+val shard = sys.props.getOrElse("SHARD", throw new Exception("Couldn't find SHARD env variable !!!"))
+
+
+// https://stackoverflow.com/questions/26244115/how-to-execute-runmain-from-custom-task
+val runA = taskKey[Unit]("Run alpha")
+runA := {
+  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.1").value
+}
+
+val runB = taskKey[Unit]("Run betta")
+runB := {
+  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.2").value
+}
+
+val runG = taskKey[Unit]("Run gamma")
+runG := {
+  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.3").value
+}
+
+
+/*
+shard match {
+  case "a" => {
+    println("a")
+    addCommandAlias("a", "runMain demo.Application -DseedPort=2551 -DseedHost=127.0.0.4 -DhttpPort=9000 -Dhost=127.0.0.1")
+  }
+  case "b" => {
+    println("b")
+    addCommandAlias("b", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.3")
+  }
+  case "g" => {
+    println("g")
+    addCommandAlias("g", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.4")
+  }
+}
+*/
+
+
+shard match {
+  case "a" => {
+    println("---- SET SHARD alpha ----")
+    //envVars in runMain := Map("NODE_TYPE" -> "master", "SHARD" -> "alpha")
+    envVars := Map("NODE_TYPE" -> "master", "SHARD" -> "alpha")
+
+  }
+  case "b" => {
+    println("---- SET SHARD betta ----")
+    envVars := Map("NODE_TYPE" -> "worker", "SHARD" -> "betta")
+  }
+  case "g" => {
+    println("---- SET SHARD gamma ----")
+    envVars := Map("NODE_TYPE" -> "worker", "SHARD" -> "betta")
+  }
+  case "docker" => {
+    println("docker")
+    envVars := Map()
   }
 }
 
 /*
+addCommandAlias("a", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.1")
+addCommandAlias("b", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.3")
+addCommandAlias("g", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.4")
+*/
+
+/*
+shard match {
+  case "a" => {
+    println("---- SET Alias alpha ----")
+    addCommandAlias("a", "runMain demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.1")
+  }
+  case "b" => {
+    println("---- SET Alias betta ----")
+    addCommandAlias("b", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.3")
+  }
+  case "g" => {
+    println("---- SET Alias gamma ----")
+    addCommandAlias("g", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.4")
+  }
+}*/
+
+
+
+//envVars in run := Map("NODE_TYPE" -> "master", "SHARD" -> "alpha")
+//addCommandAlias("a0", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.1")
+
+//sudo ifconfig lo0 127.0.0.2 add
+//envVars in run := Map("NODE_TYPE" -> "worker", "SHARD" -> "alpha")
+//addCommandAlias("a1", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.2")
+
+//sudo ifconfig lo0 127.0.0.3 add
+//envVars in run := Map("NODE_TYPE" -> "worker", "SHARD" -> "betta")
+//addCommandAlias("b0", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.3")
+
+//sudo ifconfig lo0 127.0.0.4 add
+//envVars in run := Map("NODE_TYPE" -> "worker", "SHARD" -> "gamma")
+//addCommandAlias("g0", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.4")
+
+/*
 s"-Djava.rmi.server.hostname=${System.getenv("HOST")}",
-      s"-Dcom.sun.management.jmxremote.port=${System.getenv("SEED_JMX_PORT")}",
-      s"-Dcom.sun.management.jmxremote.ssl=false",
-      s"-Dcom.sun.management.jmxremote.authenticate=false",
-      s"-Dcom.sun.management.jmxremote.local.only=false",
-      s"-Dcom.sun.management.jmxremote.rmi.port=${System.getenv("SEED_JMX_PORT")}",
-      s"-Dcom.sun.management.jmxremote=true",
+  s"-Dcom.sun.management.jmxremote.port=${System.getenv("SEED_JMX_PORT")}",
+  s"-Dcom.sun.management.jmxremote.ssl=false",
+  s"-Dcom.sun.management.jmxremote.authenticate=false",
+  s"-Dcom.sun.management.jmxremote.local.only=false",
+  s"-Dcom.sun.management.jmxremote.rmi.port=${System.getenv("SEED_JMX_PORT")}",
+  s"-Dcom.sun.management.jmxremote=true",
  */

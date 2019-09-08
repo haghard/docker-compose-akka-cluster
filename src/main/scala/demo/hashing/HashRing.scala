@@ -1,4 +1,5 @@
-package demo.hashing
+package demo
+package hashing
 
 import scala.collection.MapView
 import scala.collection.immutable.SortedMap
@@ -79,13 +80,19 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
     ring.groupBy(_._2).view.mapValues(_.keys.toList.sorted)
 
   def showSubRange(startKey: Long, endKey: Long): String = {
-    var cur  = startKey
-    val sb   = new StringBuilder
+    var cur = startKey
+    val sb  = new StringBuilder
+    sb.append("\n")
+      .append("Shard")
+      .append("\t\t\t")
+      .append("Token")
+      .append("\n")
     val iter = ring.keysIteratorFrom(startKey)
     while (iter.hasNext && cur <= endKey) {
       val key = iter.next
       cur = key
-      sb.append(s"[${key}: ${ring(key)}]").append("->")
+      sb.append(key).append("\t\t").append(ring(key)).append("\n")
+      //sb.append(s"[$key: ${ring(key)}]").append("->")
     }
     sb.toString
   }

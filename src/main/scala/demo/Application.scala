@@ -8,7 +8,7 @@ import akka.actor.{Address, CoordinatedShutdown}
 import akka.actor.CoordinatedShutdown.PhaseClusterExitingDone
 import akka.actor.typed._
 import akka.actor.typed.scaladsl.Behaviors
-import akka.cluster.typed.{Cluster, Join, SelfUp, Subscribe, Unsubscribe}
+import akka.cluster.typed.{Cluster, ClusterSingleton, Join, SelfUp, SingletonActor, Subscribe, Unsubscribe}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -27,7 +27,8 @@ java.util.TimeZone.setDefault(TimeZone.getTimeZone("America/New_York"))
 LocalDateTime.now()
  */
 
-object Application extends App {
+object Application extends Ops {
+
   val SystemName = "dc"
 
   val AKKA_PORT = "akka.remote.artery.canonical.port"
@@ -35,54 +36,110 @@ object Application extends App {
 
   val sysPropSeedPort  = "seedPort"
   val sysPropsSeedHost = "seedHost"
+
+  val sysPropsHost     = "host"
   val sysPropsHttpPort = "httpPort"
-
-  val confDir  = System.getenv("EXTRA_CONF_DIR")
-  val nodeType = System.getenv("node.type").trim
-
-  val isMasterNode = nodeType equals "master"
 
   val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
 
-  val shardName = System.getenv("shard").trim
+  val Name = "domain"
 
   val BufferSize = 1 << 5
 
-  val sysProps = sys.props
+  def main(args: Array[String]): Unit = {
+    val opts: Map[String, String] = argsToOpts(args.toList)
+    applySystemProperties(opts)
 
-  val port = sysProps
-    .get(sysPropSeedPort)
-    .fold(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))(identity)
+    //val confDir  = System.getenv("EXTRA_CONF_DIR")
+    //System.setProperty("NODE_TYPE", "master")
+    //java.lang.System.getenv().put("NODE_TYPE", "master")
 
-  val seedHostAddress = sysProps
-    .get(sysPropsSeedHost)
-    .fold(throw new Exception(s"Couldn't find $sysPropSeedPort system property"))(identity)
+    //println("Env: " + System.getenv().keySet().asScala.mkString(","))
 
-  val httpPort = sysProps
-    .get(sysPropsHttpPort)
-    .fold(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))(identity)
+    val nodeType = System.getenv("NODE_TYPE").trim
 
-  val dockerInternalAddress = NetworkInterface
-    .getByName("eth0")
-    .getInetAddresses
-    .asScala
-    .find(_.getHostAddress.matches(ipExpression))
-    .fold(throw new Exception("Couldn't find docker address"))(identity)
+    val isMasterNode = nodeType equals "master"
 
-  def createConfig(address: String): Config =
-    ConfigFactory
-      .empty()
-      .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$address"))
-      .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
-      .withFallback(ConfigFactory.parseString(s"akka.cluster.roles = [ $shardName ]"))
-      .withFallback(ConfigFactory.load())
+    val shardName = System.getenv("SHARD").trim
 
-  val extraCfg = new File(s"${confDir}/${nodeType}.conf")
-  val cfg      = if (isMasterNode) createConfig(seedHostAddress) else createConfig(dockerInternalAddress.getHostAddress)
+    val sysProps = sys.props
 
-  val Name = "domain"
+    val port = sysProps
+      .get(sysPropSeedPort)
+      .fold(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))(identity)
 
-  def worker(config: Config, seedAddress: Address, shardName: String, runtimeInfo: String): Behavior[Nothing] =
+    val seedHostAddress = sysProps
+      .get(sysPropsSeedHost)
+      .fold(throw new Exception(s"Couldn't find $sysPropSeedPort system property"))(identity)
+
+    val httpPort = sysProps
+      .get(sysPropsHttpPort)
+      .fold(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))(identity)
+
+    val hostAddress = sysProps.get(sysPropsHost)
+
+    def createConfig(address: String): Config =
+      ConfigFactory
+        .empty()
+        .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$address"))
+        .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
+        .withFallback(ConfigFactory.parseString(s"akka.cluster.roles = [ $shardName ]"))
+        .withFallback(ConfigFactory.load())
+
+    //val extraCfg = new File(s"$confDir/$nodeType.conf")
+    val cfg = hostAddress.fold(
+      if (isMasterNode) createConfig(seedHostAddress)
+      else {
+        val dockerInternalAddress = NetworkInterface
+          .getByName("eth0")
+          .getInetAddresses
+          .asScala
+          .find(_.getHostAddress.matches(ipExpression))
+          .fold(throw new Exception("Couldn't find docker address"))(identity)
+        createConfig(dockerInternalAddress.getHostAddress)
+      }
+    ) {
+      createConfig(_)
+    }
+
+    val memorySize = ManagementFactory.getOperatingSystemMXBean
+      .asInstanceOf[com.sun.management.OperatingSystemMXBean]
+      .getTotalPhysicalMemorySize
+    val runtimeInfo = new StringBuilder()
+      .append("=================================================================================================")
+      .append('\n')
+      .append(s"Cores:${Runtime.getRuntime.availableProcessors}")
+      .append('\n')
+      .append(" Total Memory:" + Runtime.getRuntime.totalMemory / 1000000 + "Mb")
+      .append('\n')
+      .append(" Max Memory:" + Runtime.getRuntime.maxMemory / 1000000 + "Mb")
+      .append('\n')
+      .append(" Free Memory:" + Runtime.getRuntime.freeMemory / 1000000 + "Mb")
+      .append('\n')
+      .append(" RAM:" + memorySize / 1000000 + "Mb")
+      .append('\n')
+      .append("=================================================================================================")
+      .toString()
+
+    val address = Address("akka", SystemName, seedHostAddress, port.toInt)
+
+    if (isMasterNode)
+      ActorSystem[Nothing](
+        master(cfg, address, shardName, runtimeInfo, httpPort.toInt),
+        SystemName,
+        cfg
+      )
+    else
+      ActorSystem[Nothing](worker(cfg, address, shardName, runtimeInfo, httpPort.toInt), SystemName, cfg)
+  }
+
+  def worker(
+    cfg: Config,
+    seedAddress: Address,
+    shardName: String,
+    runtimeInfo: String,
+    httpPort: Int
+  ): Behavior[Nothing] =
     Behaviors
       .setup[SelfUp] { ctx ⇒
         val cluster = Cluster(ctx.system)
@@ -103,19 +160,45 @@ object Application extends App {
 
             cluster.subscriptions ! Unsubscribe(ctx.self)
             val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
+            shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
+              Future
+                .successful(ctx.log.info("after.cluster-exiting-done"))
+                .map(_ ⇒ akka.Done)(ExecutionContext.global)
+            }
 
             val shardRegion =
               SharedDomain(shardName, ctx.system.toUntyped).toTyped[DeviceCommand]
 
             val membership =
-              ctx.spawn(
-                ReBalancer(shardName),
-                "members",
+              ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(shardName), "ring"))
+
+            /*ctx.spawn(
+                  RingMaster(shardName),
+                  "ring",
+                  DispatcherSelector.fromConfig("akka.metrics-dispatcher")
+                )*/
+
+            val jvmMetrics = ctx
+              .spawn(
+                ClusterJvmMetrics(BufferSize),
+                "jvm-metrics",
                 DispatcherSelector.fromConfig("akka.metrics-dispatcher")
               )
+              .narrow[ClusterJvmMetrics.Confirm]
+
+            new Bootstrap(
+              shutdown,
+              membership,
+              shardRegion,
+              jvmMetrics,
+              cluster.selfMember.address.host.get,
+              httpPort
+            )(
+              ctx.system.toUntyped
+            )
 
             ctx.spawn(
-              DomainReplicas(
+              Proxy2Shard(
                 shardRegion,
                 shardName,
                 cluster.selfMember.address.host
@@ -124,10 +207,6 @@ object Application extends App {
               ),
               Name
             )
-
-            shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
-              Future.successful(ctx.log.info("after.cluster-exiting-done")).map(_ ⇒ akka.Done)(ExecutionContext.global)
-            }
 
             Behaviors.receiveSignal {
               case (_, Terminated(`membership`)) ⇒
@@ -138,7 +217,13 @@ object Application extends App {
       }
       .narrow
 
-  def master(config: Config, seedAddress: Address, shardName: String, runtimeInfo: String): Behavior[Nothing] =
+  def master(
+    config: Config,
+    seedAddress: Address,
+    shardName: String,
+    runtimeInfo: String,
+    httpPort: Int
+  ): Behavior[Nothing] =
     Behaviors
       .setup[SelfUp] { ctx ⇒
         val cluster = Cluster(ctx.system)
@@ -151,23 +236,28 @@ object Application extends App {
               "★ ★ ★ {} {} bytes Seed {}:{} joined cluster ★ ★ ★",
               shardName,
               config.getMemorySize("akka.remote.artery.advanced.maximum-frame-size"),
-              seedHostAddress,
-              port.toInt
+              config.getString(AKKA_HOST),
+              config.getInt(AKKA_PORT)
             )
+
             ctx.log.info(runtimeInfo)
 
             cluster.subscriptions ! Unsubscribe(ctx.self)
+
             val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
+            shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
+              Future
+                .successful(ctx.log.info("after.cluster-exiting-done"))
+                .map(_ ⇒ akka.Done)(ExecutionContext.global)
+            }
 
             val shardRegion =
               SharedDomain(shardName, ctx.system.toUntyped).toTyped[DeviceCommand]
 
             val membership =
-              ctx.spawn(
-                ReBalancer(shardName),
-                "members",
-                DispatcherSelector.fromConfig("akka.metrics-dispatcher")
-              )
+              ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(shardName), "ring"))
+
+            //ctx.spawn(RingMaster(shardName), //should run on singleton"members",DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
 
             ctx.watch(membership)
 
@@ -185,11 +275,13 @@ object Application extends App {
               shardRegion,
               jvmMetrics,
               cluster.selfMember.address.host.get,
-              httpPort.toInt
-            )(ctx.system.toUntyped)
+              httpPort
+            )(
+              ctx.system.toUntyped
+            )
 
             ctx.spawn(
-              DomainReplicas(
+              Proxy2Shard(
                 shardRegion,
                 shardName,
                 cluster.selfMember.address.host
@@ -207,31 +299,4 @@ object Application extends App {
         }
       }
       .narrow
-
-  val memorySize = ManagementFactory.getOperatingSystemMXBean
-    .asInstanceOf[com.sun.management.OperatingSystemMXBean]
-    .getTotalPhysicalMemorySize
-  val runtimeInfo = new StringBuilder()
-    .append("=================================================================================================")
-    .append('\n')
-    .append(s"Cores:${Runtime.getRuntime.availableProcessors}")
-    .append('\n')
-    .append(" Total Memory:" + Runtime.getRuntime.totalMemory / 1000000 + "Mb")
-    .append('\n')
-    .append(" Max Memory:" + Runtime.getRuntime.maxMemory / 1000000 + "Mb")
-    .append('\n')
-    .append(" Free Memory:" + Runtime.getRuntime.freeMemory / 1000000 + "Mb")
-    .append('\n')
-    .append(" RAM:" + memorySize / 1000000 + "Mb")
-    .append('\n')
-    .append("=================================================================================================")
-    .toString()
-
-  val address = Address("akka", SystemName, seedHostAddress, port.toInt)
-
-  if (isMasterNode)
-    ActorSystem[Nothing](master(cfg, address, shardName, runtimeInfo), SystemName, cfg)
-  else
-    ActorSystem[Nothing](worker(cfg, address, shardName, runtimeInfo), SystemName, cfg)
-
 }

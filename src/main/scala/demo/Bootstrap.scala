@@ -18,7 +18,7 @@ object Bootstrap {
 
 class Bootstrap(
   shutdown: CoordinatedShutdown,
-  membership: ActorRef[ReBalancer.Command],
+  membership: ActorRef[RingMaster.Command],
   shardRegion: ActorRef[DeviceCommand],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   hostName: String,

@@ -2,23 +2,27 @@ package demo
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
-import demo.ReBalancer.ShardInfo
+import demo.RingMaster.ShardInfo
 
-object DomainReplicas {
+object Proxy2Shard {
 
   def apply(
     shardRegion: ActorRef[DeviceCommand],
-    shard: String,
-    hostId: String
+    shardName: String,
+    shardAddress: String
   ): Behavior[ShardRegionCmd] =
     Behaviors.setup { ctx ⇒
       ctx.system.receptionist ! akka.actor.typed.receptionist.Receptionist
-        .Register(ReBalancer.domainKey, ctx.self)
+        .Register(RingMaster.domainKey, ctx.self)
+
+      //ctx.log.warning("* * *  Start proxy [{}:{}] * * *", shardName, shardAddress)
 
       Behaviors.receiveMessage {
         case GetShardInfo(r) ⇒
+          //ctx.log.warning("* * *  Got GetShardInfo {}:{}", shardName, shardAddress)
           //if (java.util.concurrent.ThreadLocalRandom.current.nextBoolean)
-          r.tell(ShardInfo(shard, ctx.self, hostId))
+          //ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
+          r.tell(ShardInfo(shardName, ctx.self, shardAddress))
           Behaviors.same
         case cmd: DeviceCommand ⇒
           shardRegion.tell(cmd)

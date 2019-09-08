@@ -10,7 +10,7 @@ import demo.hashing.{CropCircle, HashRing}
 
 import scala.collection.immutable.SortedMultiDict
 
-object ReBalancer {
+object RingMaster {
 
   val domainKey = ServiceKey[ShardRegionCmd]("domain")
 
@@ -23,7 +23,7 @@ object ReBalancer {
 
   case class MembershipChanged(replicas: Set[ActorRef[ShardRegionCmd]]) extends Command
 
-  case class ShardInfo(shard: String, ref: ActorRef[ShardRegionCmd], hostId: String) extends Command
+  case class ShardInfo(shardName: String, shardProxy: ActorRef[ShardRegionCmd], shardAddress: String) extends Command
 
   case class RolesInfo(m: Map[String, Set[ActorRef[ShardRegionCmd]]]) extends Command
   case object ReplyTimeout                                            extends Command
@@ -35,7 +35,7 @@ object ReBalancer {
 
   case object ToKey
 
-  case class Replica(a: ActorRef[ShardRegionCmd], memberId: String)
+  case class Replica(shardProxy: ActorRef[ShardRegionCmd], shardName: String)
 
   /*val onTerminate: PartialFunction[(ActorContext[ClusterDomainEvent], Signal), Behavior[ClusterDomainEvent]] = {
     case (ctx, Terminated(actor)) ⇒
@@ -48,9 +48,9 @@ object ReBalancer {
   def apply(replicaName: String): Behavior[Command] =
     Behaviors.setup { ctx ⇒
       ctx.system.receptionist ! Receptionist.Subscribe(
-        ReBalancer.domainKey,
+        RingMaster.domainKey,
         ctx.messageAdapter[Receptionist.Listing] {
-          case ReBalancer.domainKey.Listing(replicas) ⇒
+          case RingMaster.domainKey.Listing(replicas) ⇒
             MembershipChanged(replicas)
         }
       )
@@ -101,7 +101,7 @@ object ReBalancer {
     }
 
   def awaitInfo(
-    shardName: String,
+    localShardName: String,
     self: ActorRef[Command],
     current: ActorRef[ShardRegionCmd],
     rest: Set[ActorRef[ShardRegionCmd]],
@@ -112,36 +112,34 @@ object ReBalancer {
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
-        case ShardInfo(rName, ref, hostId) ⇒
+        case ShardInfo(rName, shardProxy, shardAddress) ⇒
           timer.cancel(ToKey)
 
           val uHash = shardHash match {
-            case None ⇒
-              HashRing(rName)
-            case Some(r) ⇒
-              (r :+ rName).map(_._1).getOrElse(r)
+            case None    ⇒ HashRing(rName)
+            case Some(r) ⇒ (r :+ rName).map(_._1).getOrElse(r)
           }
-          val updatedReplicas = replicas.add(rName, Replica(ref, hostId))
+          val updatedReplicas = replicas.add(rName, Replica(shardProxy, shardAddress))
 
-          if (ctx.self.path.address == ref.path.address)
-            ref.tell(WakeUpDevice(hostId))
+          //if (ctx.self.path.address == shardProxy.path.address)
+          shardProxy.tell(InitDevice(shardAddress))
 
           if (rest.nonEmpty)
             reqClusterInfo(rName, self, rest.head, rest.tail, Some(uHash), updatedReplicas, buf)
           else {
             if (buf.isEmpty) {
               val info = updatedReplicas.keySet
-                .map(k ⇒ s"[$k -> ${updatedReplicas.get(k).map(_.memberId).mkString(",")}]")
+                .map(k ⇒ s"[$k -> ${updatedReplicas.get(k).map(_.shardName).mkString(",")}]")
                 .mkString(";")
               ctx.log.info("★ ★ ★   Forming ring {}   ★ ★ ★", info)
               converged(uHash, updatedReplicas, rName)
             } else buf.unstashAll(ctx, converge(rName, buf))
           }
         case ReplyTimeout ⇒
-          ctx.log.warning(s"No response within ${replyTimeout}. Retry {} ", current)
+          ctx.log.warning(s"No response within ${replyTimeout}. Retry {}", current)
           //TODO: Limit number of retries because the target node might die in the middle of the process
           // therefore, we won't get the reply back. Moreover, we could step into infinite loop
-          reqClusterInfo(shardName, self, current, rest, shardHash, replicas, buf)
+          reqClusterInfo(localShardName, self, current, rest, shardHash, replicas, buf)
         case m @ MembershipChanged(rs) if rs.nonEmpty ⇒
           buf.stash(m)
           Behaviors.same
@@ -154,7 +152,7 @@ object ReBalancer {
           Behaviors.same
         case other ⇒
           ctx.log.warning("Unexpected message in awaitInfo: {}", other)
-          Behaviors.stopped
+          Behaviors.ignore //.stopped
       }
     }
 
@@ -165,16 +163,16 @@ object ReBalancer {
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
-        case Ping(id) ⇒
+        case Ping(deviceId) ⇒
           //pick shard
-          val shard = shardHash.lookup(id).head
+          val shard = shardHash.lookup(deviceId).head
           //pick replica
-          val rs      = replicas.get(shard)
-          val replica = rs.head.a //always pick the first
-          val pid     = rs.head.memberId
-          ctx.log.warning("{} goes to [{} - {}:{}]", id, shard, replica, replicas.size)
-          if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for ${shard}")
-          else replica.tell(PingDevice(id, pid))
+          val rs          = replicas.get(shard)
+          val replica     = rs.head.shardProxy //always pick the first
+          val replicaName = rs.head.shardName
+          ctx.log.warning("{} goes to [{} - {}:{}]", deviceId, shard, replica, replicas.size)
+          if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shard")
+          else replica.tell(PingDevice(deviceId, replicaName))
           Behaviors.same
         case m @ MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {
@@ -183,12 +181,25 @@ object ReBalancer {
             converge(shardName)
           } else Behaviors.same
         case ClusterStateRequest(r) ⇒
+          /*
+            [alpha ->
+              Replica([akka://dc/user/domain#1683965312], master-2551),
+              Replica([akka://dc@172.20.0.3:2551/user/domain#-1231738166], 172.20.0.3-2551)];
+            [betta -> Replica([akka://dc@172.20.0.4:2551/user/domain#1030306788], 172.20.0.4-2551)];
+            [gamma -> Replica([akka://dc@172.20.0.5:2551/user/domain#48910236], 172.20.0.5-2551)]
+           */
           val info = replicas.keySet.map(k ⇒ s"[$k -> ${replicas.get(k).mkString(",")}]").mkString(";")
           r.tell(ClusterStateResponse(info))
+
+          ctx.log.warning(
+            "Ring: {}",
+            replicas.keySet.map(k ⇒ s"[$k -> ${replicas.get(k).map(_.shardName).mkString(",")}]").mkString(";")
+          )
+          ctx.log.warning("{}", shardHash.showSubRange(0, Long.MaxValue / 12))
           Behaviors.same
         case GetCropCircle(replyTo) ⇒
           val circle = replicas.keySet.foldLeft(CropCircle("circle")) { (circle, c) ⇒
-            replicas.get(c).map(_.a.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
+            replicas.get(c).map(_.shardProxy.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
               circle :+ (c, actorPath)
             }
           }
