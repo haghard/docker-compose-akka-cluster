@@ -1,5 +1,7 @@
 package demo
 
+import java.util.concurrent.ThreadLocalRandom
+
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.receptionist.ServiceKey
 import akka.actor.typed.scaladsl.{Behaviors, StashBuffer, TimerScheduler}
@@ -43,9 +45,15 @@ object RingMaster {
       Behaviors.stopped
   }*/
 
-  private val replyTimeout = 2.seconds
+  case class RingState(
+    shardHash: Option[HashRing] = None,                                                 //hash ring for shards
+    replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica] //grouped replicas by shard name
+  )
 
-  def apply(replicaName: String): Behavior[Command] =
+  private val retryLimit   = 4
+  private val replyTimeout = 1000.millis
+
+  def apply(): Behavior[Command] =
     Behaviors.setup { ctx ⇒
       ctx.system.receptionist ! Receptionist.Subscribe(
         RingMaster.domainKey,
@@ -54,24 +62,17 @@ object RingMaster {
             MembershipChanged(replicas)
         }
       )
-      converge(replicaName)
+      converge(RingState())
     }
 
-  def converge(shardName: String, buf: StashBuffer[Command] = StashBuffer[Command](1 << 6)): Behavior[Command] =
+  def converge(state: RingState, buf: StashBuffer[Command] = StashBuffer[Command](1 << 6)): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
         case MembershipChanged(rs) ⇒
+          ctx.log.warning("MembershipChanged: [{}]", rs.mkString(", "))
           if (rs.nonEmpty) {
             //on each cluster state change we rebuild the whole state
-            reqClusterInfo(
-              shardName,
-              ctx.self,
-              rs.head,
-              rs.tail,
-              None,                                   //hash ring for shards
-              SortedMultiDict.empty[String, Replica], //grouped replicas by shard
-              buf
-            )
+            reqInfo(ctx.self, rs.head, rs.tail, state, buf)
           } else Behaviors.same
         case ReplyTimeout ⇒
           Behaviors.same
@@ -85,61 +86,66 @@ object RingMaster {
       }
     }
 
-  def reqClusterInfo(
-    shardName: String,
+  def reqInfo(
     self: ActorRef[Command],
-    current: ActorRef[ShardRegionCmd],
-    rest: Set[ActorRef[ShardRegionCmd]],
-    shardHash: Option[HashRing],
-    m: SortedMultiDict[String, Replica],
-    stash: StashBuffer[Command]
+    head: ActorRef[ShardRegionCmd],
+    tail: Set[ActorRef[ShardRegionCmd]],
+    state: RingState,
+    stash: StashBuffer[Command],
+    numOfTry: Int = 0
   ): Behavior[Command] =
     Behaviors.withTimers { ctx ⇒
       ctx.startSingleTimer(ToKey, ReplyTimeout, replyTimeout)
-      current.tell(GetShardInfo(self))
-      awaitInfo(shardName, self, current, rest, shardHash, m, stash, ctx)
+      head.tell(GetShardInfo(self))
+      awaitInfo(self, head, tail, state, stash, ctx, numOfTry)
     }
 
   def awaitInfo(
-    localShardName: String,
     self: ActorRef[Command],
-    current: ActorRef[ShardRegionCmd],
-    rest: Set[ActorRef[ShardRegionCmd]],
-    shardHash: Option[HashRing],
-    replicas: SortedMultiDict[String, Replica],
+    head: ActorRef[ShardRegionCmd],
+    tail: Set[ActorRef[ShardRegionCmd]],
+    state: RingState,
     buf: StashBuffer[Command],
-    timer: TimerScheduler[Command]
+    timer: TimerScheduler[Command],
+    numOfTry: Int
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
-        case ShardInfo(rName, shardProxy, shardAddress) ⇒
+        case ShardInfo(shardName, shardProxy, shardAddress) ⇒
           timer.cancel(ToKey)
 
-          val uHash = shardHash match {
-            case None    ⇒ HashRing(rName)
-            case Some(r) ⇒ (r :+ rName).map(_._1).getOrElse(r)
+          val uHash = state.shardHash match {
+            case None    ⇒ HashRing(shardName)
+            case Some(r) ⇒ (r :+ shardName).map(_._1).getOrElse(r)
           }
-          val updatedReplicas = replicas.add(rName, Replica(shardProxy, shardAddress))
+          val updatedReplicas = state.replicas.add(shardName, Replica(shardProxy, shardAddress))
+          val newState        = state.copy(Some(uHash), updatedReplicas)
 
-          //if (ctx.self.path.address == shardProxy.path.address)
           shardProxy.tell(InitDevice(shardAddress))
 
-          if (rest.nonEmpty)
-            reqClusterInfo(rName, self, rest.head, rest.tail, Some(uHash), updatedReplicas, buf)
+          if (tail.nonEmpty)
+            reqInfo(self, tail.head, tail.tail, newState, buf)
           else {
             if (buf.isEmpty) {
               val info = updatedReplicas.keySet
                 .map(k ⇒ s"[$k -> ${updatedReplicas.get(k).map(_.shardName).mkString(",")}]")
                 .mkString(";")
-              ctx.log.info("★ ★ ★   Forming ring {}   ★ ★ ★", info)
-              converged(uHash, updatedReplicas, rName)
-            } else buf.unstashAll(ctx, converge(rName, buf))
+              ctx.log.warning("★ ★ ★  Ring {}  ★ ★ ★", info)
+              converged(newState)
+            } else buf.unstashAll(ctx, converge(state, buf))
           }
         case ReplyTimeout ⇒
-          ctx.log.warning(s"No response within ${replyTimeout}. Retry {}", current)
-          //TODO: Limit number of retries because the target node might die in the middle of the process
-          // therefore, we won't get the reply back. Moreover, we could step into infinite loop
-          reqClusterInfo(localShardName, self, current, rest, shardHash, replicas, buf)
+          ctx.log.warning(s"No response within $replyTimeout. Retry {}", head)
+          if (numOfTry < retryLimit) reqInfo(self, head, tail, state, buf, numOfTry + 1)
+          else {
+            if (tail.nonEmpty) {
+              ctx.log.warning(s"Declare {} death. Move on to the {}", head, tail.head)
+              reqInfo(self, tail.head, tail.tail, state, buf)
+            } else {
+              if (buf.isEmpty) converged(state)
+              else buf.unstashAll(ctx, converge(state, buf))
+            }
+          }
         case m @ MembershipChanged(rs) if rs.nonEmpty ⇒
           buf.stash(m)
           Behaviors.same
@@ -152,54 +158,46 @@ object RingMaster {
           Behaviors.same
         case other ⇒
           ctx.log.warning("Unexpected message in awaitInfo: {}", other)
-          Behaviors.ignore //.stopped
+          Behaviors.stopped
       }
     }
 
-  def converged(
-    shardHash: HashRing,
-    replicas: SortedMultiDict[String, Replica],
-    shardName: String
-  ): Behavior[Command] =
+  def converged(state: RingState): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
         case Ping(deviceId) ⇒
-          //pick shard
-          val shard = shardHash.lookup(deviceId).head
-          //pick replica
-          val rs          = replicas.get(shard)
-          val replica     = rs.head.shardProxy //always pick the first
-          val replicaName = rs.head.shardName
-          ctx.log.warning("{} goes to [{} - {}:{}]", deviceId, shard, replica, replicas.size)
-          if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shard")
-          else replica.tell(PingDevice(deviceId, replicaName))
+          state.shardHash.foreach { ring ⇒
+            //pick shard
+            val shard = ring.lookup(deviceId).head
+            //randomly pick a shard replica
+            val rs          = state.replicas.get(shard).toVector
+            val ind         = ThreadLocalRandom.current.nextInt(0, rs.size)
+            val replica     = rs(ind).shardProxy
+            val replicaName = rs(ind).shardName
+            ctx.log.warning("{} goes to [{} - {}:{}]", deviceId, shard, replica, state.replicas.size)
+            if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shard")
+            else replica.tell(PingDevice(deviceId, replicaName))
+          }
           Behaviors.same
         case m @ MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {
-            ctx.log.error("!!!!!!! converged -> converge")
             ctx.self.tell(m)
-            converge(shardName)
+            converge(state)
           } else Behaviors.same
         case ClusterStateRequest(r) ⇒
-          /*
-            [alpha ->
-              Replica([akka://dc/user/domain#1683965312], master-2551),
-              Replica([akka://dc@172.20.0.3:2551/user/domain#-1231738166], 172.20.0.3-2551)];
-            [betta -> Replica([akka://dc@172.20.0.4:2551/user/domain#1030306788], 172.20.0.4-2551)];
-            [gamma -> Replica([akka://dc@172.20.0.5:2551/user/domain#48910236], 172.20.0.5-2551)]
-           */
-          val info = replicas.keySet.map(k ⇒ s"[$k -> ${replicas.get(k).mkString(",")}]").mkString(";")
+          val info = state.replicas.keySet.map(k ⇒ s"[$k -> ${state.replicas.get(k).mkString(",")}]").mkString(";")
           r.tell(ClusterStateResponse(info))
-
           ctx.log.warning(
             "Ring: {}",
-            replicas.keySet.map(k ⇒ s"[$k -> ${replicas.get(k).map(_.shardName).mkString(",")}]").mkString(";")
+            state.replicas.keySet
+              .map(k ⇒ s"[$k -> ${state.replicas.get(k).map(_.shardName).mkString(",")}]")
+              .mkString(";")
           )
-          ctx.log.warning("{}", shardHash.showSubRange(0, Long.MaxValue / 12))
+          ctx.log.warning("{}", state.shardHash.get.showSubRange(0, Long.MaxValue / 12))
           Behaviors.same
         case GetCropCircle(replyTo) ⇒
-          val circle = replicas.keySet.foldLeft(CropCircle("circle")) { (circle, c) ⇒
-            replicas.get(c).map(_.shardProxy.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
+          val circle = state.replicas.keySet.foldLeft(CropCircle("circle")) { (circle, c) ⇒
+            state.replicas.get(c).map(_.shardProxy.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
               circle :+ (c, actorPath)
             }
           }

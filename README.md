@@ -2,7 +2,28 @@
 
 ##  Ideas
 
-We have 3 shards: alpha, betta and gamma. Each cluster node starts knowing its shard name.
+https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
+
+
+Sharding + Replication
+
+RingMaster is deployed as cluster singleton running in our cluster. It holds hash ring and routes all
+incoming requests to a particular shard region.          
+
+Each cluster node starts knowing its shard name. For example: alpha, betta, gamma.
+Each shard writes to/reads from its own shard region. Therefore, if we have following set of shards: 
+alpha, betta, gamma then we also have 3 independently running shard regions that know nothing about each other. 
+Each shard region is being used only inside a particular shard.
+
+
+Next question to address:
+ When we add a new shard, say betta, in an operational cluster of 2 alpha nodes ([alpha -> 127.0.0.1-2551,127.0.0.2-2551]), 
+ we need to transfer data that from now on is associated with shard betta [alpha -> 127.0.0.1-2551,127.0.0.2-2551, betta -> 127.0.0.10-2551]
+ ???
+       
+ 
+
+## Docker compose setup  
 
 The docker-compose2.yml by default runs: 
  * 2 replicas for alpha
@@ -42,9 +63,9 @@ All replicas that have the same shard name should be responsible to the same ran
 
 ### Crop circle
 
-  `http GET 192.168.77.10:9000/cluster`
+  `http GET 192.168.77.10:9000/clusterView`
 
-  `http GET 192.168.77.10:9000/cluster1`
+  `http GET 192.168.77.10:9000/clusterView1`
 
   `http GET 192.168.77.10:9000/members`
 
@@ -94,6 +115,8 @@ https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
 https://www.digitalocean.com/community/tutorials/how-to-provision-and-manage-remote-docker-hosts-with-docker-machine-on-ubuntu-16-04
 
 https://github.com/mckeeh3/akka-java-cluster-kubernetes/tree/d714ad5651ee4dc84464d1995be3c2d3ae9ca684
+
+https://doc.akka.io/docs/akka-management/current/cluster-http-management.html
 
 
 ### Docker  

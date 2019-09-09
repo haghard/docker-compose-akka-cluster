@@ -133,28 +133,50 @@ ThisBuild / turbo := true
 
 fork in run := true
 
-//sbt -DSHARD=a and runA
-//sbt -DSHARD=b and runB
-//sbt -DSHARD=g and runG
-//sbt -DSHARD=docker
+//sbt -DSHARD=a runA
+//sbt -DSHARD=b runB
+//sbt -DSHARD=g runG
+//sbt -DSHARD=docker docker
 
 val shard = sys.props.getOrElse("SHARD", throw new Exception("Couldn't find SHARD env variable !!!"))
 
 
 // https://stackoverflow.com/questions/26244115/how-to-execute-runmain-from-custom-task
-val runA = taskKey[Unit]("Run alpha")
-runA := {
+val runA0 = taskKey[Unit]("Run alpha0")
+runA0 := {
+  //(runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=192.168.77.10 -DhttpPort=9000 -Dhost=192.168.77.10").value
   (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.1").value
 }
 
-val runB = taskKey[Unit]("Run betta")
-runB := {
+val runA1 = taskKey[Unit]("Run alpha1")
+runA1 := {
   (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.2").value
 }
 
-val runG = taskKey[Unit]("Run gamma")
-runG := {
+val runA2 = taskKey[Unit]("Run alpha2")
+runA2 := {
   (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.3").value
+}
+
+
+val runB0 = taskKey[Unit]("Run betta0")
+runB0 := {
+  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.10").value
+}
+
+val runB1 = taskKey[Unit]("Run betta1")
+runB1 := {
+  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.11").value
+}
+
+val runG0 = taskKey[Unit]("Run gamma0")
+runG0 := {
+  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.20").value
+}
+
+val runG1 = taskKey[Unit]("Run gamma1")
+runG1 := {
+  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.21").value
 }
 
 
@@ -189,7 +211,7 @@ shard match {
   }
   case "g" => {
     println("---- SET SHARD gamma ----")
-    envVars := Map("NODE_TYPE" -> "worker", "SHARD" -> "betta")
+    envVars := Map("NODE_TYPE" -> "worker", "SHARD" -> "gamma")
   }
   case "docker" => {
     println("docker")
@@ -218,7 +240,6 @@ shard match {
     addCommandAlias("g", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.4")
   }
 }*/
-
 
 
 //envVars in run := Map("NODE_TYPE" -> "master", "SHARD" -> "alpha")

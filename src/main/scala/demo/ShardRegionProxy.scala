@@ -4,7 +4,7 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import demo.RingMaster.ShardInfo
 
-object Proxy2Shard {
+object ShardRegionProxy {
 
   def apply(
     shardRegion: ActorRef[DeviceCommand],
@@ -16,11 +16,11 @@ object Proxy2Shard {
         .Register(RingMaster.domainKey, ctx.self)
 
       //ctx.log.warning("* * *  Start proxy [{}:{}] * * *", shardName, shardAddress)
-
       Behaviors.receiveMessage {
         case GetShardInfo(r) ⇒
           //ctx.log.warning("* * *  Got GetShardInfo {}:{}", shardName, shardAddress)
           //if (java.util.concurrent.ThreadLocalRandom.current.nextBoolean)
+
           //ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
           r.tell(ShardInfo(shardName, ctx.self, shardAddress))
           Behaviors.same

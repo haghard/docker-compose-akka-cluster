@@ -38,11 +38,11 @@ class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
   def await: Receive = {
     case InitDevice(_) ⇒
       log.warning("* * *  Wake up device: {}  * * *", replicaName)
-      //TODO: start replicator for replicaName here !!!
+      //TODO: start replicator for the replicaName here !!!
       context.become(active)
     case cmd: PingDevice ⇒
       log.warning("* * *  Wake up device by ping: {}  * * *", replicaName)
-      //TODO: start replicator for replicaName here !!!
+      //TODO: start replicator for the replicaName here !!!
       context.become(active)
     case other ⇒
       log.warning("* * *  Ignore: {} * * *", other)

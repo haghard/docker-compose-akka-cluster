@@ -1,17 +1,14 @@
 package demo
 
-import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.NetworkInterface
 
 import akka.actor.{Address, CoordinatedShutdown}
-import akka.actor.CoordinatedShutdown.PhaseClusterExitingDone
 import akka.actor.typed._
 import akka.actor.typed.scaladsl.Behaviors
-import akka.cluster.typed.{Cluster, ClusterSingleton, Join, SelfUp, SingletonActor, Subscribe, Unsubscribe}
+import akka.cluster.typed.{Cluster, ClusterSingleton, ClusterSingletonSettings, Join, SelfUp, SingletonActor, Subscribe, Unsubscribe}
 import com.typesafe.config.{Config, ConfigFactory}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
 import akka.actor.typed.scaladsl.adapter._
 import akka.cluster.MemberStatus
@@ -46,9 +43,21 @@ object Application extends Ops {
 
   val BufferSize = 1 << 5
 
+  def createConfig(host: String, port: String, shardName: String): Config =
+    ConfigFactory
+      .empty()
+      .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$host"))
+      .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
+      .withFallback(ConfigFactory.parseString(s"akka.cluster.roles = [ $shardName ]"))
+      .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.host=$host"))
+      .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.port=$port"))
+      .withFallback(ConfigFactory.load())
+
   def main(args: Array[String]): Unit = {
     val opts: Map[String, String] = argsToOpts(args.toList)
     applySystemProperties(opts)
+
+    //akka.persistence.journal.plugin
 
     //val confDir  = System.getenv("EXTRA_CONF_DIR")
     //System.setProperty("NODE_TYPE", "master")
@@ -78,17 +87,12 @@ object Application extends Ops {
 
     val hostAddress = sysProps.get(sysPropsHost)
 
-    def createConfig(address: String): Config =
-      ConfigFactory
-        .empty()
-        .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$address"))
-        .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
-        .withFallback(ConfigFactory.parseString(s"akka.cluster.roles = [ $shardName ]"))
-        .withFallback(ConfigFactory.load())
+    //cluster
 
     //val extraCfg = new File(s"$confDir/$nodeType.conf")
     val cfg = hostAddress.fold(
-      if (isMasterNode) createConfig(seedHostAddress)
+      //docker
+      if (isMasterNode) createConfig(seedHostAddress, port, shardName)
       else {
         val dockerInternalAddress = NetworkInterface
           .getByName("eth0")
@@ -96,10 +100,10 @@ object Application extends Ops {
           .asScala
           .find(_.getHostAddress.matches(ipExpression))
           .fold(throw new Exception("Couldn't find docker address"))(identity)
-        createConfig(dockerInternalAddress.getHostAddress)
+        createConfig(dockerInternalAddress.getHostAddress, port, shardName)
       }
     ) {
-      createConfig(_)
+      createConfig(_, port, shardName)
     }
 
     val memorySize = ManagementFactory.getOperatingSystemMXBean
@@ -117,6 +121,8 @@ object Application extends Ops {
       .append(" Free Memory:" + Runtime.getRuntime.freeMemory / 1000000 + "Mb")
       .append('\n')
       .append(" RAM:" + memorySize / 1000000 + "Mb")
+      .append('\n')
+      .append(cfg.getString("akka.persistence.journal.plugin"))
       .append('\n')
       .append("=================================================================================================")
       .toString()
@@ -160,23 +166,13 @@ object Application extends Ops {
 
             cluster.subscriptions ! Unsubscribe(ctx.self)
             val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
-            shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
-              Future
-                .successful(ctx.log.info("after.cluster-exiting-done"))
-                .map(_ ⇒ akka.Done)(ExecutionContext.global)
-            }
 
             val shardRegion =
               SharedDomain(shardName, ctx.system.toUntyped).toTyped[DeviceCommand]
 
-            val membership =
-              ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(shardName), "ring"))
+            val membership = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring"))
 
-            /*ctx.spawn(
-                  RingMaster(shardName),
-                  "ring",
-                  DispatcherSelector.fromConfig("akka.metrics-dispatcher")
-                )*/
+            //ctx.spawn(RingMaster(shardName),"ring",DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
 
             val jvmMetrics = ctx
               .spawn(
@@ -198,7 +194,7 @@ object Application extends Ops {
             )
 
             ctx.spawn(
-              Proxy2Shard(
+              ShardRegionProxy(
                 shardRegion,
                 shardName,
                 cluster.selfMember.address.host
@@ -245,19 +241,13 @@ object Application extends Ops {
             cluster.subscriptions ! Unsubscribe(ctx.self)
 
             val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
-            shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
-              Future
-                .successful(ctx.log.info("after.cluster-exiting-done"))
-                .map(_ ⇒ akka.Done)(ExecutionContext.global)
-            }
 
             val shardRegion =
               SharedDomain(shardName, ctx.system.toUntyped).toTyped[DeviceCommand]
 
-            val membership =
-              ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(shardName), "ring"))
-
-            //ctx.spawn(RingMaster(shardName), //should run on singleton"members",DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
+            val membership = ClusterSingleton(ctx.system)
+              .init(SingletonActor(RingMaster(), "ring"))
+            //.withSettings(ClusterSingletonSettings(ctx.system).withRole(shardName))
 
             ctx.watch(membership)
 
@@ -281,7 +271,7 @@ object Application extends Ops {
             )
 
             ctx.spawn(
-              Proxy2Shard(
+              ShardRegionProxy(
                 shardRegion,
                 shardName,
                 cluster.selfMember.address.host

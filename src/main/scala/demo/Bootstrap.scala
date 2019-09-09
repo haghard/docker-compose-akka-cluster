@@ -6,9 +6,9 @@ import akka.http.scaladsl.Http
 import akka.actor.typed.ActorRef
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
-import akka.actor.CoordinatedShutdown.{PhaseServiceRequestsDone, PhaseServiceUnbind, Reason}
+import akka.actor.CoordinatedShutdown.{PhaseClusterExitingDone, PhaseServiceRequestsDone, PhaseServiceUnbind, Reason}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 
@@ -25,7 +25,7 @@ class Bootstrap(
   port: Int
 )(implicit sys: ActorSystem) {
 
-  val terminationDeadline = 2.seconds
+  val terminationDeadline = 3.seconds
   implicit val mat        = ActorMaterializer(ActorMaterializerSettings.create(sys).withDispatcher("akka.cluster-dispatcher"))
 
   /*Http().bind(hostName, port)
@@ -43,12 +43,19 @@ class Bootstrap(
         shutdown.run(Bootstrap.BindFailure)
 
       case Success(binding) ⇒
-        sys.log.warning(s"* * * Seed node: Listening for HTTP connections on ${binding.localAddress} * * *")
+        sys.log.warning(s"★ ★ ★ Listening for HTTP connections on ${binding.localAddress} * * *")
+
         shutdown.addTask(PhaseServiceUnbind, "api.unbind") { () ⇒
           sys.log.info("api.unbind")
           // No new connections are accepted
           // Existing connections are still allowed to perform request/response cycles
           binding.unbind()
+        }
+
+        shutdown.addTask(PhaseClusterExitingDone, "after.cluster-exiting-done") { () ⇒
+          Future
+            .successful(sys.log.info("after.cluster-exiting-done"))
+            .map(_ ⇒ akka.Done)(ExecutionContext.global)
         }
 
         shutdown.addTask(PhaseServiceRequestsDone, "api.terminate") { () ⇒

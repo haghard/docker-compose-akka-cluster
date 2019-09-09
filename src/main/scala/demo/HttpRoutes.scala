@@ -17,6 +17,7 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.stream.typed.scaladsl.ActorSource
 import akka.cluster.sharding.ShardRegion.{ClusterShardingStats, GetClusterShardingStats}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
+import akka.management.cluster.ClusterHttpManagementRouteProvider
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 
 class HttpRoutes(
@@ -59,6 +60,9 @@ class HttpRoutes(
   //Ensure that the Broadcast output is dropped if there are no listening parties.
   metricsSource.runWith(Sink.ignore)
 
+  //ClusterHttpManagementRouteProvider(sys)
+  //val clusterRoutes = ClusterHttpManagementRoutes(akka.cluster.Cluster(sys))
+
   def flowWithHeartbeat(
     hbMsg: TextMessage = TextMessage("hb"),
     d: FiniteDuration = 30.second
@@ -74,8 +78,8 @@ class HttpRoutes(
     )
 
   val cropCircleRoute =
-    path("cluster")(get(encodeResponse(getFromFile(folderName + "/" + circlePage)))) ~
-    path("cluster1")(get(encodeResponse(getFromFile(folderName + "/" + circlePage1)))) ~
+    path("view")(get(encodeResponse(getFromFile(folderName + "/" + circlePage)))) ~
+    path("view1")(get(encodeResponse(getFromFile(folderName + "/" + circlePage1)))) ~
     pathPrefix("d3" / Remaining)(file ⇒ encodeResponse(getFromFile(folderName + "/" + file))) ~
     path("events") {
       handleWebSocketMessages(
@@ -116,7 +120,7 @@ class HttpRoutes(
       }
     } ~ path("metrics")(
       get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
-    ) ~ cropCircleRoute ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys))
+    ) ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys)) ~ cropCircleRoute
 
   def queryForMembers: Future[HttpResponse] =
     membership
