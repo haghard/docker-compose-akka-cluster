@@ -143,8 +143,8 @@ val shard = sys.props.getOrElse("SHARD", throw new Exception("Couldn't find SHAR
 
 // https://stackoverflow.com/questions/26244115/how-to-execute-runmain-from-custom-task
 val runA0 = taskKey[Unit]("Run alpha0")
+
 runA0 := {
-  //(runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=192.168.77.10 -DhttpPort=9000 -Dhost=192.168.77.10").value
   (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.1").value
 }
 
@@ -169,6 +169,11 @@ runB1 := {
   (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.11").value
 }
 
+val runB2 = taskKey[Unit]("Run betta2")
+runB2 := {
+  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.12").value
+}
+
 val runG0 = taskKey[Unit]("Run gamma0")
 runG0 := {
   (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.20").value
@@ -177,6 +182,11 @@ runG0 := {
 val runG1 = taskKey[Unit]("Run gamma1")
 runG1 := {
   (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.21").value
+}
+
+val runG2 = taskKey[Unit]("Run gamma2")
+runG2 := {
+  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.22").value
 }
 
 

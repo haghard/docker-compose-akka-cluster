@@ -20,7 +20,6 @@ Next question to address:
  When we add a new shard, say betta, in an operational cluster of 2 alpha nodes ([alpha -> 127.0.0.1-2551,127.0.0.2-2551]), 
  we need to transfer data that from now on is associated with shard betta [alpha -> 127.0.0.1-2551,127.0.0.2-2551, betta -> 127.0.0.10-2551]
  ???
-       
  
 
 ## Docker compose setup  

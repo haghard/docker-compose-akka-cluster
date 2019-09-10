@@ -62,12 +62,6 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
       Some(HashRing(m, start, end, step) → ranges(node))
     }
 
-  def lookup(hash: Long, rf: Int = 1): Vector[String] =
-    (ring.keysIteratorFrom(hash) ++ ring.keysIteratorFrom(ring.firstKey))
-      .take(Math.min(rf, nodes.size))
-      .map(ring(_))
-      .toVector
-
   def last: Long = ring.lastKey
 
   def first: Long = ring.firstKey
@@ -78,6 +72,12 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
 
   def ranges: MapView[String, List[Long]] =
     ring.groupBy(_._2).view.mapValues(_.keys.toList.sorted)
+
+  def lookup(hash: Long, rf: Int = 1): Vector[String] =
+    (ring.keysIteratorFrom(hash) ++ ring.keysIteratorFrom(ring.firstKey))
+      .take(Math.min(rf, nodes.size))
+      .map(ring(_))
+      .toVector
 
   def showSubRange(startKey: Long, endKey: Long): String = {
     var cur = startKey
@@ -138,7 +138,7 @@ object HashRing {
     name: String,
     start: Long = Long.MinValue,
     end: Long = Long.MaxValue,
-    step: Long = 9223372036854773L //2501 partitions, change if you need more
+    step: Long = 9223372036854773L //2500 partitions, change if you need more
   ): HashRing =
     HashRing(
       (start until end by step)
