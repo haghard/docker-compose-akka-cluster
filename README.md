@@ -46,7 +46,7 @@ All replicas that have the same shard name should be responsible to the same ran
     
     `export TZ=UTC`
     
-  * Build and publish the image `sbt -DSHARD=docker && docker`
+  * Build and publish the image `sbt -DSHARD=docker docker`
   
   * Start one seed node and one worker node `docker-compose -f docker-compose2.yml up -d`
      
@@ -60,13 +60,32 @@ All replicas that have the same shard name should be responsible to the same ran
     
   * Now you can build the image again
 
+## Run with sbt
+ 
+```
+sbt -DSHARD=a runA0
+sbt -DSHARD=a runA1
+sbt -DSHARD=a runA2
+
+sbt -DSHARD=b runB0
+sbt -DSHARD=b runB1
+sbt -DSHARD=b runB2
+
+sbt -DSHARD=g runG0
+sbt -DSHARD=g runG1
+sbt -DSHARD=g runG2
+```
+
+
 ### Crop circle
 
-  `http GET 192.168.77.10:9000/clusterView`
+  `http GET 192.168.77.10:9000/view`
 
-  `http GET 192.168.77.10:9000/clusterView1`
+  `http GET 192.168.77.10:9000/view1`
 
   `http GET 192.168.77.10:9000/members`
+
+   `http://192.168.77.10:9000/rng`
 
 ### Cluster members
 

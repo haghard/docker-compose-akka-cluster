@@ -7,6 +7,6 @@ package object demo {
       Address.addressOrdering.compare(addr, other.addr)
 
     override def toString: String =
-      addr.host.flatMap(h ⇒ addr.port.map(p ⇒ s"{$h:${p}}")).getOrElse("")
+      addr.host.flatMap(h ⇒ addr.port.map(p ⇒ s"{$h:$p}")).getOrElse("")
   }
 }

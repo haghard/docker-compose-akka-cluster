@@ -1,13 +1,13 @@
-package demo
-package hashing
+package demo.hashing
 
 import scala.collection.MapView
 import scala.collection.immutable.SortedMap
 import spray.json.{JsArray, JsNumber, JsObject, JsString}
 
 /*
-  Nodes in the cluster own ranges/buckets of all the possible tokens.
   By default it outputs tokens in the range of -263 to 263 - 1,
+  Nodes take ownership over sub ranges within [-2 to 63 to 2 to 63 - 1]
+  This is an immutable data structure and therefore all modification operations return new instance of HashRing.
  */
 case class HashRing(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
 
@@ -19,9 +19,7 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
 
   /**
     *
-    * Adds a node to the node ring.
-    * Note that the instance is immutable and this operation returns a new instance.
-    *
+    * Adds a node on ring.
     * When we add new node, it changes the ownership of some ranges by splitting it up.
     */
   def add(node: String): Option[(HashRing, Set[(Long, String)])] =
@@ -92,7 +90,6 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
       val key = iter.next
       cur = key
       sb.append(key).append("\t\t").append(ring(key)).append("\n")
-      //sb.append(s"[$key: ${ring(key)}]").append("->")
     }
     sb.toString
   }
@@ -150,3 +147,6 @@ object HashRing {
       step
     )
 }
+/*
+val h = HashRing("a", -8, 8, 2)
+ */

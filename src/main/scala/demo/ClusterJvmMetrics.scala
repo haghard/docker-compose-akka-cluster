@@ -33,7 +33,7 @@ object ClusterJvmMetrics {
         Behaviors.stopped
     }
 
-  def awaitCnf(
+  def awaitConfirmation(
     sourceIn: ActorRef[ClusterJvmMetrics.JvmMetrics],
     rb: RingBuffer[ClusterMetrics]
   ): Behavior[ClusterMetricsEvent] =
@@ -41,7 +41,7 @@ object ClusterJvmMetrics {
       case (_, ClusterJvmMetrics.Confirm) ⇒
         if (rb.size > 0) {
           rb.poll.foreach(sourceIn ! _)
-          awaitCnf(sourceIn, rb)
+          awaitConfirmation(sourceIn, rb)
         } else active(sourceIn, rb)
       case _ ⇒
         Behaviors.ignore
@@ -81,7 +81,7 @@ object ClusterJvmMetrics {
 
           if (rb.size > 0) {
             rb.poll.foreach(sourceIn.tell(_))
-            awaitCnf(sourceIn, rb)
+            awaitConfirmation(sourceIn, rb)
           } else Behaviors.same
         case (ctx, other) ⇒
           ctx.log.warning("Unexpected message: {} active", other.getClass.getName)

@@ -17,7 +17,6 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.stream.typed.scaladsl.ActorSource
 import akka.cluster.sharding.ShardRegion.{ClusterShardingStats, GetClusterShardingStats}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import akka.management.cluster.ClusterHttpManagementRouteProvider
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 
 class HttpRoutes(
@@ -47,9 +46,8 @@ class HttpRoutes(
     ActorSource
       .actorRefWithAck[ClusterJvmMetrics.JvmMetrics, ClusterJvmMetrics.Confirm](
         jvmMetricsSrc,
-        ClusterJvmMetrics.Confirm, {
-          case ClusterJvmMetrics.Completed            ⇒ CompletionStrategy.immediately
-        }, { case ClusterJvmMetrics.StreamFailure(ex) ⇒ ex }
+        ClusterJvmMetrics.Confirm, { case ClusterJvmMetrics.Completed ⇒ CompletionStrategy.immediately },
+        { case ClusterJvmMetrics.StreamFailure(ex)                    ⇒ ex }
       )
       .collect { case ClusterJvmMetrics.ClusterMetrics(bt) ⇒ bt }
       .toMat(BroadcastHub.sink[ByteString](BufferSize))(Keep.both) //one to many
@@ -59,9 +57,6 @@ class HttpRoutes(
 
   //Ensure that the Broadcast output is dropped if there are no listening parties.
   metricsSource.runWith(Sink.ignore)
-
-  //ClusterHttpManagementRouteProvider(sys)
-  //val clusterRoutes = ClusterHttpManagementRoutes(akka.cluster.Cluster(sys))
 
   def flowWithHeartbeat(
     hbMsg: TextMessage = TextMessage("hb"),
@@ -76,6 +71,29 @@ class HttpRoutes(
         FlowShape(merge.preferred, merge.out)
       }
     )
+
+  def ringFlow(): Flow[Message, Message, akka.NotUsed] = {
+
+    def created(nodeId: Int, successorId: Int) =
+      TextMessage.Strict(s"""{"type":"NodeCreated","nodeId":$nodeId,"successorId":$successorId}""")
+
+    def delete(nodeId: Int) =
+      TextMessage.Strict(s"""{"type":"NodeDeleted","nodeId":$nodeId}""")
+
+    Flow.fromSinkAndSource[Message, Message](
+      Sink.ignore,
+      Source
+        .fromIterator(
+          () ⇒
+            Iterator.range(1, 64).map(created(_, 1)) ++ Iterator.range(1, 32).filter(_ % 2 == 0).map(delete(_))
+            ++ Iterator.range(1, 32).filter(_                                          % 2 == 0).map(created(_, 1))
+        )
+        .zipWith(Source.tick(0.second, 500.millis, ()))((a, _) ⇒ a)
+    )
+  }
+
+  val ringRoute = path("rng")(get(encodeResponse(getFromFile(folderName + "/" + "ring.html")))) ~
+    path("ring-events")(handleWebSocketMessages(ringFlow())) //http://192.168.77.10:9000/rng
 
   val cropCircleRoute =
     path("view")(get(encodeResponse(getFromFile(folderName + "/" + circlePage)))) ~

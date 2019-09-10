@@ -133,9 +133,19 @@ ThisBuild / turbo := true
 
 fork in run := true
 
-//sbt -DSHARD=a runA
-//sbt -DSHARD=b runB
-//sbt -DSHARD=g runG
+//sbt -DSHARD=a runA0
+//sbt -DSHARD=a runA1
+//sbt -DSHARD=a runA2
+
+//sbt -DSHARD=b runB0
+//sbt -DSHARD=b runB1
+//sbt -DSHARD=b runB2
+
+//sbt -DSHARD=g runG0
+//sbt -DSHARD=g runG1
+//sbt -DSHARD=g runG2
+
+
 //sbt -DSHARD=docker docker
 
 val shard = sys.props.getOrElse("SHARD", throw new Exception("Couldn't find SHARD env variable !!!"))

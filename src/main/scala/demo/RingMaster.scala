@@ -115,7 +115,7 @@ object RingMaster {
           timer.cancel(ToKey)
 
           val uHash = state.shardHash match {
-            case None    ⇒ HashRing(shardName)
+            case None    ⇒ HashRing(shardName) //-128, 128, 4
             case Some(r) ⇒ (r :+ shardName).map(_._1).getOrElse(r)
           }
           val updatedReplicas = state.replicas.add(shardName, Replica(shardProxy, shardAddress))
@@ -196,12 +196,16 @@ object RingMaster {
           ctx.log.warning("{}", state.shardHash.get.showSubRange(0, Long.MaxValue / 12))
           Behaviors.same
         case GetCropCircle(replyTo) ⇒
+          //to show all token
+          //state.shardHash.foreach(r ⇒ replyTo.tell(CropCircleView(r.toCropCircle)))
+
           val circle = state.replicas.keySet.foldLeft(CropCircle("circle")) { (circle, c) ⇒
             state.replicas.get(c).map(_.shardProxy.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
               circle :+ (c, actorPath)
             }
           }
           replyTo.tell(CropCircleView(circle.toString))
+
           Behaviors.same
         case other ⇒
           ctx.log.warning("Unexpected message in convergence: {}", other)

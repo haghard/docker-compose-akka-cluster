@@ -87,8 +87,6 @@ object Application extends Ops {
 
     val hostAddress = sysProps.get(sysPropsHost)
 
-    //cluster
-
     //val extraCfg = new File(s"$confDir/$nodeType.conf")
     val cfg = hostAddress.fold(
       //docker
