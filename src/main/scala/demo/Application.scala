@@ -163,7 +163,7 @@ object Application extends Ops {
             cluster.subscriptions ! Unsubscribe(ctx.self)
             val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
-            val shardRegion = SharedDomain(shardName, ctx.system) //.toTyped[DeviceCommand]
+            val shardRegion = SharedDomain(shardName, ctx.system)
 
             val membership = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring"))
 
@@ -237,7 +237,7 @@ object Application extends Ops {
 
             val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
-            val shardRegion = SharedDomain(shardName, ctx.system) //.toTyped[DeviceCommand]
+            val shardRegion = SharedDomain(shardName, ctx.system)
 
             val membership = ClusterSingleton(ctx.system)
               .init(SingletonActor(RingMaster(), "ring"))

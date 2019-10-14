@@ -185,7 +185,7 @@ object RingMaster {
         case m @ MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {
             ctx.self.tell(m)
-            converge(state)
+            converge(RingState() /*state*/ )
           } else Behaviors.same
         case ClusterStateRequest(r) ⇒
           val info = state.replicas.keySet.map(k ⇒ s"[$k -> ${state.replicas.get(k).mkString(",")}]").mkString(";")

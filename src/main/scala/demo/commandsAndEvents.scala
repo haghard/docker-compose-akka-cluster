@@ -1,9 +1,7 @@
 package demo
 
-import akka.actor.typed.ActorRef
-
 sealed trait ShardRegionCmd
-case class GetShardInfo(replyTo: ActorRef[demo.RingMaster.Command]) extends ShardRegionCmd
+case class GetShardInfo(replyTo: akka.actor.typed.ActorRef[demo.RingMaster.Command]) extends ShardRegionCmd
 
 sealed trait DeviceCommand extends ShardRegionCmd {
   def replica: String
