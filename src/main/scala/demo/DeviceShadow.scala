@@ -19,6 +19,12 @@ object DeviceShadow {
     Props(new DeviceShadow(replicaName)).withDispatcher("akka.shard-dispatcher")
 }
 
+/**
+  *
+  * akka://dc@127.0.0.1:2551/system/sharding/devices/127.0.0.1-2551/127.0.0.1-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
+  * akka://dc@127.0.0.2:2551/system/sharding/devices/127.0.0.2-2551/127.0.0.2-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
+  * akka://dc@127.0.0.3:2551/system/sharding/devices/127.0.0.3-2551/127.0.0.3-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
+  */
 class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
 
   /*override def preStart(): Unit =

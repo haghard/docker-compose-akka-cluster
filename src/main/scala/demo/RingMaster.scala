@@ -37,7 +37,8 @@ object RingMaster {
 
   case object ToKey
 
-  case class Replica(shardProxy: ActorRef[ShardRegionCmd], shardName: String)
+  //ActorRef[ShardRegionCmd], 127.0.0.1-2551
+  case class Replica(shardProxy: ActorRef[ShardRegionCmd], shardHost: String)
 
   /*val onTerminate: PartialFunction[(ActorContext[ClusterDomainEvent], Signal), Behavior[ClusterDomainEvent]] = {
     case (ctx, Terminated(actor)) ⇒
@@ -46,9 +47,9 @@ object RingMaster {
   }*/
 
   case class RingState(
-    shardHash: Option[HashRing] = None,                                                 //hash ring for shards
-    replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica] //grouped replicas by shard name
-  )
+    shardHash: Option[HashRing] = None, //hash ring for shards
+    replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica]
+  ) //grouped replicas by shard name
 
   private val retryLimit   = 4
   private val replyTimeout = 1000.millis
@@ -128,7 +129,7 @@ object RingMaster {
           else {
             if (buf.isEmpty) {
               val info = updatedReplicas.keySet
-                .map(k ⇒ s"[$k -> ${updatedReplicas.get(k).map(_.shardName).mkString(",")}]")
+                .map(k ⇒ s"[$k -> ${updatedReplicas.get(k).map(_.shardHost).mkString(",")}]")
                 .mkString(";")
               ctx.log.warning("★ ★ ★  Ring {}  ★ ★ ★", info)
               converged(newState)
@@ -170,10 +171,12 @@ object RingMaster {
             //pick shard
             val shard = ring.lookup(deviceId).head
             //randomly pick a shard replica
-            val rs          = state.replicas.get(shard).toVector
-            val ind         = ThreadLocalRandom.current.nextInt(0, rs.size)
-            val replica     = rs(ind).shardProxy
-            val replicaName = rs(ind).shardName
+            val rs      = state.replicas.get(shard).toVector
+            val ind     = ThreadLocalRandom.current.nextInt(0, rs.size)
+            val replica = rs(ind).shardProxy
+
+            //127.0.0.1-2551 or 127.0.0.1-2552 or ...
+            val replicaName = rs(ind).shardHost
             ctx.log.warning("{} goes to [{} - {}:{}]", deviceId, shard, replica, state.replicas.size)
             if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shard")
             else replica.tell(PingDevice(deviceId, replicaName))
@@ -190,7 +193,7 @@ object RingMaster {
           ctx.log.warning(
             "Ring: {}",
             state.replicas.keySet
-              .map(k ⇒ s"[$k -> ${state.replicas.get(k).map(_.shardName).mkString(",")}]")
+              .map(k ⇒ s"[$k -> ${state.replicas.get(k).map(_.shardHost).mkString(",")}]")
               .mkString(";")
           )
           ctx.log.warning("{}", state.shardHash.get.showSubRange(0, Long.MaxValue / 12))

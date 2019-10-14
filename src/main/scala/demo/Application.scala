@@ -120,8 +120,6 @@ object Application extends Ops {
       .append('\n')
       .append(" RAM:" + memorySize / 1000000 + "Mb")
       .append('\n')
-      .append(cfg.getString("akka.persistence.journal.plugin"))
-      .append('\n')
       .append("=================================================================================================")
       .toString()
 
@@ -165,12 +163,11 @@ object Application extends Ops {
             cluster.subscriptions ! Unsubscribe(ctx.self)
             val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
-            val shardRegion =
-              SharedDomain(shardName, ctx.system.toUntyped).toTyped[DeviceCommand]
+            val shardRegion = SharedDomain(shardName, ctx.system) //.toTyped[DeviceCommand]
 
             val membership = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring"))
 
-            //ctx.spawn(RingMaster(shardName),"ring",DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
+            //ctx.spawn(RingMaster(shardName), "ring", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
 
             val jvmMetrics = ctx
               .spawn(
@@ -240,8 +237,7 @@ object Application extends Ops {
 
             val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
 
-            val shardRegion =
-              SharedDomain(shardName, ctx.system.toUntyped).toTyped[DeviceCommand]
+            val shardRegion = SharedDomain(shardName, ctx.system) //.toTyped[DeviceCommand]
 
             val membership = ClusterSingleton(ctx.system)
               .init(SingletonActor(RingMaster(), "ring"))

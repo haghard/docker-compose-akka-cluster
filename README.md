@@ -7,18 +7,27 @@ https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
 
 Sharding + Replication
 
-RingMaster is deployed as cluster singleton running in our cluster. It holds hash ring and routes all
-incoming requests to a particular shard region.          
+RingMaster is managed by cluster singleton. It holds hash ring and routes all incoming requests to a particular shard region.          
 
 Each cluster node starts knowing its shard name. For example: alpha, betta, gamma.
-Each shard writes to/reads from its own shard region. Therefore, if we have following set of shards: 
-alpha, betta, gamma then we also have 3 independently running shard regions that know nothing about each other. 
-Each shard region is being used only inside a particular shard.
+Each shard writes to/reads from its own shard region. Therefore, if we have the following set of shards: 
+alpha, betta, gamma then we also have 3 independently running shard regions, each of which knows nothing about others. 
+Each shard region is being used only inside a particular shard. Each shard becomes its own distributed system since it gets replications.
+
+On each node that belongs to alpha we allocate only one sharded entity. Combination of host ip and port is used as shard and entity names, therefore 
+ it guarantees that each node runs only one instance of sharded entity. Each sharded entity has the replicator actor inside.  
+
+
+Example paths:
+
+akka://dc@127.0.0.1:2551/system/sharding/devices/127.0.0.1-2551/127.0.0.1-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
+akka://dc@127.0.0.2:2551/system/sharding/devices/127.0.0.2-2551/127.0.0.2-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
+akka://dc@127.0.0.3:2551/system/sharding/devices/127.0.0.3-2551/127.0.0.3-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
 
 
 Next question to address:
  When we add a new shard, say betta, in an operational cluster of 2 alpha nodes ([alpha -> 127.0.0.1-2551,127.0.0.2-2551]), 
- we need to transfer data that from now on is associated with shard betta [alpha -> 127.0.0.1-2551,127.0.0.2-2551, betta -> 127.0.0.10-2551]
+ we need to transfer data, that from now on is associated with betta [alpha -> 127.0.0.1-2551,127.0.0.2-2551, betta -> 127.0.0.10-2551]
  ???
  
 
@@ -146,3 +155,12 @@ https://github.com/chbatey/docker-jvm-akka/blob/master/docker-compose.yml
 https://dzone.com/articles/docker-container-resource-management-cpu-ram-and-i
 
 http://www.batey.info/docker-jvm-k8s.html
+
+
+
+Ring [alpha -> 127.0.0.1-2551,127.0.0.2-2551,127.0.0.3-2551] 
+
+akka://dc@127.0.0.1:2551/system/sharding/devices/127.0.0.1-2551/127.0.0.1-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
+akka://dc@127.0.0.2:2551/system/sharding/devices/127.0.0.2-2551/127.0.0.2-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
+akka://dc@127.0.0.3:2551/system/sharding/devices/127.0.0.3-2551/127.0.0.3-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
+ 

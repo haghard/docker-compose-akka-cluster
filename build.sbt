@@ -7,7 +7,7 @@ val Akka   = "2.5.25"
 
 //"2.6.0-M4"
 
-val akkaHttpVersion = "10.1.9"
+val akkaHttpVersion = "10.1.10"
 
 val Version = "0.3"
 
@@ -17,10 +17,12 @@ scalacOptions in (Compile, console) := Seq("-feature", "-Xfatal-warnings", "-dep
 scalaVersion := scalaV
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-cluster-typed"    % Akka,
   "com.typesafe.akka" %% "akka-cluster-metrics"  % Akka,
+  "com.typesafe.akka" %% "akka-cluster-typed"    % Akka,
   "com.typesafe.akka" %% "akka-stream-typed"     % Akka,
-  "com.typesafe.akka" %% "akka-cluster-sharding" % Akka,
+  //"com.typesafe.akka" %% "akka-cluster-sharding" % Akka,
+  "com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
+
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
   "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.3",
   //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.98",
@@ -36,7 +38,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %% "akka-http"                   % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"        % akkaHttpVersion,
   "ch.qos.logback"         % "logback-classic"              % "1.2.3",
-  ("com.lihaoyi" % "ammonite" % "1.6.9" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "1.7.1" % "test").cross(CrossVersion.full)
 )
 
 //test:run
@@ -148,10 +150,12 @@ fork in run := true
 
 //sbt -DSHARD=docker docker
 
+
 val shard = sys.props.getOrElse("SHARD", throw new Exception("Couldn't find SHARD env variable !!!"))
 
 
 // https://stackoverflow.com/questions/26244115/how-to-execute-runmain-from-custom-task
+
 val runA0 = taskKey[Unit]("Run alpha0")
 
 runA0 := {
@@ -199,25 +203,6 @@ runG2 := {
   (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.22").value
 }
 
-
-/*
-shard match {
-  case "a" => {
-    println("a")
-    addCommandAlias("a", "runMain demo.Application -DseedPort=2551 -DseedHost=127.0.0.4 -DhttpPort=9000 -Dhost=127.0.0.1")
-  }
-  case "b" => {
-    println("b")
-    addCommandAlias("b", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.3")
-  }
-  case "g" => {
-    println("g")
-    addCommandAlias("g", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.4")
-  }
-}
-*/
-
-
 shard match {
   case "a" => {
     println("---- SET SHARD alpha ----")
@@ -238,6 +223,27 @@ shard match {
     envVars := Map()
   }
 }
+
+
+
+
+/*
+shard match {
+  case "a" => {
+    println("a")
+    addCommandAlias("a", "runMain demo.Application -DseedPort=2551 -DseedHost=127.0.0.4 -DhttpPort=9000 -Dhost=127.0.0.1")
+  }
+  case "b" => {
+    println("b")
+    addCommandAlias("b", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.3")
+  }
+  case "g" => {
+    println("g")
+    addCommandAlias("g", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.4")
+  }
+}
+*/
+
 
 /*
 addCommandAlias("a", "run demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.1")
