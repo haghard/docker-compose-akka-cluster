@@ -1,26 +1,15 @@
 package demo
 
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
 import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtractor}
 
+import scala.concurrent.duration._
+
 object SharedDomain {
 
-  val passivationTO = java.time.Duration.ofMinutes(10) //TODO: make it configurable
-
-  object MsgExtractor {
-    def apply[T <: DeviceCommand](numberOfShards: Int = 0): ShardingMessageExtractor[T, T] =
-      new ShardingMessageExtractor[T, T] {
-
-        override def entityId(evn: T): String =
-          evn.replica
-
-        override def shardId(entityId: String): String =
-          entityId
-
-        override def unwrapMessage(evn: T): T = evn
-      }
-  }
+  val passivationTO = 30.seconds
+  //java.time.Duration.ofMinutes(10) //TODO: make it configurable
 
   /**
     *
@@ -55,11 +44,18 @@ object SharedDomain {
       ClusterShardingSettings(system)
         .withRememberEntities(false)
         .withStateStoreMode(StateStoreModeDData)
+        .withPassivateIdleEntitiesAfter(passivationTO)
         .withRole(replicaName)
 
     ClusterSharding(system).init(
       Entity(DeviceShadowEntity.entityKey, entityCtx ⇒ DeviceShadowEntity(entityCtx.entityId, replicaName))
-        .withMessageExtractor(MsgExtractor[DeviceCommand]())
+        .withMessageExtractor(
+          new ShardingMessageExtractor[DeviceCommand, DeviceCommand] {
+            override def entityId(cmd: DeviceCommand): String             = cmd.replica
+            override def shardId(entityId: String): String                = entityId
+            override def unwrapMessage(cmd: DeviceCommand): DeviceCommand = cmd
+          }
+        )
         .withSettings(settings)
         .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("akka.shard-dispatcher"))
     )

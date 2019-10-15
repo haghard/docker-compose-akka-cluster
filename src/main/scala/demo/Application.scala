@@ -165,7 +165,7 @@ object Application extends Ops {
 
             val shardRegion = SharedDomain(shardName, ctx.system)
 
-            val membership = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring"))
+            val ring = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring"))
 
             //ctx.spawn(RingMaster(shardName), "ring", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
 
@@ -179,7 +179,7 @@ object Application extends Ops {
 
             new Bootstrap(
               shutdown,
-              membership,
+              ring,
               shardRegion,
               jvmMetrics,
               cluster.selfMember.address.host.get,
@@ -200,7 +200,7 @@ object Application extends Ops {
             )
 
             Behaviors.receiveSignal {
-              case (_, Terminated(`membership`)) ⇒
+              case (_, Terminated(ring)) ⇒
                 ctx.log.error("Membership failure detected !!!")
                 Behaviors.stopped
             }
@@ -239,11 +239,8 @@ object Application extends Ops {
 
             val shardRegion = SharedDomain(shardName, ctx.system)
 
-            val membership = ClusterSingleton(ctx.system)
-              .init(SingletonActor(RingMaster(), "ring"))
-            //.withSettings(ClusterSingletonSettings(ctx.system).withRole(shardName))
-
-            ctx.watch(membership)
+            val ring = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring"))
+            ctx.watch(ring)
 
             val jvmMetrics = ctx
               .spawn(
@@ -255,7 +252,7 @@ object Application extends Ops {
 
             new Bootstrap(
               shutdown,
-              membership,
+              ring,
               shardRegion,
               jvmMetrics,
               cluster.selfMember.address.host.get,
@@ -276,7 +273,7 @@ object Application extends Ops {
             )
 
             Behaviors.receiveSignal[SelfUp] {
-              case (_, Terminated(`membership`)) ⇒
+              case (_, Terminated(`ring`)) ⇒
                 ctx.log.error("Membership failure detected !!!")
                 Behaviors.stopped
             }

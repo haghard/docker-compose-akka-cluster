@@ -118,6 +118,19 @@ class HttpRoutes(
       )
     }
 
+  import ExtraHttpDirectives._
+
+  val pingRoute = extractLog { implicit log ⇒
+    aroundRequest(logLatency(log)) {
+      path("device" / LongNumber) { deviceId ⇒
+        get {
+          membership.tell(Ping(deviceId))
+          complete(OK)
+        }
+      }
+    }
+  }
+
   val route: Route =
     path("ring")(get(complete(queryForMembers))) ~
     path("shards") {
@@ -130,13 +143,7 @@ class HttpRoutes(
             .map(stats ⇒ "\n" + stats.regions.mkString("\n"))
         }
       }
-    } ~
-    path("device" / LongNumber) { deviceId ⇒
-      get {
-        membership.tell(Ping(deviceId))
-        complete(OK)
-      }
-    } ~ path("metrics")(
+    } ~ pingRoute ~ path("metrics")(
       get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
     ) ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys)) ~ cropCircleRoute
 

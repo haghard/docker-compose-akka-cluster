@@ -177,7 +177,7 @@ object RingMaster {
 
             //127.0.0.1-2551 or 127.0.0.1-2552 or ...
             val replicaName = rs(ind).shardHost
-            ctx.log.warning("{} goes to [{} - {}:{}]", deviceId, shard, replica, state.replicas.size)
+            ctx.log.warning("{} -> [{} - {}:{}]", deviceId, shard, replica, state.replicas.size)
             if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shard")
             else replica.tell(PingDevice(deviceId, replicaName))
           }

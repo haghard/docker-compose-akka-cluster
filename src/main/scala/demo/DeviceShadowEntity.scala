@@ -16,7 +16,7 @@ object DeviceShadowEntity {
 
   def apply(entityId: String, replicaName: String): Behavior[DeviceCommand] =
     Behaviors.setup { ctx ⇒
-      await(ctx.log, replicaName)
+      await(ctx.log, replicaName, entityId)
     }
 
   def active(log: akka.actor.typed.Logger): Behavior[DeviceCommand] =
@@ -25,11 +25,12 @@ object DeviceShadowEntity {
         log.info("ping device {}", id)
         Behaviors.same
       case InitDevice(_) ⇒
+        log.info("* * *  Wake up device * * *")
         Behaviors.same
       //Ignore rerun wake up device because cluster membership has changed
     }
 
-  def await(log: akka.actor.typed.Logger, replicaName: String): Behavior[DeviceCommand] =
+  def await(log: akka.actor.typed.Logger, replicaName: String, entityId: String): Behavior[DeviceCommand] =
     Behaviors.receiveMessage {
       case InitDevice(_) ⇒
         log.warning("* * *  Wake up device: {}  * * *", replicaName)

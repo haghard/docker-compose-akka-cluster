@@ -94,7 +94,7 @@ sbt -DSHARD=g runG2
 
   `http GET 192.168.77.10:9000/members`
 
-   `http://192.168.77.10:9000/rng`
+  `http://192.168.77.10:9000/rng`
 
 ### Cluster members
 
@@ -133,7 +133,7 @@ https://speedcom.github.io/dsp2017/2017/04/13/justindb-replication-and-partition
  
 ### Akka
 
-https://doc.akka.io/docs/akka/2.5.23/typed/cluster-sharding.html
+https://doc.akka.io/docs/akka/2.5.25/typed/cluster-sharding.html
 
 https://doc.akka.io/docs/akka/current/distributed-data.html
 
