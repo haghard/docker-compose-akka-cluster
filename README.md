@@ -14,15 +14,7 @@ Each shard writes to/reads from its own shard region. Therefore, if we have the 
 alpha, betta, gamma then we also have 3 independently running shard regions, each of which knows nothing about others. 
 Each shard region is being used only inside a particular shard. Each shard becomes its own distributed system since it gets replications.
 
-On each node that belongs to alpha we allocate only one sharded entity. Combination of host ip and port is used as shard and entity names, therefore 
- it guarantees that each node runs only one instance of sharded entity. Each sharded entity has the replicator actor inside.  
-
-
-Example paths:
-
-akka://dc@127.0.0.1:2551/system/sharding/devices/127.0.0.1-2551/127.0.0.1-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
-akka://dc@127.0.0.2:2551/system/sharding/devices/127.0.0.2-2551/127.0.0.2-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
-akka://dc@127.0.0.3:2551/system/sharding/devices/127.0.0.3-2551/127.0.0.3-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
+On each node that belongs to alpha we allocate only one sharded entity. Combination of host ip and port is used as shard and entity names, therefore it guarantees that each node runs only one instance of sharded entity. Each sharded entity has the replicator actor inside.  
 
 
 Next question to address:

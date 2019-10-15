@@ -8,8 +8,7 @@ import scala.concurrent.duration._
 
 object SharedDomain {
 
-  val passivationTO = 30.seconds
-  //java.time.Duration.ofMinutes(10) //TODO: make it configurable
+  val passivationTO = 20.minutes //TODO: make it configurable
 
   /**
     *
@@ -17,9 +16,6 @@ object SharedDomain {
     * https://github.com/akka/akka/blob/master/akka-cluster-sharding/src/main/scala/akka/cluster/sharding/ShardCoordinator.scala#L71 and
     * https://doc.akka.io/docs/akka/current/cluster-sharding.html#shard-location.
     *
-    * @param replicaName
-    * @param system
-    * @return
     */
   def apply(replicaName: String, system: akka.actor.typed.ActorSystem[_]): akka.actor.typed.ActorRef[DeviceCommand] = {
     /*val allocStrategy = ClusterSharding(system)

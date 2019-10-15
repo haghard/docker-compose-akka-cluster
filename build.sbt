@@ -151,7 +151,7 @@ fork in run := true
 //sbt -DSHARD=docker docker
 
 
-val shard = sys.props.getOrElse("SHARD", throw new Exception("Couldn't find SHARD env variable !!!"))
+val shard = sys.props.getOrElse("SHARD", "docker") //throw new Exception("Couldn't find SHARD env variable !!!")
 
 
 // https://stackoverflow.com/questions/26244115/how-to-execute-runmain-from-custom-task
