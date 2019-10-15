@@ -37,15 +37,16 @@ class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
   def active: Receive = {
     case PingDevice(id, _) ⇒
       log.info("ping device {}", id)
-    case InitDevice(_) ⇒
+    //case InitDevice(_) ⇒
     //Ignore rerun wake up device because cluster membership has changed
   }
 
   def await: Receive = {
-    case InitDevice(_) ⇒
+    /*case InitDevice(_) ⇒
       log.warning("* * *  Wake up device: {}  * * *", replicaName)
       //TODO: start replicator for the replicaName here !!!
       context.become(active)
+     */
     case cmd: PingDevice ⇒
       log.warning("* * *  Wake up device by ping: {}  * * *", replicaName)
       //TODO: start replicator for the replicaName here !!!
@@ -54,5 +55,5 @@ class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
       log.warning("* * *  Ignore: {} * * *", other)
   }
 
-  override def receive: Receive = await
+  override def receive: Receive = active //await
 }

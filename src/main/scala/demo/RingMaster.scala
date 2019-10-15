@@ -122,7 +122,7 @@ object RingMaster {
           val updatedReplicas = state.replicas.add(shardName, Replica(shardProxy, shardAddress))
           val newState        = state.copy(Some(uHash), updatedReplicas)
 
-          shardProxy.tell(InitDevice(shardAddress))
+          //shardProxy.tell(InitDevice(shardAddress))
 
           if (tail.nonEmpty)
             reqInfo(self, tail.head, tail.tail, newState, buf)

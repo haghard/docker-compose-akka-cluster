@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 
 object SharedDomain {
 
-  val passivationTO = 20.minutes //TODO: make it configurable
+  val passivationTO = 30.seconds //TODO: make it configurable
 
   /**
     *

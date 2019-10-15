@@ -8,6 +8,9 @@ import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
   * akka://dc/system/sharding/device/127.0.0.1-2551/127.0.0.1-2551
   * akka://dc/system/sharding/device/127.0.0.2-2551/127.0.0.2-2551
   * akka://dc/system/sharding/device/127.0.0.2-2551/127.0.0.2-2551
+  *
+  *
+  * Should start a replicator instance for the given replica name
   */
 object DeviceShadowEntity {
 
@@ -23,30 +26,15 @@ object DeviceShadowEntity {
 
   def apply(entityId: String, replicaName: String): Behavior[DeviceCommand] =
     Behaviors.setup { ctx ⇒
-      ctx.log.info("* * *  Start up entity * * *")
+      ctx.log.warning("* * *  Wake up replicator for {}  * * *", replicaName)
       await(ctx.log, replicaName, entityId) orElse idle(ctx.log)
-    }
-
-  private def active(log: akka.actor.typed.Logger): Behavior[DeviceCommand] =
-    Behaviors.receiveMessage {
-      case PingDevice(id, _) ⇒
-        log.info("ping entity {}", id)
-        Behaviors.same
-      case InitDevice(_) ⇒
-        //Ignore rerun wake up device because cluster membership has changed
-        log.info("* * *  Wake up entity * * *")
-        Behaviors.same
     }
 
   private def await(log: akka.actor.typed.Logger, replicaName: String, entityId: String): Behavior[DeviceCommand] =
     Behaviors.receiveMessage {
-      case InitDevice(_) ⇒
-        log.warning("* * *  Wake up entity: {}  * * *", replicaName)
-        //TODO: start replicator for the replicaName here !!!
-        active(log) orElse idle(log)
       case PingDevice(id, _) ⇒
-        log.warning("* * *  Wake up entity by ping: {}:{}  * * *", replicaName, id)
+        log.warning("* * *  ping replicator {}:{}  * * *", replicaName, id)
         //TODO: start replicator for the replicaName here !!!
-        active(log) orElse idle(log)
+        await(log, replicaName, entityId) orElse idle(log)
     }
 }
