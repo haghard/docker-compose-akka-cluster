@@ -3,7 +3,7 @@ import sbt._
 import sbtdocker.ImageName
 
 val scalaV = "2.13.0"
-val Akka   = "2.5.25"
+val Akka   = "2.5.26"
 
 //"2.6.0-M4"
 
@@ -38,7 +38,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %% "akka-http"                   % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"        % akkaHttpVersion,
   "ch.qos.logback"         % "logback-classic"              % "1.2.3",
-  ("com.lihaoyi" % "ammonite" % "1.7.1" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "1.7.4" % "test").cross(CrossVersion.full)
 )
 
 //test:run
