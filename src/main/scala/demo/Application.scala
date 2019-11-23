@@ -161,7 +161,7 @@ object Application extends Ops {
             ctx.log.info(runtimeInfo)
 
             cluster.subscriptions ! Unsubscribe(ctx.self)
-            val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
+            val shutdown = CoordinatedShutdown(ctx.system.toClassic)
 
             val shardRegion = SharedDomain(shardName, ctx.system)
 
@@ -185,7 +185,7 @@ object Application extends Ops {
               cluster.selfMember.address.host.get,
               httpPort
             )(
-              ctx.system.toUntyped
+              ctx.system.toClassic
             )
 
             ctx.spawn(
@@ -235,7 +235,7 @@ object Application extends Ops {
 
             cluster.subscriptions ! Unsubscribe(ctx.self)
 
-            val shutdown = CoordinatedShutdown(ctx.system.toUntyped)
+            val shutdown = CoordinatedShutdown(ctx.system.toClassic)
 
             val shardRegion = SharedDomain(shardName, ctx.system)
 
@@ -258,7 +258,7 @@ object Application extends Ops {
               cluster.selfMember.address.host.get,
               httpPort
             )(
-              ctx.system.toUntyped
+              ctx.system.toClassic
             )
 
             ctx.spawn(

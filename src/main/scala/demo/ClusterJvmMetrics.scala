@@ -25,8 +25,8 @@ object ClusterJvmMetrics {
   def apply(bs: Int): Behavior[ClusterMetricsEvent] =
     Behaviors.receive[ClusterMetricsEvent] {
       case (ctx, _ @Connect(src)) ⇒
-        val ex = ClusterMetricsExtension(ctx.system.toUntyped)
-        ex.subscribe(ctx.self.toUntyped)
+        val ex = ClusterMetricsExtension(ctx.system.toClassic)
+        ex.subscribe(ctx.self.toClassic)
         active(src, new RingBuffer[ClusterMetrics](bs)) //if you have more than 32 node in the cluster you need to increase this buffer
       case (ctx, other) ⇒
         ctx.log.warning("Unexpected message: {} in init", other.getClass.getName)

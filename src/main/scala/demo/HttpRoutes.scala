@@ -138,7 +138,7 @@ class HttpRoutes(
         import akka.actor.typed.scaladsl.adapter._
         import akka.pattern.ask
         complete {
-          (shardRegion.toUntyped ? GetClusterShardingStats(2.seconds))
+          (shardRegion.toClassic ? GetClusterShardingStats(2.seconds))
             .mapTo[ClusterShardingStats]
             .map(stats ⇒ "\n" + stats.regions.mkString("\n"))
         }
