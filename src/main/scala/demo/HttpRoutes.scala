@@ -3,7 +3,7 @@ package demo
 import akka.stream._
 import Application._
 import akka.actor.typed.ActorSystem
-import akka.actor.typed.{ActorRef, Scheduler}
+import akka.actor.typed.ActorRef
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.{Route, _}
 import akka.stream.scaladsl._
@@ -11,7 +11,7 @@ import akka.util.ByteString
 import demo.RingMaster.Ping
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.stream.typed.scaladsl.ActorSource
@@ -32,16 +32,8 @@ class HttpRoutes(
 
   val DispatcherName = "akka.metrics-dispatcher"
 
-  implicit val t = akka.util.Timeout(1.seconds)
-  //implicit val sch = sys.scheduler
+  implicit val t  = akka.util.Timeout(1.seconds)
   implicit val ec = sys.executionContext
-
-  //implicit val ec  = sys.dispatchers.lookup(DispatcherName)
-  /*implicit val mat = ActorMaterializer(
-    ActorMaterializerSettings(sys)
-      .withDispatcher(DispatcherName)
-      .withInputBuffer(BufferSize, BufferSize)
-  )*/
 
   val (ref, metricsSource) =
     ActorSource
