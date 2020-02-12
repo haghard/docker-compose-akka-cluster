@@ -2,8 +2,8 @@ package demo
 
 import akka.stream._
 import Application._
-import akka.actor.ActorSystem
-import akka.actor.typed.ActorRef
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.{ActorRef, Scheduler}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.{Route, _}
 import akka.stream.scaladsl._
@@ -11,7 +11,7 @@ import akka.util.ByteString
 import demo.RingMaster.Ping
 
 import scala.concurrent.duration._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.stream.typed.scaladsl.ActorSource
@@ -23,7 +23,7 @@ class HttpRoutes(
   membership: ActorRef[RingMaster.Command],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   shardRegion: ActorRef[DeviceCommand]
-)(implicit sys: ActorSystem)
+)(implicit sys: ActorSystem[Nothing])
     extends Directives {
 
   val folderName  = "d3"
@@ -32,18 +32,20 @@ class HttpRoutes(
 
   val DispatcherName = "akka.metrics-dispatcher"
 
-  implicit val t   = akka.util.Timeout(1.seconds)
-  implicit val sch = sys.scheduler
-  implicit val ec  = sys.dispatchers.lookup(DispatcherName)
+  implicit val t = akka.util.Timeout(1.seconds)
+  //implicit val sch = sys.scheduler
+  implicit val ec = sys.executionContext
 
-  implicit val mat = ActorMaterializer(
+  //implicit val ec  = sys.dispatchers.lookup(DispatcherName)
+  /*implicit val mat = ActorMaterializer(
     ActorMaterializerSettings(sys)
       .withDispatcher(DispatcherName)
       .withInputBuffer(BufferSize, BufferSize)
-  )
+  )*/
 
   val (ref, metricsSource) =
     ActorSource
+    //.actorRefWithBackpressure
       .actorRefWithAck[ClusterJvmMetrics.JvmMetrics, ClusterJvmMetrics.Confirm](
         jvmMetricsSrc,
         ClusterJvmMetrics.Confirm, { case ClusterJvmMetrics.Completed ⇒ CompletionStrategy.immediately },
@@ -83,10 +85,9 @@ class HttpRoutes(
     Flow.fromSinkAndSource[Message, Message](
       Sink.ignore,
       Source
-        .fromIterator(
-          () ⇒
-            Iterator.range(1, 64).map(created(_, 1)) ++ Iterator.range(1, 32).filter(_ % 2 == 0).map(delete(_))
-            ++ Iterator.range(1, 32).filter(_                                          % 2 == 0).map(created(_, 1))
+        .fromIterator(() ⇒
+          Iterator.range(1, 64).map(created(_, 1)) ++ Iterator.range(1, 32).filter(_ % 2 == 0).map(delete(_))
+          ++ Iterator.range(1, 32).filter(_                                          % 2 == 0).map(created(_, 1))
         )
         .zipWith(Source.tick(0.second, 500.millis, ()))((a, _) ⇒ a)
     )
@@ -95,7 +96,7 @@ class HttpRoutes(
   val ringRoute = path("rng")(get(encodeResponse(getFromFile(folderName + "/" + "ring.html")))) ~
     path("ring-events")(handleWebSocketMessages(ringFlow())) //http://192.168.77.10:9000/rng
 
-  val cropCircleRoute =
+  def cropCircleRoute /*(implicit /*sch: Scheduler,*/ ec: ExecutionContext)*/ =
     path("view")(get(encodeResponse(getFromFile(folderName + "/" + circlePage)))) ~
     path("view1")(get(encodeResponse(getFromFile(folderName + "/" + circlePage1)))) ~
     pathPrefix("d3" / Remaining)(file ⇒ encodeResponse(getFromFile(folderName + "/" + file))) ~
@@ -131,7 +132,7 @@ class HttpRoutes(
     }
   }
 
-  val route: Route =
+  def route: Route =
     path("ring")(get(complete(queryForMembers))) ~
     path("shards") {
       get {
@@ -145,7 +146,7 @@ class HttpRoutes(
       }
     } ~ pingRoute ~ path("metrics")(
       get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
-    ) ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys)) ~ cropCircleRoute
+    ) ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys)) ~ cropCircleRoute //(sch)
 
   def queryForMembers: Future[HttpResponse] =
     membership

@@ -4,13 +4,15 @@ import java.util.concurrent.ThreadLocalRandom
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.receptionist.ServiceKey
-import akka.actor.typed.scaladsl.{Behaviors, StashBuffer, TimerScheduler}
+import akka.actor.typed.scaladsl.{Behaviors, TimerScheduler}
 
 import scala.concurrent.duration._
 import akka.actor.typed.receptionist.Receptionist
 import demo.hashing.{CropCircle, HashRing}
 
 import scala.collection.immutable.SortedMultiDict
+
+import akka.actor.typed.scaladsl.StashBuffer
 
 object RingMaster {
 
@@ -55,22 +57,24 @@ object RingMaster {
   private val replyTimeout = 1000.millis
 
   def apply(): Behavior[Command] =
-    Behaviors.setup { ctx ⇒
-      ctx.system.receptionist ! Receptionist.Subscribe(
-        RingMaster.domainKey,
-        ctx.messageAdapter[Receptionist.Listing] {
-          case RingMaster.domainKey.Listing(replicas) ⇒
-            MembershipChanged(replicas)
-        }
-      )
-      converge(RingState())
+    Behaviors.withStash(1 << 6) { buf ⇒
+      Behaviors.setup { ctx ⇒
+        ctx.system.receptionist ! Receptionist.Subscribe(
+          RingMaster.domainKey,
+          ctx.messageAdapter[Receptionist.Listing] {
+            case RingMaster.domainKey.Listing(replicas) ⇒
+              MembershipChanged(replicas)
+          }
+        )
+        converge(RingState(), buf)
+      }
     }
 
-  def converge(state: RingState, buf: StashBuffer[Command] = StashBuffer[Command](1 << 6)): Behavior[Command] =
+  def converge(state: RingState, buf: StashBuffer[Command]): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
         case MembershipChanged(rs) ⇒
-          ctx.log.warning("MembershipChanged: [{}]", rs.mkString(", "))
+          ctx.log.warn("MembershipChanged: [{}]", rs.mkString(", "))
           if (rs.nonEmpty) {
             //on each cluster state change we rebuild the whole state
             reqInfo(ctx.self, rs.head, rs.tail, state, buf)
@@ -79,10 +83,10 @@ object RingMaster {
           Behaviors.same
         case cmd: PingDevice ⇒
           //TODO: respond fast, because we're not ready yet
-          ctx.log.warning("{} respond fast, because we're not ready yet", cmd)
+          ctx.log.warn("{} respond fast, because we're not ready yet", cmd)
           Behaviors.same
         case other ⇒
-          ctx.log.warning("other: {}", other)
+          ctx.log.warn("other: {}", other)
           Behaviors.same
       }
     }
@@ -131,20 +135,20 @@ object RingMaster {
               val info = updatedReplicas.keySet
                 .map(k ⇒ s"[$k -> ${updatedReplicas.get(k).map(_.shardHost).mkString(",")}]")
                 .mkString(";")
-              ctx.log.warning("★ ★ ★  Ring {}  ★ ★ ★", info)
+              ctx.log.warn("★ ★ ★  Ring {}  ★ ★ ★", info)
               converged(newState)
-            } else buf.unstashAll(ctx, converge(state, buf))
+            } else buf.unstashAll(converge(state, buf))
           }
         case ReplyTimeout ⇒
-          ctx.log.warning(s"No response within $replyTimeout. Retry {}", head)
+          ctx.log.warn(s"No response within $replyTimeout. Retry {}", head)
           if (numOfTry < retryLimit) reqInfo(self, head, tail, state, buf, numOfTry + 1)
           else {
             if (tail.nonEmpty) {
-              ctx.log.warning(s"Declare {} death. Move on to the {}", head, tail.head)
+              ctx.log.warn(s"Declare {} death. Move on to the {}", head, tail.head)
               reqInfo(self, tail.head, tail.tail, state, buf)
             } else {
               if (buf.isEmpty) converged(state)
-              else buf.unstashAll(ctx, converge(state, buf))
+              else buf.unstashAll(converge(state, buf))
             }
           }
         case m @ MembershipChanged(rs) if rs.nonEmpty ⇒
@@ -152,67 +156,69 @@ object RingMaster {
           Behaviors.same
         case cmd: PingDevice ⇒
           //TODO: respond false, because we're not ready yet
-          ctx.log.warning("{} respond fast, because we're not ready yet", cmd)
+          ctx.log.warn("{} respond fast, because we're not ready yet", cmd)
           Behaviors.same
         case cmd: ClusterStateRequest ⇒
           cmd.replyTo.tell(ClusterStateResponse("Not ready. Try later"))
           Behaviors.same
         case other ⇒
-          ctx.log.warning("Unexpected message in awaitInfo: {}", other)
+          ctx.log.warn("Unexpected message in awaitInfo: {}", other)
           Behaviors.stopped
       }
     }
 
   def converged(state: RingState): Behavior[Command] =
-    Behaviors.receive { (ctx, msg) ⇒
-      msg match {
-        case Ping(deviceId) ⇒
-          state.shardHash.foreach { ring ⇒
-            //pick shard
-            val shard = ring.lookup(deviceId).head
-            //randomly pick a shard replica
-            val rs      = state.replicas.get(shard).toVector
-            val ind     = ThreadLocalRandom.current.nextInt(0, rs.size)
-            val replica = rs(ind).shardProxy
+    Behaviors.withStash(1 << 6) { buf ⇒
+      Behaviors.receive { (ctx, msg) ⇒
+        msg match {
+          case Ping(deviceId) ⇒
+            state.shardHash.foreach { ring ⇒
+              //pick shard
+              val shard = ring.lookup(deviceId).head
+              //randomly pick a shard replica
+              val rs      = state.replicas.get(shard).toVector
+              val ind     = ThreadLocalRandom.current.nextInt(0, rs.size)
+              val replica = rs(ind).shardProxy
 
-            //127.0.0.1-2551 or 127.0.0.1-2552 or ...
-            val replicaName = rs(ind).shardHost
-            ctx.log.warning("{} -> [{} - {}:{}]", deviceId, shard, replica, state.replicas.size)
-            if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shard")
-            else replica.tell(PingDevice(deviceId, replicaName))
-          }
-          Behaviors.same
-        case m @ MembershipChanged(rs) ⇒
-          if (rs.nonEmpty) {
-            ctx.self.tell(m)
-            converge(RingState() /*state*/ )
-          } else Behaviors.same
-        case ClusterStateRequest(r) ⇒
-          val info = state.replicas.keySet.map(k ⇒ s"[$k -> ${state.replicas.get(k).mkString(",")}]").mkString(";")
-          r.tell(ClusterStateResponse(info))
-          ctx.log.warning(
-            "Ring: {}",
-            state.replicas.keySet
-              .map(k ⇒ s"[$k -> ${state.replicas.get(k).map(_.shardHost).mkString(",")}]")
-              .mkString(";")
-          )
-          ctx.log.warning("{}", state.shardHash.get.showSubRange(0, Long.MaxValue / 12))
-          Behaviors.same
-        case GetCropCircle(replyTo) ⇒
-          //to show all token
-          //state.shardHash.foreach(r ⇒ replyTo.tell(CropCircleView(r.toCropCircle)))
-
-          val circle = state.replicas.keySet.foldLeft(CropCircle("circle")) { (circle, c) ⇒
-            state.replicas.get(c).map(_.shardProxy.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
-              circle :+ (c, actorPath)
+              //127.0.0.1-2551 or 127.0.0.1-2552 or ...
+              val replicaName = rs(ind).shardHost
+              ctx.log.warn("{} -> [{} - {}:{}]", deviceId, shard, replica, state.replicas.size)
+              if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shard")
+              else replica.tell(PingDevice(deviceId, replicaName))
             }
-          }
-          replyTo.tell(CropCircleView(circle.toString))
+            Behaviors.same
+          case m @ MembershipChanged(rs) ⇒
+            if (rs.nonEmpty) {
+              ctx.self.tell(m)
+              converge(RingState(), buf)
+            } else Behaviors.same
+          case ClusterStateRequest(r) ⇒
+            val info = state.replicas.keySet.map(k ⇒ s"[$k -> ${state.replicas.get(k).mkString(",")}]").mkString(";")
+            r.tell(ClusterStateResponse(info))
+            ctx.log.warn(
+              "Ring: {}",
+              state.replicas.keySet
+                .map(k ⇒ s"[$k -> ${state.replicas.get(k).map(_.shardHost).mkString(",")}]")
+                .mkString(";")
+            )
+            ctx.log.warn("{}", state.shardHash.get.showSubRange(0, Long.MaxValue / 12))
+            Behaviors.same
+          case GetCropCircle(replyTo) ⇒
+            //to show all token
+            //state.shardHash.foreach(r ⇒ replyTo.tell(CropCircleView(r.toCropCircle)))
 
-          Behaviors.same
-        case other ⇒
-          ctx.log.warning("Unexpected message in convergence: {}", other)
-          Behaviors.same
+            val circle = state.replicas.keySet.foldLeft(CropCircle("circle")) { (circle, c) ⇒
+              state.replicas.get(c).map(_.shardProxy.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
+                circle :+ (c, actorPath)
+              }
+            }
+            replyTo.tell(CropCircleView(circle.toString))
+
+            Behaviors.same
+          case other ⇒
+            ctx.log.warn("Unexpected message in convergence: {}", other)
+            Behaviors.same
+        }
       }
     }
 }

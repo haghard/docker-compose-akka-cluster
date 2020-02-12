@@ -29,7 +29,7 @@ object ClusterJvmMetrics {
         ex.subscribe(ctx.self.toClassic)
         active(src, new RingBuffer[ClusterMetrics](bs)) //if you have more than 32 node in the cluster you need to increase this buffer
       case (ctx, other) ⇒
-        ctx.log.warning("Unexpected message: {} in init", other.getClass.getName)
+        ctx.log.warn("Unexpected message: {} in init", other.getClass.getName)
         Behaviors.stopped
     }
 
@@ -84,12 +84,12 @@ object ClusterJvmMetrics {
             awaitConfirmation(sourceIn, rb)
           } else Behaviors.same
         case (ctx, other) ⇒
-          ctx.log.warning("Unexpected message: {} active", other.getClass.getName)
+          ctx.log.warn("Unexpected message: {} active", other.getClass.getName)
           Behaviors.same
       }
       .receiveSignal {
         case (ctx, PostStop) ⇒
-          ctx.log.warning("PostStop")
+          ctx.log.warn("PostStop")
           sourceIn ! StreamFailure(new Exception("Never should stop"))
           Behaviors.stopped
       }

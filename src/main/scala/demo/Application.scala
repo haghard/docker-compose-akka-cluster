@@ -151,7 +151,7 @@ object Application extends Ops {
         Behaviors.receive[SelfUp] {
           case (ctx, _ @SelfUp(state)) ⇒
             val av = state.members.filter(_.status == MemberStatus.Up).map(_.address)
-            ctx.log.warning(
+            ctx.log.warn(
               "★ ★ ★ {} Worker {}:{} joined cluster with existing members:[{}] ★ ★ ★",
               shardName,
               cfg.getString(AKKA_HOST),
@@ -185,7 +185,7 @@ object Application extends Ops {
               cluster.selfMember.address.host.get,
               httpPort
             )(
-              ctx.system.toClassic
+              ctx.system //.toClassic
             )
 
             ctx.spawn(
@@ -223,7 +223,7 @@ object Application extends Ops {
 
         Behaviors.receive[SelfUp] {
           case (ctx, _ @SelfUp(_)) ⇒
-            ctx.log.warning(
+            ctx.log.warn(
               "★ ★ ★ {} {} bytes Seed {}:{} joined cluster ★ ★ ★",
               shardName,
               config.getMemorySize("akka.remote.artery.advanced.maximum-frame-size"),
@@ -258,7 +258,7 @@ object Application extends Ops {
               cluster.selfMember.address.host.get,
               httpPort
             )(
-              ctx.system.toClassic
+              ctx.system
             )
 
             ctx.spawn(

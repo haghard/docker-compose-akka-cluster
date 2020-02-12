@@ -12,7 +12,7 @@ RingMaster is managed by cluster singleton. It holds hash ring and routes all in
 Each cluster node starts knowing its shard name. For example: alpha, betta, gamma.
 Each shard writes to/reads from its own shard region. Therefore, if we have the following set of shards: 
 alpha, betta, gamma then we also have 3 independently running shard regions, each of which knows nothing about others. 
-Each shard region is being used only inside a particular shard. Each shard becomes its own distributed system since it gets replications.
+Each shard region is being used only inside a particular shard. Each shard becomes its own distributed system as it runs it own replicator.
 
 On each node that belongs to alpha we allocate only one sharded entity. Combination of host ip and port is used as shard and entity names, therefore it guarantees that each node runs only one instance of sharded entity. Each sharded entity has the replicator actor inside.  
 

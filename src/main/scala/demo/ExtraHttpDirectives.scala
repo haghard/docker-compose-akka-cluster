@@ -24,10 +24,10 @@ object ExtraHttpDirectives {
     (extractRequestContext & extractExecutionContext).tflatMap { tuple ⇒
       val onDone = onRequest(tuple._1)
       mapInnerRoute { inner ⇒
-        withRequestTimeoutResponse(_ ⇒ {
+        withRequestTimeoutResponse { _ ⇒
           onDone(Success(Complete(timeoutResponse)))
           timeoutResponse
-        }) {
+        } {
           inner.andThen { resultFuture ⇒
             resultFuture
               .map {

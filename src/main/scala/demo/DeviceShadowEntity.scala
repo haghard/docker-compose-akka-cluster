@@ -1,7 +1,7 @@
 package demo
 
-import akka.actor.typed.Behavior
-import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{Behavior, Signal}
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
 
 /**
@@ -17,25 +17,33 @@ object DeviceShadowEntity {
   val entityKey: EntityTypeKey[DeviceCommand] =
     EntityTypeKey[DeviceCommand]("devices")
 
-  //expect only akka.actor.typed.internal.PoisonPill
-  private def idle(log: akka.actor.typed.Logger): Behavior[DeviceCommand] =
-    Behaviors.receiveSignal {
-      case (_, signal) ⇒
-        log.warning(s"* * *  Passivate sharded entity for replicator ${signal.getClass.getName}  * * *")
-        Behaviors.stopped
-    }
-
   def apply(entityId: String, replicaName: String): Behavior[DeviceCommand] =
     Behaviors.setup { ctx ⇒
-      ctx.log.warning("* * *  Wake up sharded entity for replicator {}  * * *", replicaName)
-      await(ctx.log, replicaName, entityId) orElse idle(ctx.log)
+      ctx.log.warn("* * *  Wake up sharded entity for replicator {}  * * *", replicaName)
+      await(ctx.log, replicaName, entityId) //orElse idle(ctx.log)
     }
 
-  private def await(log: akka.actor.typed.Logger, replicaName: String, entityId: String): Behavior[DeviceCommand] =
-    Behaviors.receiveMessage {
-      case PingDevice(id, _) ⇒
-        log.warning("* * *  ping replicator {}:{}  * * *", replicaName, id)
-        //TODO: start replicator for the replicaName here !!!
-        await(log, replicaName, entityId) orElse idle(log)
-    }
+  //expect only akka.actor.typed.internal.PoisonPill
+  /*def idle(log: org.slf4j.Logger): Behavior[DeviceCommand] =
+    Behaviors.receiveSignal {
+      case (_, signal) ⇒
+        log.warn(s"* * *  Passivate sharded entity for replicator ${signal.getClass.getName}  * * *")
+        Behaviors.stopped
+    }*/
+
+  def onSignal(log: org.slf4j.Logger): PartialFunction[(ActorContext[DeviceCommand], Signal), Behavior[DeviceCommand]] = {
+    case (_, signal) ⇒
+      log.warn(s"* * *  Passivate sharded entity for replicator ${signal.getClass.getName}  * * *")
+      Behaviors.stopped[DeviceCommand]
+  }
+
+  private def await(log: org.slf4j.Logger, replicaName: String, entityId: String): Behavior[DeviceCommand] =
+    Behaviors
+      .receiveMessage[DeviceCommand] {
+        case PingDevice(id, _) ⇒
+          log.warn("* * *  ping replicator {}:{}  * * *", replicaName, id)
+          //TODO: start replicator for the replicaName here !!!
+          await(log, replicaName, entityId) //orElse idle(log)
+      }
+      .receiveSignal(onSignal(log))
 }

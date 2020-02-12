@@ -1,9 +1,9 @@
-import _root_.sbtdocker.DockerPlugin.autoImport._
+//import _root_.sbtdocker.DockerPlugin.autoImport._
 import sbt._
 import sbtdocker.ImageName
 
 val scalaV = "2.13.1"
-val Akka   = "2.5.26"
+val Akka   = "2.6.3"
 
 //"2.6.0-M4"
 
@@ -24,12 +24,12 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
-  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.3",
+  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.5",
   //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.98",
   //"com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
   //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
   "com.typesafe.akka"      %% "akka-slf4j"               % Akka,
-  "org.scala-lang.modules" %% "scala-collection-contrib" % "0.1.0",
+  "org.scala-lang.modules" %% "scala-collection-contrib" % "0.2.1",
   //custom build for 2.13
   //"io.moia" %% "streamee" % "5.0.0-M1+1-691a3938+20190726-1217",
 
@@ -38,7 +38,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %% "akka-http"                   % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"        % akkaHttpVersion,
   "ch.qos.logback"         % "logback-classic"              % "1.2.3",
-  ("com.lihaoyi" % "ammonite" % "1.7.4" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "1.9.2" % "test").cross(CrossVersion.full)
 )
 
 //test:run
