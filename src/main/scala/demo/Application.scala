@@ -26,7 +26,8 @@ LocalDateTime.now()
 
 object Application extends Ops {
 
-  val SystemName = "dc"
+  val SystemName            = "dc"
+  val metricsDispatcherName = "akka.metrics-dispatcher"
 
   val AKKA_PORT = "akka.remote.artery.canonical.port"
   val AKKA_HOST = "akka.remote.artery.canonical.hostname"
@@ -184,9 +185,7 @@ object Application extends Ops {
               jvmMetrics,
               cluster.selfMember.address.host.get,
               httpPort
-            )(
-              ctx.system //.toClassic
-            )
+            )(ctx.system)
 
             ctx.spawn(
               ShardRegionProxy(
@@ -257,9 +256,7 @@ object Application extends Ops {
               jvmMetrics,
               cluster.selfMember.address.host.get,
               httpPort
-            )(
-              ctx.system
-            )
+            )(ctx.system)
 
             ctx.spawn(
               ShardRegionProxy(

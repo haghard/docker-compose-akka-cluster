@@ -7,12 +7,17 @@ https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
 
 Sharding + Replication
 
-RingMaster is managed by cluster singleton. It holds hash ring and routes all incoming requests to a particular shard region.          
+RingMaster is managed by cluster singleton. It holds hash ring and redirects all incoming requests to a particular shard region.          
 
-Each cluster node starts knowing its shard name. For example: alpha, betta, gamma.
-Each shard writes to/reads from its own shard region. Therefore, if we have the following set of shards: 
-alpha, betta, gamma then we also have 3 independently running shard regions, each of which knows nothing about others. 
-Each shard region is being used only inside a particular shard. Each shard becomes its own distributed system as it runs it own replicator.
+Each cluster node starts knowing its shard name. In other words, it start akka-sharding region on a node with corresponding role.
+For example: alpha, betta, gamma. Each shard writes to/reads from its own shard region. 
+
+
+Therefore, if we have the following set of shards: 
+alpha, betta, gamma then we also have 3 independently running shard regions, each of which knows nothing about each other. 
+Each shard region is being used only inside a particular shard and each sharded entity become a replica of the shard. 
+
+Each shard becomes its own distributed system as each sharded entity of each shard runs its own replicator (Not implemented yet).
 
 On each node that belongs to alpha we allocate only one sharded entity. Combination of host ip and port is used as shard and entity names, therefore it guarantees that each node runs only one instance of sharded entity. Each sharded entity has the replicator actor inside.  
 

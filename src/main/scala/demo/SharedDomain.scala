@@ -36,7 +36,6 @@ object SharedDomain {
       extractEntityId = DeviceShadow.entityId
     )*/
 
-    val sharding = ClusterSharding(system)
     val settings =
       ClusterShardingSettings(system)
         .withRememberEntities(false)
@@ -44,7 +43,7 @@ object SharedDomain {
         .withPassivateIdleEntityAfter(passivationTO)
         .withRole(replicaName)
 
-    sharding.init(
+    ClusterSharding(system).init(
       Entity(DeviceShadowEntity.entityKey)(entityCtx ⇒ DeviceShadowEntity(entityCtx.entityId, replicaName))
         .withMessageExtractor(
           new ShardingMessageExtractor[DeviceCommand, DeviceCommand] {

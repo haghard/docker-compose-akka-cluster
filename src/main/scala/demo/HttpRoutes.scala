@@ -2,8 +2,7 @@ package demo
 
 import akka.stream._
 import Application._
-import akka.actor.typed.ActorSystem
-import akka.actor.typed.ActorRef
+import akka.actor.typed.{ActorRef, ActorSystem, DispatcherSelector}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.{Route, _}
 import akka.stream.scaladsl._
@@ -30,15 +29,12 @@ class HttpRoutes(
   val circlePage  = "view.html"
   val circlePage1 = "view1.html"
 
-  val DispatcherName = "akka.metrics-dispatcher"
-
   implicit val t  = akka.util.Timeout(1.seconds)
-  implicit val ec = sys.executionContext
+  implicit val ec = sys.dispatchers.lookup(DispatcherSelector.fromConfig(metricsDispatcherName))
 
   val (ref, metricsSource) =
     ActorSource
-    //.actorRefWithBackpressure
-      .actorRefWithAck[ClusterJvmMetrics.JvmMetrics, ClusterJvmMetrics.Confirm](
+      .actorRefWithBackpressure[ClusterJvmMetrics.JvmMetrics, ClusterJvmMetrics.Confirm](
         jvmMetricsSrc,
         ClusterJvmMetrics.Confirm, { case ClusterJvmMetrics.Completed ⇒ CompletionStrategy.immediately },
         { case ClusterJvmMetrics.StreamFailure(ex)                    ⇒ ex }
