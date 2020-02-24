@@ -18,7 +18,7 @@ object Bootstrap {
 
 class Bootstrap(
   shutdown: CoordinatedShutdown,
-  membership: ActorRef[RingMaster.Command],
+  ringMaster: ActorRef[RingMaster.Command],
   shardRegion: ActorRef[DeviceCommand],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   hostName: String,
@@ -38,7 +38,7 @@ class Bootstrap(
     }).run()*/
 
   Http()
-    .bindAndHandle(new HttpRoutes(membership, jvmMetricsSrc, shardRegion).route, hostName, port)
+    .bindAndHandle(new HttpRoutes(ringMaster, jvmMetricsSrc, shardRegion).route, hostName, port)
     .onComplete {
       case Failure(ex) ⇒
         s.log.error(ex, s"Shutting down because can't bind to $hostName:$port")

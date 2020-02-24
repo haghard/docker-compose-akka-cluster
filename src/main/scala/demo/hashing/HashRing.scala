@@ -5,8 +5,7 @@ import scala.collection.immutable.SortedMap
 import spray.json.{JsArray, JsNumber, JsObject, JsString}
 
 /*
-  By default it outputs tokens in the range of -263 to 263 - 1,
-  Nodes take ownership over sub ranges within [-2 to 63 to 2 to 63 - 1]
+  Nodes take ownership over sub ranges within [-2 to 63  ...  2 to 63 - 1]
   This is an immutable data structure and therefore all modification operations return new instance of HashRing.
  */
 case class HashRing(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
@@ -139,9 +138,7 @@ object HashRing {
   ): HashRing =
     HashRing(
       (start until end by step)
-        .foldLeft(SortedMap[Long, String]()) { (acc, c) ⇒
-          acc + (c → name)
-        },
+        .foldLeft(SortedMap[Long, String]())((acc, c) ⇒ acc + (c → name)),
       start,
       end,
       step

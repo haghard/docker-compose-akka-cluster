@@ -19,7 +19,7 @@ import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 
 class HttpRoutes(
-  membership: ActorRef[RingMaster.Command],
+  ringMaster: ActorRef[RingMaster.Command],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   shardRegion: ActorRef[DeviceCommand]
 )(implicit sys: ActorSystem[Nothing])
@@ -92,7 +92,7 @@ class HttpRoutes(
       handleWebSocketMessages(
         flowWithHeartbeat().mapAsync(1) {
           case TextMessage.Strict(_) ⇒
-            membership
+            ringMaster
               .ask[RingMaster.CropCircleView](RingMaster.GetCropCircle(_))
               .map(r ⇒ TextMessage.Strict(r.json))
           case other ⇒
@@ -113,7 +113,7 @@ class HttpRoutes(
     aroundRequest(logLatency(log)) {
       path("device" / LongNumber) { deviceId ⇒
         get {
-          membership.tell(Ping(deviceId))
+          ringMaster.tell(Ping(deviceId))
           complete(OK)
         }
       }
@@ -137,7 +137,7 @@ class HttpRoutes(
     ) ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys)) ~ cropCircleRoute //(sch)
 
   def queryForMembers: Future[HttpResponse] =
-    membership
+    ringMaster
       .ask[RingMaster.ClusterStateResponse](RingMaster.ClusterStateRequest(_))
       .map { reply ⇒
         HttpResponse(

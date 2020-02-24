@@ -49,7 +49,7 @@ object RingMaster {
   }*/
 
   case class RingState(
-    shardHash: Option[HashRing] = None, //hash ring for shards
+    hashRing: Option[HashRing] = None, //hash ring for shards
     replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica]
   ) //grouped replicas by shard name
 
@@ -116,27 +116,28 @@ object RingMaster {
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
+        //ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
         case ShardInfo(shardName, shardProxy, shardAddress) ⇒
           timer.cancel(ToKey)
 
-          val uHash = state.shardHash match {
+          val uHash = state.hashRing match {
             case None    ⇒ HashRing(shardName) //-128, 128, 4
             case Some(r) ⇒ (r :+ shardName).map(_._1).getOrElse(r)
           }
           val updatedReplicas = state.replicas.add(shardName, Replica(shardProxy, shardAddress))
-          val newState        = state.copy(Some(uHash), updatedReplicas)
+          val updatedState    = state.copy(Some(uHash), updatedReplicas)
 
           //shardProxy.tell(InitDevice(shardAddress))
 
           if (tail.nonEmpty)
-            reqInfo(self, tail.head, tail.tail, newState, buf)
+            reqInfo(self, tail.head, tail.tail, updatedState, buf)
           else {
             if (buf.isEmpty) {
               val info = updatedReplicas.keySet
                 .map(k ⇒ s"[$k -> ${updatedReplicas.get(k).map(_.shardHost).mkString(",")}]")
                 .mkString(";")
               ctx.log.warn("★ ★ ★  Ring {}  ★ ★ ★", info)
-              converged(newState)
+              converged(updatedState)
             } else buf.unstashAll(converge(state, buf))
           }
         case ReplyTimeout ⇒
@@ -172,9 +173,9 @@ object RingMaster {
       Behaviors.receive { (ctx, msg) ⇒
         msg match {
           case Ping(deviceId) ⇒
-            state.shardHash.foreach { ring ⇒
+            state.hashRing.foreach { hashRing ⇒
               //pick shard
-              val shard = ring.lookup(deviceId).head
+              val shard = hashRing.lookup(deviceId).head
               //randomly pick a shard replica
               val rs      = state.replicas.get(shard).toVector
               val ind     = ThreadLocalRandom.current.nextInt(0, rs.size)
@@ -201,7 +202,7 @@ object RingMaster {
                 .map(k ⇒ s"[$k -> ${state.replicas.get(k).map(_.shardHost).mkString(",")}]")
                 .mkString(";")
             )
-            ctx.log.warn("{}", state.shardHash.get.showSubRange(0, Long.MaxValue / 12))
+            ctx.log.warn("{}", state.hashRing.get.showSubRange(0, Long.MaxValue / 12))
             Behaviors.same
           case GetCropCircle(replyTo) ⇒
             //to show all token

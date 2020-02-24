@@ -238,8 +238,8 @@ object Application extends Ops {
 
             val shardRegion = SharedDomain(shardName, ctx.system)
 
-            val ring = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring"))
-            ctx.watch(ring)
+            val ringMaster = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring-master"))
+            ctx.watch(ringMaster)
 
             val jvmMetrics = ctx
               .spawn(
@@ -251,7 +251,7 @@ object Application extends Ops {
 
             new Bootstrap(
               shutdown,
-              ring,
+              ringMaster,
               shardRegion,
               jvmMetrics,
               cluster.selfMember.address.host.get,
@@ -270,7 +270,7 @@ object Application extends Ops {
             )
 
             Behaviors.receiveSignal[SelfUp] {
-              case (_, Terminated(`ring`)) ⇒
+              case (_, Terminated(ringMaster)) ⇒
                 ctx.log.error("Membership failure detected !!!")
                 Behaviors.stopped
             }

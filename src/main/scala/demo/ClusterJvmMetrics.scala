@@ -27,28 +27,31 @@ object ClusterJvmMetrics {
       case (ctx, _ @Connect(src)) ⇒
         val ex = ClusterMetricsExtension(ctx.system.toClassic)
         ex.subscribe(ctx.self.toClassic)
-        active(src, new RingBuffer[ClusterMetrics](bs)) //if you have more than 32 node in the cluster you need to increase this buffer
+        active(
+          src,
+          new RingBuffer[ClusterMetrics](bs)
+        ) //if you have more than 32 node in the cluster you need to increase this buffer
       case (ctx, other) ⇒
         ctx.log.warn("Unexpected message: {} in init", other.getClass.getName)
         Behaviors.stopped
     }
 
   def awaitConfirmation(
-    sourceIn: ActorRef[ClusterJvmMetrics.JvmMetrics],
+    source: ActorRef[ClusterJvmMetrics.JvmMetrics],
     rb: RingBuffer[ClusterMetrics]
   ): Behavior[ClusterMetricsEvent] =
     Behaviors.receive[ClusterMetricsEvent] {
       case (_, ClusterJvmMetrics.Confirm) ⇒
         if (rb.size > 0) {
-          rb.poll.foreach(sourceIn ! _)
-          awaitConfirmation(sourceIn, rb)
-        } else active(sourceIn, rb)
+          rb.poll.foreach(source.tell(_))
+          awaitConfirmation(source, rb)
+        } else active(source, rb)
       case _ ⇒
         Behaviors.ignore
     }
 
   def active(
-    sourceIn: ActorRef[ClusterJvmMetrics.JvmMetrics],
+    source: ActorRef[ClusterJvmMetrics.JvmMetrics],
     rb: RingBuffer[ClusterMetrics],
     divider: Long = 1024 * 1024,
     defaultTZ: ZoneId = ZoneId.of(java.util.TimeZone.getDefault.getID),
@@ -74,14 +77,14 @@ object ClusterJvmMetrics {
                 )
               ).prettyPrint
               //the size of metrics emitted at once is equal to the number of nodes in the cluster,
-              //therefore the max size of the queue is bound to the number
+              //therefore the max size of the queue is bound to that number
               rb.offer(ClusterMetrics(ByteString(js)))
             case _ ⇒
           }
 
           if (rb.size > 0) {
-            rb.poll.foreach(sourceIn.tell(_))
-            awaitConfirmation(sourceIn, rb)
+            rb.poll.foreach(source.tell(_))
+            awaitConfirmation(source, rb)
           } else Behaviors.same
         case (ctx, other) ⇒
           ctx.log.warn("Unexpected message: {} active", other.getClass.getName)
@@ -90,7 +93,7 @@ object ClusterJvmMetrics {
       .receiveSignal {
         case (ctx, PostStop) ⇒
           ctx.log.warn("PostStop")
-          sourceIn ! StreamFailure(new Exception("Never should stop"))
+          source ! StreamFailure(new Exception("JvmMetrics should never stop"))
           Behaviors.stopped
       }
 }
