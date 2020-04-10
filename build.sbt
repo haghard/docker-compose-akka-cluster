@@ -21,12 +21,12 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-typed"    % Akka,
   "com.typesafe.akka" %% "akka-stream-typed"     % Akka,
   //"com.typesafe.akka" %% "akka-cluster-sharding" % Akka,
+  //"com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
   "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.6",
-  //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.98",
-  //"com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
+  //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.103",
   //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
   "com.typesafe.akka"      %% "akka-slf4j"               % Akka,
   "org.scala-lang.modules" %% "scala-collection-contrib" % "0.2.1",
