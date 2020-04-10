@@ -58,35 +58,30 @@ object Application extends Ops {
     val opts: Map[String, String] = argsToOpts(args.toList)
     applySystemProperties(opts)
 
-    //akka.persistence.journal.plugin
-
     //val confDir  = System.getenv("EXTRA_CONF_DIR")
     //System.setProperty("NODE_TYPE", "master")
     //java.lang.System.getenv().put("NODE_TYPE", "master")
 
     //println("Env: " + System.getenv().keySet().asScala.mkString(","))
 
-    val nodeType = System.getenv("NODE_TYPE").trim
+    val nodeType  = sys.env.get("NODE_TYPE").getOrElse(???)
+    val shardName = sys.env.get("SHARD").getOrElse(???)
 
     val isMasterNode = nodeType equals "master"
 
-    val shardName = System.getenv("SHARD").trim
-
-    val sysProps = sys.props
-
-    val port = sysProps
+    val port = sys.props
       .get(sysPropSeedPort)
       .fold(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))(identity)
 
-    val seedHostAddress = sysProps
+    val seedHostAddress = sys.props
       .get(sysPropsSeedHost)
       .fold(throw new Exception(s"Couldn't find $sysPropSeedPort system property"))(identity)
 
-    val httpPort = sysProps
+    val httpPort = sys.props
       .get(sysPropsHttpPort)
       .fold(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))(identity)
 
-    val hostAddress = sysProps.get(sysPropsHost)
+    val hostAddress = sys.props.get(sysPropsHost)
 
     //val extraCfg = new File(s"$confDir/$nodeType.conf")
     val cfg = hostAddress.fold(

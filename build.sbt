@@ -40,7 +40,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %% "akka-http"                   % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"        % akkaHttpVersion,
   "ch.qos.logback"         % "logback-classic"              % "1.2.3",
-  ("com.lihaoyi" % "ammonite" % "1.9.2" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "2.0.4" % "test").cross(CrossVersion.full)
 )
 
 //test:run
@@ -135,7 +135,7 @@ dockerfile in docker := {
 
 ThisBuild / turbo := true
 
-fork in run := true
+//fork in run := true
 
 //sbt -DSHARD=a runA0
 //sbt -DSHARD=a runA1
