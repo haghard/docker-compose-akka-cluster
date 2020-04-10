@@ -92,12 +92,12 @@ object RingMaster {
     }
 
   def reqInfo(
-               self: ActorRef[Command],
-               head: ActorRef[ShardRegionCmd],
-               tail: Set[ActorRef[ShardRegionCmd]],
-               state: HashRingState,
-               stash: StashBuffer[Command],
-               numOfTry: Int = 0
+    self: ActorRef[Command],
+    head: ActorRef[ShardRegionCmd],
+    tail: Set[ActorRef[ShardRegionCmd]],
+    state: HashRingState,
+    stash: StashBuffer[Command],
+    numOfTry: Int = 0
   ): Behavior[Command] =
     Behaviors.withTimers { ctx ⇒
       ctx.startSingleTimer(ToKey, ReplyTimeout, replyTimeout)
@@ -106,13 +106,13 @@ object RingMaster {
     }
 
   def awaitInfo(
-                 self: ActorRef[Command],
-                 head: ActorRef[ShardRegionCmd],
-                 tail: Set[ActorRef[ShardRegionCmd]],
-                 state: HashRingState,
-                 buf: StashBuffer[Command],
-                 timer: TimerScheduler[Command],
-                 numOfTry: Int
+    self: ActorRef[Command],
+    head: ActorRef[ShardRegionCmd],
+    tail: Set[ActorRef[ShardRegionCmd]],
+    state: HashRingState,
+    buf: StashBuffer[Command],
+    timer: TimerScheduler[Command],
+    numOfTry: Int
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
