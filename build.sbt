@@ -3,11 +3,11 @@ import sbt._
 import sbtdocker.ImageName
 
 val scalaV = "2.13.1"
-val Akka   = "2.6.3"
+val Akka   = "2.6.4"
 
 //"2.6.0-M4"
 
-val akkaHttpVersion = "10.1.10"
+val akkaHttpVersion = "10.1.11"
 
 val Version = "0.3"
 
@@ -24,7 +24,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
-  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.5",
+  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.6",
   //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.98",
   //"com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
   //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
@@ -34,7 +34,9 @@ libraryDependencies ++= Seq(
   //"io.moia" %% "streamee" % "5.0.0-M1+1-691a3938+20190726-1217",
 
   //local build for 2.13 /Users/haghard/.ivy2/local/com.github.TanUkkii007/akka-cluster-custom-downing_2.13/0.0.13-SNAPSHOT/jars/akka-cluster-custom-downing_2.13.jar
-  "com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT",
+  //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT",
+  "org.sisioh"             %% "akka-cluster-custom-downing" % "0.1.0",
+
   "com.typesafe.akka"      %% "akka-http"                   % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"        % akkaHttpVersion,
   "ch.qos.logback"         % "logback-classic"              % "1.2.3",

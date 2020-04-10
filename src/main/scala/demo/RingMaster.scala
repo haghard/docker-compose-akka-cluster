@@ -48,7 +48,7 @@ object RingMaster {
       Behaviors.stopped
   }*/
 
-  case class RingState(
+  case class HashRingState(
     hashRing: Option[HashRing] = None, //hash ring for shards
     replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica]
   ) //grouped replicas by shard name
@@ -66,11 +66,11 @@ object RingMaster {
               MembershipChanged(replicas)
           }
         )
-        converge(RingState(), buf)
+        converge(HashRingState(), buf)
       }
     }
 
-  def converge(state: RingState, buf: StashBuffer[Command]): Behavior[Command] =
+  def converge(state: HashRingState, buf: StashBuffer[Command]): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
         case MembershipChanged(rs) ⇒
@@ -92,12 +92,12 @@ object RingMaster {
     }
 
   def reqInfo(
-    self: ActorRef[Command],
-    head: ActorRef[ShardRegionCmd],
-    tail: Set[ActorRef[ShardRegionCmd]],
-    state: RingState,
-    stash: StashBuffer[Command],
-    numOfTry: Int = 0
+               self: ActorRef[Command],
+               head: ActorRef[ShardRegionCmd],
+               tail: Set[ActorRef[ShardRegionCmd]],
+               state: HashRingState,
+               stash: StashBuffer[Command],
+               numOfTry: Int = 0
   ): Behavior[Command] =
     Behaviors.withTimers { ctx ⇒
       ctx.startSingleTimer(ToKey, ReplyTimeout, replyTimeout)
@@ -106,13 +106,13 @@ object RingMaster {
     }
 
   def awaitInfo(
-    self: ActorRef[Command],
-    head: ActorRef[ShardRegionCmd],
-    tail: Set[ActorRef[ShardRegionCmd]],
-    state: RingState,
-    buf: StashBuffer[Command],
-    timer: TimerScheduler[Command],
-    numOfTry: Int
+                 self: ActorRef[Command],
+                 head: ActorRef[ShardRegionCmd],
+                 tail: Set[ActorRef[ShardRegionCmd]],
+                 state: HashRingState,
+                 buf: StashBuffer[Command],
+                 timer: TimerScheduler[Command],
+                 numOfTry: Int
   ): Behavior[Command] =
     Behaviors.receive { (ctx, msg) ⇒
       msg match {
@@ -168,7 +168,7 @@ object RingMaster {
       }
     }
 
-  def converged(state: RingState): Behavior[Command] =
+  def converged(state: HashRingState): Behavior[Command] =
     Behaviors.withStash(1 << 6) { buf ⇒
       Behaviors.receive { (ctx, msg) ⇒
         msg match {
@@ -191,7 +191,7 @@ object RingMaster {
           case m @ MembershipChanged(rs) ⇒
             if (rs.nonEmpty) {
               ctx.self.tell(m)
-              converge(RingState(), buf)
+              converge(HashRingState(), buf)
             } else Behaviors.same
           case ClusterStateRequest(r) ⇒
             val info = state.replicas.keySet.map(k ⇒ s"[$k -> ${state.replicas.get(k).mkString(",")}]").mkString(";")
