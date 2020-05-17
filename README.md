@@ -7,9 +7,8 @@ https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
 
 Sharding + Replication
 
-RingMaster is managed by cluster singleton. It holds hash ring and redirects all incoming requests to a particular shard region.          
-
-Each cluster node starts knowing its shard name. In other words, it start akka-sharding region on a node with corresponding role.
+RingMaster is managed by cluster singleton. It holds a hash ring and redirects all incoming requests to a particular shard region.
+Each cluster node starts knowing its shard name. In other words, it start a sharding region on a node with corresponding role.
 For example: alpha, betta, gamma. Each shard writes to/reads from its own shard region. 
 
 
