@@ -2,7 +2,7 @@
 import sbt._
 import sbtdocker.ImageName
 
-val scalaV = "2.13.1"
+val scalaV = "2.13.2"
 val Akka   = "2.6.5"
 
 //"2.6.0-M4"

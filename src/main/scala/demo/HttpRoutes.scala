@@ -20,7 +20,7 @@ import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 
 class HttpRoutes(
   ringMaster: ActorRef[RingMaster.Command],
-  jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
+  jvmMetricsSubscriber: ActorRef[ClusterJvmMetrics.Confirm],
   shardRegion: ActorRef[DeviceCommand]
 )(implicit sys: ActorSystem[Nothing])
     extends Directives {
@@ -32,10 +32,10 @@ class HttpRoutes(
   implicit val t  = akka.util.Timeout(1.seconds)
   implicit val ec = sys.dispatchers.lookup(DispatcherSelector.fromConfig(metricsDispatcherName))
 
-  val (ref, metricsSource) =
+  val (metricsActorSrc, metricsSource) =
     ActorSource
       .actorRefWithBackpressure[ClusterJvmMetrics.JvmMetrics, ClusterJvmMetrics.Confirm](
-        jvmMetricsSrc,
+        jvmMetricsSubscriber,
         ClusterJvmMetrics.Confirm, { case ClusterJvmMetrics.Completed ⇒ CompletionStrategy.immediately },
         { case ClusterJvmMetrics.StreamFailure(ex)                    ⇒ ex }
       )
@@ -43,7 +43,7 @@ class HttpRoutes(
       .toMat(BroadcastHub.sink[ByteString](BufferSize))(Keep.both) //one to many
       .run()
 
-  jvmMetricsSrc.tell(ClusterJvmMetrics.Connect(ref))
+  jvmMetricsSubscriber.tell(ClusterJvmMetrics.Connect(metricsActorSrc))
 
   //Ensure that the Broadcast output is dropped if there are no listening parties.
   metricsSource.runWith(Sink.ignore)
