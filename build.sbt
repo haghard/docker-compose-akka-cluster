@@ -3,17 +3,33 @@ import sbt._
 import sbtdocker.ImageName
 
 val scalaV = "2.13.1"
-val Akka   = "2.6.4"
+val Akka   = "2.6.5"
 
 //"2.6.0-M4"
 
-val akkaHttpVersion = "10.1.11"
+val akkaHttpVersion = "10.1.12"
 
 val Version = "0.3"
 
 name := "docker-cluster"
 version := Version
-scalacOptions in (Compile, console) := Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked")
+//scalacOptions in (Compile, console) := Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked")
+scalacOptions in (Compile, console) := Seq(
+  "-deprecation", // Emit warning and location for usages of deprecated APIs.
+  "-unchecked",   // Enable additional warnings where generated code depends on assumptions.
+  "-encoding", "UTF-8", // Specify character encoding used by source files.
+  "-Ywarn-dead-code",                  // Warn when dead code is identified.
+  "-Ywarn-extra-implicit",             // Warn when more than one implicit parameter section is defined.
+  "-Ywarn-numeric-widen",              // Warn when numerics are widened.
+  "-Ywarn-unused:implicits",           // Warn if an implicit parameter is unused.
+  "-Ywarn-unused:imports",             // Warn if an import selector is not referenced.
+  "-Ywarn-unused:locals",              // Warn if a local definition is unused.
+  "-Ywarn-unused:params",              // Warn if a value parameter is unused.
+  "-Ywarn-unused:patvars",             // Warn if a variable bound in a pattern is unused.
+  "-Ywarn-unused:privates",            // Warn if a private member is unused.
+  "-Ywarn-value-discard"              // Warn when non-Unit expression results are unused.
+)
+
 scalaVersion := scalaV
 
 libraryDependencies ++= Seq(
@@ -25,7 +41,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
-  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.6",
+  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.7",
   //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.103",
   //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
   "com.typesafe.akka"      %% "akka-slf4j"               % Akka,
@@ -37,10 +53,12 @@ libraryDependencies ++= Seq(
   //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT",
   "org.sisioh"             %% "akka-cluster-custom-downing" % "0.1.0",
 
+  //"com.swissborg"          %% "lithium"  %  "0.11.1", //brings cats
+
   "com.typesafe.akka"      %% "akka-http"                   % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"        % akkaHttpVersion,
   "ch.qos.logback"         % "logback-classic"              % "1.2.3",
-  ("com.lihaoyi" % "ammonite" % "2.0.4" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "2.1.1" % "test").cross(CrossVersion.full)
 )
 
 //test:run
@@ -90,10 +108,12 @@ dockerfile in docker := {
   val d3TargetDirPath    = s"${imageAppBaseDir}/d3"
 
   new sbtdocker.mutable.Dockerfile {
+    from("adoptopenjdk:11.0.6_10-jdk-hotspot")
+
     //from("openjdk:8-jre")
     //from("adoptopenjdk/openjdk11:jdk-11.0.1.13")
     //from("adoptopenjdk/openjdk8:x86_64-alpine-jdk8u192-b12")
-    from("adoptopenjdk/openjdk12")
+    //from("adoptopenjdk/openjdk12")
 
     maintainer("haghard")
 
@@ -120,13 +140,17 @@ dockerfile in docker := {
       "-XX:ParallelGCThreads=2",
       //"-XX:+PrintFlagsFinal",
       "-XshowSettings",
-      "-XX:MaxRAMFraction=1",
+      //"-XX:MaxRAMFraction=1",
+      "-XX:+UnlockExperimentalVMOptions",
+      "-XX:InitialRAMPercentage=60",
+      "-XX:MaxRAMPercentage=75",
+      "-XX:MinRAMPercentage=50",
       "-XX:+PreferContainerQuotaForCPUCount", //Added in JDK11. Support for using the cpu_quota instead of cpu_shares for
       // picking the number of cores the JVM uses to makes decisions such as how many compiler threads, GC threads and sizing of the fork join pool
-      s"-DseedHost=${System.getenv("MASTER_DNS")}",
-      s"-DseedPort=${System.getenv("AKKA_PORT")}",
-      s"-DhttpPort=${System.getenv("HTTP_PORT")}",
-      s"-Duser.timezone=${System.getenv("TZ")}",
+      s"-DseedHost=${sys.env.get("MASTER_DNS").getOrElse(???)}",
+      s"-DseedPort=${sys.env.get("AKKA_PORT").getOrElse(???)}",
+      s"-DhttpPort=${sys.env.get("HTTP_PORT").getOrElse(???)}",
+      s"-Duser.timezone=${sys.env.get("TZ").getOrElse(???)}",
       "-jar",
       artifactTargetPath
     )
@@ -135,7 +159,7 @@ dockerfile in docker := {
 
 ThisBuild / turbo := true
 
-//fork in run := true
+fork in run := true
 
 //sbt -DSHARD=a runA0
 //sbt -DSHARD=a runA1

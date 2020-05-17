@@ -226,7 +226,6 @@ object Application extends Ops {
             )
 
             ctx.log.info(runtimeInfo)
-
             cluster.subscriptions ! Unsubscribe(ctx.self)
 
             val shutdown = CoordinatedShutdown(ctx.system.toClassic)
@@ -265,6 +264,7 @@ object Application extends Ops {
             )
 
             Behaviors.receiveSignal[SelfUp] {
+              //TODO: Probable should be removed
               case (_, Terminated(ringMaster)) ⇒
                 ctx.log.error("Membership failure detected !!!")
                 Behaviors.stopped
