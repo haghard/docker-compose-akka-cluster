@@ -37,7 +37,7 @@ object ExtraHttpDirectives {
                       if (entity.isKnownEmpty) {
                         onDone(Success(c))
                         entity
-                      } else {
+                      } else
                         // On an empty entity, `transformDataBytes` unsets `isKnownEmpty`.
                         // Call onDone right away, since there's no significant amount of
                         // data to send, anyway.
@@ -46,7 +46,6 @@ object ExtraHttpDirectives {
                             f.map(_ ⇒ c)(tuple._2).onComplete(onDone)(tuple._2)
                             m
                         })
-                      }
                     }
                   )
                 case other ⇒

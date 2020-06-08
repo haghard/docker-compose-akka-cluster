@@ -20,7 +20,7 @@ import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 
 class HttpRoutes(
   ringMaster: ActorRef[RingMaster.Command],
-  jvmMetricsSubscriber: ActorRef[ClusterJvmMetrics.Confirm],
+  jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   shardRegion: ActorRef[DeviceCommand]
 )(implicit sys: ActorSystem[Nothing])
     extends Directives {
@@ -32,18 +32,19 @@ class HttpRoutes(
   implicit val t  = akka.util.Timeout(1.seconds)
   implicit val ec = sys.dispatchers.lookup(DispatcherSelector.fromConfig(metricsDispatcherName))
 
-  val (metricsActorSrc, metricsSource) =
+  val (ref, metricsSource) =
     ActorSource
       .actorRefWithBackpressure[ClusterJvmMetrics.JvmMetrics, ClusterJvmMetrics.Confirm](
-        jvmMetricsSubscriber,
-        ClusterJvmMetrics.Confirm, { case ClusterJvmMetrics.Completed ⇒ CompletionStrategy.immediately },
-        { case ClusterJvmMetrics.StreamFailure(ex)                    ⇒ ex }
+        jvmMetricsSrc,
+        ClusterJvmMetrics.Confirm,
+        { case ClusterJvmMetrics.Completed ⇒ CompletionStrategy.immediately },
+        { case ClusterJvmMetrics.StreamFailure(ex) ⇒ ex }
       )
       .collect { case ClusterJvmMetrics.ClusterMetrics(bt) ⇒ bt }
       .toMat(BroadcastHub.sink[ByteString](BufferSize))(Keep.both) //one to many
       .run()
 
-  jvmMetricsSubscriber.tell(ClusterJvmMetrics.Connect(metricsActorSrc))
+  jvmMetricsSrc.tell(ClusterJvmMetrics.Connect(ref))
 
   //Ensure that the Broadcast output is dropped if there are no listening parties.
   metricsSource.runWith(Sink.ignore)
@@ -75,7 +76,7 @@ class HttpRoutes(
       Source
         .fromIterator(() ⇒
           Iterator.range(1, 64).map(created(_, 1)) ++ Iterator.range(1, 32).filter(_ % 2 == 0).map(delete(_))
-          ++ Iterator.range(1, 32).filter(_                                          % 2 == 0).map(created(_, 1))
+          ++ Iterator.range(1, 32).filter(_ % 2 == 0).map(created(_, 1))
         )
         .zipWith(Source.tick(0.second, 500.millis, ()))((a, _) ⇒ a)
     )

@@ -31,7 +31,9 @@ object DeviceShadowEntity {
         Behaviors.stopped
     }*/
 
-  def onSignal(log: org.slf4j.Logger): PartialFunction[(ActorContext[DeviceCommand], Signal), Behavior[DeviceCommand]] = {
+  def onSignal(
+    log: org.slf4j.Logger
+  ): PartialFunction[(ActorContext[DeviceCommand], Signal), Behavior[DeviceCommand]] = {
     case (_, signal) ⇒
       log.warn(s"* * *  Passivate sharded entity for replicator ${signal.getClass.getName}  * * *")
       Behaviors.stopped[DeviceCommand]

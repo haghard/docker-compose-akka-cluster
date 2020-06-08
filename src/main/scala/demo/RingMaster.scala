@@ -75,10 +75,10 @@ object RingMaster {
       msg match {
         case MembershipChanged(rs) ⇒
           ctx.log.warn("MembershipChanged: [{}]", rs.mkString(", "))
-          if (rs.nonEmpty) {
+          if (rs.nonEmpty)
             //on each cluster state change we rebuild the whole state
             reqInfo(ctx.self, rs.head, rs.tail, state, buf)
-          } else Behaviors.same
+          else Behaviors.same
         case ReplyTimeout ⇒
           Behaviors.same
         case cmd: PingDevice ⇒
@@ -131,27 +131,21 @@ object RingMaster {
 
           if (tail.nonEmpty)
             reqInfo(self, tail.head, tail.tail, updatedState, buf)
-          else {
-            if (buf.isEmpty) {
-              val info = updatedReplicas.keySet
-                .map(k ⇒ s"[$k -> ${updatedReplicas.get(k).map(_.shardHost).mkString(",")}]")
-                .mkString(";")
-              ctx.log.warn("★ ★ ★  Ring {}  ★ ★ ★", info)
-              converged(updatedState)
-            } else buf.unstashAll(converge(state, buf))
-          }
+          else if (buf.isEmpty) {
+            val info = updatedReplicas.keySet
+              .map(k ⇒ s"[$k -> ${updatedReplicas.get(k).map(_.shardHost).mkString(",")}]")
+              .mkString(";")
+            ctx.log.warn("★ ★ ★  Ring {}  ★ ★ ★", info)
+            converged(updatedState)
+          } else buf.unstashAll(converge(state, buf))
         case ReplyTimeout ⇒
           ctx.log.warn(s"No response within $replyTimeout. Retry {}", head)
           if (numOfTry < retryLimit) reqInfo(self, head, tail, state, buf, numOfTry + 1)
-          else {
-            if (tail.nonEmpty) {
-              ctx.log.warn(s"Declare {} death. Move on to the {}", head, tail.head)
-              reqInfo(self, tail.head, tail.tail, state, buf)
-            } else {
-              if (buf.isEmpty) converged(state)
-              else buf.unstashAll(converge(state, buf))
-            }
-          }
+          else if (tail.nonEmpty) {
+            ctx.log.warn(s"Declare {} death. Move on to the {}", head, tail.head)
+            reqInfo(self, tail.head, tail.tail, state, buf)
+          } else if (buf.isEmpty) converged(state)
+          else buf.unstashAll(converge(state, buf))
         case m @ MembershipChanged(rs) if rs.nonEmpty ⇒
           buf.stash(m)
           Behaviors.same
