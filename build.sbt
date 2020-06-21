@@ -58,7 +58,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %% "akka-http"                   % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"        % akkaHttpVersion,
   "ch.qos.logback"         % "logback-classic"              % "1.2.3",
-  ("com.lihaoyi" % "ammonite" % "2.1.1" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "2.1.4" % "test").cross(CrossVersion.full)
 )
 
 //test:run

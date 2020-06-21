@@ -71,9 +71,8 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
     ring.groupBy(_._2).view.mapValues(_.keys.toList.sorted)
 
   def lookup(hash: Long, rf: Int = 1): Vector[String] =
-    (ring.keysIteratorFrom(hash) ++ ring.keysIteratorFrom(ring.firstKey))
+    (ring.valuesIteratorFrom(hash) ++ ring.valuesIteratorFrom(ring.firstKey))
       .take(Math.min(rf, nodes.size))
-      .map(ring(_))
       .toVector
 
   def showSubRange(startKey: Long, endKey: Long): String = {
