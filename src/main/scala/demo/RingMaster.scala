@@ -59,12 +59,13 @@ object RingMaster {
   def apply(): Behavior[Command] =
     Behaviors.withStash(1 << 6) { buf ⇒
       Behaviors.setup { ctx ⇒
-        ctx.system.receptionist ! Receptionist.Subscribe(
-          RingMaster.domainKey,
-          ctx.messageAdapter[Receptionist.Listing] {
-            case RingMaster.domainKey.Listing(replicas) ⇒
-              MembershipChanged(replicas)
-          }
+        ctx.system.receptionist.tell(
+          Receptionist.Subscribe(
+            RingMaster.domainKey,
+            ctx.messageAdapter[Receptionist.Listing] {
+              case RingMaster.domainKey.Listing(replicas) ⇒ MembershipChanged(replicas)
+            }
+          )
         )
         converge(HashRingState(), buf)
       }
@@ -119,6 +120,10 @@ object RingMaster {
         //ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
         case ShardInfo(shardName, shardProxy, shardAddress) ⇒
           timer.cancel(ToKey)
+
+          //For any shardId that has not been allocated it will be allocated to the requesting node. To make explicit allocations:
+          //val shardAllocationClient = ExternalShardAllocation(ctx.system).clientFor(DeviceShadowEntity.entityKey.name)
+          //shardAllocationClient.updateShardLocation(shardAddress, shardProxy.path.address)
 
           val uHash = state.hashRing match {
             case None    ⇒ HashRing(shardName) //-128, 128, 4
@@ -175,7 +180,6 @@ object RingMaster {
               val ind     = ThreadLocalRandom.current.nextInt(0, rs.size)
               val replica = rs(ind).shardProxy
 
-
               //127.0.0.1-2551 or 127.0.0.1-2552 or ...
               val replicaName = rs(ind).shardHost
 
@@ -194,7 +198,7 @@ object RingMaster {
                   // the entityId becomes the akka-shard-id
                   shardAllocation.updateShardLocation(entityId, system.address)
                 }
-              */
+               */
 
               ctx.log.warn("{} -> [{} - {}:{}]", deviceId, shard, replica, state.replicas.size)
               if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shard")

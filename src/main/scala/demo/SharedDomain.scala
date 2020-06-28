@@ -25,7 +25,7 @@ object SharedDomain {
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
     //Distributed processing with Akka Cluster & Kafka https://youtu.be/Ad2DyOn4dlY?t=197
     //https://github.com/akka/akka-samples/tree/2.6/akka-sample-kafka-to-sharding-scala
-    
+
     //TODO: To make explicit allocations. Try it out
     //val shardAllocation = ExternalShardAllocation(system).clientFor(DeviceShadowEntity.entityKey.name)
     //shardAllocation.shardLocations()
@@ -35,12 +35,12 @@ object SharedDomain {
 
     val settings =
       ClusterShardingSettings(system)
-        /*
+      /*
           rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
           a different `ShardRegion` due to rebalance, crash or graceful exit. That is exactly what we want.
           But there is one downside - the associated shard entity will be allocated on first message arrives(lazy allocation).
           If you need to load massive amount of date in memory, it could be problematic.
-        */
+       */
         .withRememberEntities(false)
         .withStateStoreMode(StateStoreModeDData)
         .withPassivateIdleEntityAfter(passivationTO)
