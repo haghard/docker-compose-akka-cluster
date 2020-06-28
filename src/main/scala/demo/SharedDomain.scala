@@ -2,7 +2,7 @@ package demo
 
 import akka.Done
 import akka.actor.Address
-import akka.cluster.sharding.external.ExternalShardAllocation
+import akka.cluster.sharding.external.{ExternalShardAllocation, ExternalShardAllocationStrategy}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
 import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtractor}
@@ -23,8 +23,12 @@ object SharedDomain {
 
     //Allocation strategy which decides on which nodes to allocate new shards.
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
+    //Distributed processing with Akka Cluster & Kafka https://youtu.be/Ad2DyOn4dlY?t=197
+    //https://github.com/akka/akka-samples/tree/2.6/akka-sample-kafka-to-sharding-scala
+    
     //TODO: To make explicit allocations. Try it out
     //val shardAllocation = ExternalShardAllocation(system).clientFor(DeviceShadowEntity.entityKey.name)
+    //shardAllocation.shardLocations()
     //val _: Future[Done] = shardAllocation.updateShardLocation(shardName, system.address)
 
     val sharding = ClusterSharding(system)
@@ -43,6 +47,18 @@ object SharedDomain {
         .withRole(shardName)
 
     //val allocStrategy = sharding.defaultShardAllocationStrategy(settings)
+
+    sharding.init(
+      Entity(DeviceShadowEntity.entityKey)(createBehavior = _ ⇒ DeviceShadowEntity(shardName))
+        .withAllocationStrategy(new ExternalShardAllocationStrategy(system, DeviceShadowEntity.entityKey.name))
+        .withMessageExtractor(
+          new ShardingMessageExtractor[DeviceCommand, DeviceCommand] {
+            override def entityId(cmd: DeviceCommand): String             = cmd.replica
+            override def shardId(entityId: String): String                = entityId
+            override def unwrapMessage(cmd: DeviceCommand): DeviceCommand = cmd
+          }
+        )
+    )
 
     sharding.init(
       Entity(DeviceShadowEntity.entityKey)(entityCtx ⇒ DeviceShadowEntity(entityCtx.entityId, shardName))

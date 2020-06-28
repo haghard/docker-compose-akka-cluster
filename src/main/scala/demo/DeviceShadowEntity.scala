@@ -18,9 +18,31 @@ object DeviceShadowEntity {
 
   def apply(entityId: String, replicaName: String): Behavior[DeviceCommand] =
     Behaviors.setup { ctx ⇒
+
+      //For any shardId that has not been allocated it will be allocated to the requesting node.
+      // To make explicit allocations:
+      /*implicit val ec = system.executionContext
+      val shardAllocation = ExternalShardAllocation(system).clientFor(DeviceShadowEntity.entityKey.name)
+      shardAllocation
+        .shardLocations()
+        .filter(_.locations.find(_._1 == entityId).isEmpty)
+        .flatMap { _ =>
+          // the entityId becomes the akka-shard-id
+          shardAllocation.updateShardLocation(entityId, system.address)
+        }
+      */
+
       ctx.log.warn("* * *  Wake up sharded entity for replicator {}  * * *", replicaName)
       await(ctx.log, replicaName, entityId) //orElse idle(ctx.log)
     }
+
+  def apply(replicaName: String): Behavior[DeviceCommand] = {
+    Behaviors.setup { ctx ⇒
+      ctx.log.warn("* * *  Wake up sharded entity for replicator {}  * * *", replicaName)
+      await(ctx.log, replicaName) //orElse idle(ctx.log)
+    }
+  }
+
 
   //expect only akka.actor.typed.internal.PoisonPill
   /*def idle(log: org.slf4j.Logger): Behavior[DeviceCommand] =
@@ -47,4 +69,14 @@ object DeviceShadowEntity {
           await(log, replicaName, entityId) //orElse idle(log)
       }
       .receiveSignal(onSignal(log))
+
+  private def await(log: org.slf4j.Logger, replicaName: String): Behavior[DeviceCommand] =
+      Behaviors
+        .receiveMessage[DeviceCommand] {
+          case PingDevice(id, _) ⇒
+            log.warn("* * *  ping replicator {}:{}  * * *", replicaName, id)
+            //TODO: start replicator for the replicaName here !!!
+            await(log, replicaName) //orElse idle(log)
+        }
+        .receiveSignal(onSignal(log))
 }

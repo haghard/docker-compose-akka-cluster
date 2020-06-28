@@ -11,8 +11,8 @@ import akka.actor.typed.receptionist.Receptionist
 import demo.hashing.{CropCircle, HashRing}
 
 import scala.collection.immutable.SortedMultiDict
-
 import akka.actor.typed.scaladsl.StashBuffer
+import akka.cluster.sharding.external.ExternalShardAllocation
 
 object RingMaster {
 
@@ -175,8 +175,27 @@ object RingMaster {
               val ind     = ThreadLocalRandom.current.nextInt(0, rs.size)
               val replica = rs(ind).shardProxy
 
+
               //127.0.0.1-2551 or 127.0.0.1-2552 or ...
               val replicaName = rs(ind).shardHost
+
+              //TODO: validate
+              //val shardAllocationClient = ExternalShardAllocation(ctx.system).clientFor(DeviceShadowEntity.entityKey.name)
+              //shardAllocationClient.updateShardLocation(replicaName, replica.path.address)
+              //or
+              //For any shardId that has not been allocated it will be allocated to the requesting node.
+              // To make explicit allocations:
+              /*implicit val ec = system.executionContext
+              val shardAllocation = ExternalShardAllocation(system).clientFor(DeviceShadowEntity.entityKey.name)
+              shardAllocation
+                .shardLocations()
+                .filter(_.locations.find(_._1 == entityId).isEmpty)
+                .flatMap { _ =>
+                  // the entityId becomes the akka-shard-id
+                  shardAllocation.updateShardLocation(entityId, system.address)
+                }
+              */
+
               ctx.log.warn("{} -> [{} - {}:{}]", deviceId, shard, replica, state.replicas.size)
               if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shard")
               else replica.tell(PingDevice(deviceId, replicaName))
