@@ -85,7 +85,7 @@ class HttpRoutes(
   val ringRoute = path("rng")(get(encodeResponse(getFromFile(folderName + "/" + "ring.html")))) ~
     path("ring-events")(handleWebSocketMessages(ringFlow())) //http://192.168.77.10:9000/rng
 
-  def cropCircleRoute /*(implicit /*sch: Scheduler,*/ ec: ExecutionContext)*/ =
+  def cropCircleRoute =
     path("view")(get(encodeResponse(getFromFile(folderName + "/" + circlePage)))) ~
     path("view1")(get(encodeResponse(getFromFile(folderName + "/" + circlePage1)))) ~
     pathPrefix("d3" / Remaining)(file ⇒ encodeResponse(getFromFile(folderName + "/" + file))) ~

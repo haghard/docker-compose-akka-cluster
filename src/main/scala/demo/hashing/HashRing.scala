@@ -20,7 +20,6 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
     add(node)
 
   /**
-    *
     * Adds a node on ring.
     * When we add new node, it changes the ownership of some ranges by splitting it up.
     */

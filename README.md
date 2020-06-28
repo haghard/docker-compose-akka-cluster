@@ -8,8 +8,8 @@ https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
 Sharding + Replication
 
 RingMaster is managed by cluster singleton. It holds a hash ring and redirects all incoming requests to a particular shard region.
-Each cluster node starts knowing its shard name. In other words, it start a sharding region on a node with corresponding role.
-For example: alpha, betta, gamma. Each shard writes to/reads from its own shard region. 
+Each cluster node starts knowing its shard name. In other words, it starts a sharding region on a node with corresponding role.
+For example, we have following shards: alpha, betta, gamma. Each shard writes to/reads from its own shard region. 
 
 
 Therefore, if we have the following set of shards: 
@@ -141,6 +141,7 @@ https://github.com/mckeeh3/akka-java-cluster-kubernetes/tree/d714ad5651ee4dc8446
 
 https://doc.akka.io/docs/akka-management/current/cluster-http-management.html
 
+ExternalShardAllocation https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
 
 ### Docker  
 

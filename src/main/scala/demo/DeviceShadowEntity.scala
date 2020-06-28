@@ -9,7 +9,6 @@ import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
   * akka://dc/system/sharding/devices/127.0.0.2-2551/127.0.0.2-2551
   * akka://dc/system/sharding/devices/127.0.0.2-2551/127.0.0.2-2551
   *
-  *
   * Should start a replicator instance for the given replica name
   */
 object DeviceShadowEntity {
