@@ -18,6 +18,11 @@ import akka.cluster.sharding.ShardRegion.{ClusterShardingStats, GetClusterShardi
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 
+object HttpRoutes {
+
+  case class CropCircleView(json: String)
+}
+
 class HttpRoutes(
   ringMaster: ActorRef[RingMaster.Command],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm]
@@ -93,7 +98,7 @@ class HttpRoutes(
         flowWithHeartbeat().mapAsync(1) {
           case TextMessage.Strict(_) ⇒
             ringMaster
-              .ask[RingMaster.CropCircleView](RingMaster.GetCropCircle(_))
+              .ask[HttpRoutes.CropCircleView](RingMaster.GetCropCircle(_))
               .map(r ⇒ TextMessage.Strict(r.json))
           case other ⇒
             throw new Exception(s"Unexpected message $other !!!")

@@ -61,7 +61,7 @@ object SharedDomain {
     )
      */
 
-    val e = Entity(DeviceShadowEntity.entityKey)(DeviceShadowEntity(_, shardName))
+    val entity = Entity(DeviceShadowEntity.entityKey)(DeviceShadowEntity(_, shardName))
       .withMessageExtractor(
         new ShardingMessageExtractor[DeviceCommand, DeviceCommand] {
           override def entityId(cmd: DeviceCommand): String             = cmd.replica
@@ -79,6 +79,6 @@ object SharedDomain {
     // .clientFor(DeviceShadowEntity.entityKey.name)
     //.updateShardLocation("chat0", system.path.address)
 
-    sharding.init(e)
+    sharding.init(entity)
   }
 }

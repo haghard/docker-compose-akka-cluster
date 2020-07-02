@@ -140,6 +140,8 @@ object Application extends Ops {
   ): Behavior[Nothing] =
     Behaviors
       .setup[SelfUp] { ctx ⇒
+        implicit val classicSystem = ctx.system.toClassic
+
         val cluster = Cluster(ctx.system)
         cluster.manager tell Join(seedAddress)
         cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
@@ -158,7 +160,14 @@ object Application extends Ops {
 
             cluster.subscriptions ! Unsubscribe(ctx.self)
             val shutdown = CoordinatedShutdown(ctx.system.toClassic)
-            val ring     = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring"))
+
+            //resume all possible errors so that it never fails
+            val behavior = Behaviors
+              .supervise(RingMaster())
+              .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true))
+
+            val ringMaster = ClusterSingleton(ctx.system)
+              .init(SingletonActor(behavior, "ring-master").withStopMessage(RingMaster.Shutdown))
 
             val jvmMetrics = ctx
               .spawn(
@@ -168,15 +177,9 @@ object Application extends Ops {
               )
               .narrow[ClusterJvmMetrics.Confirm]
 
-            new Bootstrap(
-              shutdown,
-              ring,
-              jvmMetrics,
-              cluster.selfMember.address.host.get,
-              httpPort
-            )(ctx.system)
+            new Bootstrap(ringMaster, jvmMetrics, cluster.selfMember.address.host.get, httpPort)
 
-            ctx.spawn(
+            val proxy = ctx.spawn(
               ShardRegionProxy(
                 shardName,
                 cluster.selfMember.address.host
@@ -186,10 +189,12 @@ object Application extends Ops {
               Name
             )
 
+            ctx.watch(proxy)
             Behaviors.receiveSignal {
-              case (_, Terminated(ring)) ⇒
-                ctx.log.error("Membership failure detected !!!")
-                Behaviors.stopped
+              case (_, Terminated(`proxy`)) ⇒
+                ctx.log.error(s"Proxy $proxy has failed/stopped. Shutting down...")
+                shutdown.run(Bootstrap.CriticalError)
+                Behaviors.same
             }
         }
       }
@@ -204,7 +209,8 @@ object Application extends Ops {
   ): Behavior[Nothing] =
     Behaviors
       .setup[SelfUp] { ctx ⇒
-        val cluster = Cluster(ctx.system)
+        implicit val classicSystem = ctx.system.toClassic
+        val cluster                = Cluster(ctx.system)
         cluster.manager tell Join(seedAddress)
         cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
 
@@ -222,11 +228,14 @@ object Application extends Ops {
             cluster.subscriptions ! Unsubscribe(ctx.self)
 
             val shutdown = CoordinatedShutdown(ctx.system.toClassic)
-            val ringMaster = ClusterSingleton(ctx.system).init(
-              SingletonActor(RingMaster(), "ring-master")
-                .withStopMessage(RingMaster.Shutdown)
-            )
-            ctx.watch(ringMaster)
+
+            //resume all possible errors so that it never fails
+            val behavior = Behaviors
+              .supervise(RingMaster())
+              .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true))
+
+            val ringMaster = ClusterSingleton(ctx.system)
+              .init(SingletonActor(behavior, "ring-master").withStopMessage(RingMaster.Shutdown))
 
             val jvmMetrics = ctx
               .spawn(
@@ -236,15 +245,9 @@ object Application extends Ops {
               )
               .narrow[ClusterJvmMetrics.Confirm]
 
-            new Bootstrap(
-              shutdown,
-              ringMaster,
-              jvmMetrics,
-              cluster.selfMember.address.host.get,
-              httpPort
-            )(ctx.system)
+            new Bootstrap(ringMaster, jvmMetrics, cluster.selfMember.address.host.get, httpPort)
 
-            ctx.spawn(
+            val proxy = ctx.spawn(
               ShardRegionProxy(
                 shardName,
                 cluster.selfMember.address.host
@@ -254,11 +257,12 @@ object Application extends Ops {
               Name
             )
 
-            Behaviors.receiveSignal[SelfUp] {
-              //TODO: Probable should be removed
-              case (_, Terminated(ringMaster)) ⇒
-                ctx.log.error("Membership failure detected !!!")
-                Behaviors.stopped
+            ctx.watch(proxy)
+            Behaviors.receiveSignal {
+              case (_, Terminated(`proxy`)) ⇒
+                ctx.log.error(s"Proxy $proxy has failed/stopped. Shutting down...")
+                shutdown.run(Bootstrap.CriticalError)
+                Behaviors.same
             }
         }
       }
