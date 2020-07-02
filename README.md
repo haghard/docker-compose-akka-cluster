@@ -65,6 +65,13 @@ All replicas that have the same shard name should be responsible to the same ran
     
   * Now you can build the image again
 
+### Network
+
+sudo ifconfig lo0 127.0.0.2 add
+
+sudo ifconfig lo0 127.0.0.3 add
+
+
 ## Run with sbt
  
 ```
@@ -84,17 +91,17 @@ sbt -DSHARD=g runG2
 
 ### Crop circle
 
-  `http GET 192.168.77.10:9000/view`
+  `http GET 192.168.178.10:9000/view`
 
-  `http GET 192.168.77.10:9000/view1`
+  `http GET 192.168.178.10:9000/view1`
 
-  `http GET 192.168.77.10:9000/members`
+  `http GET 192.168.178.10:9000/members`
 
-  `http://192.168.77.10:9000/rng`
+  `http://192.168.178.10:9000/rng`
 
 ### Cluster members
 
-   `http GET 192.168.77.10:9000/cluster/members`
+   `http GET 127.0.0.1:9000/cluster/members`
     
 
 ### Jvm metrics 
@@ -103,6 +110,21 @@ sbt -DSHARD=g runG2
 ### Ping device
   
   `http GET 192.168.77.10:9000/device/1`  
+
+### Query shard regions
+
+`http 127.0.0.1:9000/shards`
+
+
+### Query processes  
+ 
+lsof -i :2551 | grep LISTEN | awk '{print $2}'
+
+kill -stop <pid>
+
+kill -suspend <pid>
+
+lsof -i :8558 | grep LISTEN | awk '{print $2}'
 
 
 #### Docker commands ####

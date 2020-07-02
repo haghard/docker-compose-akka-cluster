@@ -81,15 +81,15 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
     var cur = startKey
     val sb  = new StringBuilder
     sb.append("\n")
-      .append("Shard")
-      .append("\t\t\t")
       .append("Token")
+      .append("\t\t\t")
+      .append("Shard")
       .append("\n")
     val iter = ring.keysIteratorFrom(startKey)
     while (iter.hasNext && cur <= endKey) {
-      val key = iter.next
-      cur = key
-      sb.append(key).append("\t\t").append(ring(key)).append("\n")
+      val token = iter.next
+      cur = token
+      sb.append(token).append("\t\t").append(ring(token)).append("\n")
     }
     sb.toString
   }

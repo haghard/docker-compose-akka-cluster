@@ -9,5 +9,4 @@ sealed trait DeviceCommand extends ShardRegionCmd {
   def replica: String
 }
 
-//case class InitDevice(replica: String)                 extends DeviceCommand
 case class PingDevice(deviceId: Long, replica: String) extends DeviceCommand

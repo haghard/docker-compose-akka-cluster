@@ -27,6 +27,13 @@ object RingMaster {
 
   case class ClusterStateResponse(state: String)
 
+  case class Replica(ref: ActorRef[ShardRegionCmd], shardHost: String) //ActorRef[ShardRegionCmd], 127.0.0.1-2551
+
+  case class HashRingState(
+    hashRing: Option[HashRing] = None, //hash ring for shards
+    replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica]
+  ) //grouped replicas by shard name
+
   sealed trait Command
 
   case class ClusterStateRequest(replyTo: ActorRef[ClusterStateResponse]) extends Command
@@ -43,13 +50,6 @@ object RingMaster {
   case class Ping(id: Long) extends Command
 
   case object Shutdown extends Command
-
-  case class Replica(ref: ActorRef[ShardRegionCmd], shardHost: String) //ActorRef[ShardRegionCmd], 127.0.0.1-2551
-
-  case class HashRingState(
-    hashRing: Option[HashRing] = None, //hash ring for shards
-    replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica]
-  ) //grouped replicas by shard name
 
   def apply(): Behavior[Command] =
     Behaviors.withStash(bSize) { buf ⇒
@@ -188,7 +188,7 @@ object RingMaster {
               .map(k ⇒ s"[$k -> ${state.replicas.get(k).map(_.shardHost).mkString(",")}]")
               .mkString(";")
           )
-          ctx.log.warn("{}", state.hashRing.get.showSubRange(0, Long.MaxValue / 12))
+          ctx.log.warn("{}", state.hashRing.get.showSubRange(0, Long.MaxValue / 32))
           Behaviors.same
         case GetCropCircle(replyTo) ⇒
           //to show all token

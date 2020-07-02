@@ -15,8 +15,11 @@ import akka.actor.typed.scaladsl.AskPattern._
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.stream.typed.scaladsl.ActorSource
 import akka.cluster.sharding.ShardRegion.{ClusterShardingStats, GetClusterShardingStats}
+import akka.cluster.sharding.typed.ClusterShardingQuery
+import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
+import ExtraHttpDirectives._
 
 object HttpRoutes {
 
@@ -25,7 +28,8 @@ object HttpRoutes {
 
 class HttpRoutes(
   ringMaster: ActorRef[RingMaster.Command],
-  jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm]
+  jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
+  shardName: String
 )(implicit sys: ActorSystem[Nothing])
     extends Directives {
 
@@ -33,7 +37,7 @@ class HttpRoutes(
   val circlePage  = "view.html"
   val circlePage1 = "view1.html"
 
-  implicit val t  = akka.util.Timeout(1.seconds)
+  implicit val t  = akka.util.Timeout(2.seconds)
   implicit val ec = sys.dispatchers.lookup(DispatcherSelector.fromConfig(metricsDispatcherName))
 
   val (ref, metricsSource) =
@@ -112,8 +116,6 @@ class HttpRoutes(
       )
     }
 
-  import ExtraHttpDirectives._
-
   val pingRoute = extractLog { implicit log ⇒
     aroundRequest(logLatency(log)) {
       path("device" / LongNumber) { deviceId ⇒
@@ -126,24 +128,23 @@ class HttpRoutes(
   }
 
   def route: Route =
-    path("ring")(get(complete(queryForMembers))) ~
-    /*
+    path("ring")(get(complete(queryRing))) ~
     path("shards") {
       get {
-        import akka.actor.typed.scaladsl.adapter._
-        import akka.pattern.ask
         complete {
-          (shardRegion.toClassic ? GetClusterShardingStats(2.seconds))
-            .mapTo[ClusterShardingStats]
-            .map(stats ⇒ "\n" + stats.regions.mkString("\n"))
+          ClusterSharding(sys).shardState
+            .ask[ClusterShardingStats](
+              akka.cluster.sharding.typed.GetClusterShardingStats(DeviceShadowEntity.entityKey, t.duration, _)
+            )
+            .map(stats ⇒ shardName + "\n" + stats.regions.mkString("\n"))
         }
       }
-    } */
+    } ~
     pingRoute ~ path("metrics")(
       get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
     ) ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys)) ~ cropCircleRoute //(sch)
 
-  def queryForMembers: Future[HttpResponse] =
+  def queryRing: Future[HttpResponse] =
     ringMaster
       .ask[RingMaster.ClusterStateResponse](RingMaster.ClusterStateRequest(_))
       .map { reply ⇒

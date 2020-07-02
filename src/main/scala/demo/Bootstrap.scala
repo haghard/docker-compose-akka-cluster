@@ -4,9 +4,9 @@ import akka.Done
 import akka.actor.CoordinatedShutdown
 import akka.http.scaladsl.Http
 import akka.actor.typed.ActorRef
-import akka.actor.CoordinatedShutdown.{PhaseActorSystemTerminate, PhaseBeforeServiceUnbind, PhaseClusterExitingDone, PhaseServiceRequestsDone, PhaseServiceStop, PhaseServiceUnbind, Reason}
+import akka.actor.CoordinatedShutdown.{PhaseActorSystemTerminate, PhaseBeforeServiceUnbind, PhaseServiceRequestsDone, PhaseServiceStop, PhaseServiceUnbind, Reason}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 import akka.actor.typed.scaladsl.adapter._
@@ -18,7 +18,8 @@ object Bootstrap {
   val terminationDeadline = 4.seconds
 }
 
-class Bootstrap(
+case class Bootstrap(
+  shardName: String,
   ringMaster: ActorRef[RingMaster.Command],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   hostName: String,
@@ -26,6 +27,7 @@ class Bootstrap(
 )(implicit classicSystem: akka.actor.ActorSystem) {
 
   implicit val ex = classicSystem.dispatcher
+  val shutdown    = CoordinatedShutdown(classicSystem)
 
   /*Http().bind(hostName, port)
     .to(akka.stream.scaladsl.Sink.foreach { con =>
@@ -34,53 +36,22 @@ class Bootstrap(
       //decrement counter
     }).run()*/
 
-  /*Http()
-    .bindAndHandle(new HttpRoutes(ringMaster, jvmMetricsSrc).route, hostName, port)
-    .onComplete {
-      case Failure(ex) ⇒
-        classicSystem.log.error(ex, s"Shutting down because can't bind to $hostName:$port")
-        shutdown.run(Bootstrap.BindFailure)
-
-      case Success(binding) ⇒
-        classicSystem.log.warning(s"★ ★ ★ Listening for HTTP connections on ${binding.localAddress} * * *")
-
-        shutdown.addTask(PhaseServiceUnbind, "api.unbind") { () ⇒
-          classicSystem.log.info("api.unbind")
-          // No new connections are accepted
-          // Existing connections are still allowed to perform request/response cycles
-          binding
-            .unbind()
-            .map { r ⇒
-              classicSystem.log.info("★ ★ ★ api.unbind ★ ★ ★")
-              r
-            }(ExecutionContext.global)
-        }
-
-        shutdown.addTask(PhaseServiceRequestsDone, "api.terminate") { () ⇒
-          classicSystem.log.info("★ ★ ★ api.terminate ★ ★ ★")
-          //graceful termination requests being handled on this connection
-          binding.terminate(terminationDeadline).map(_ ⇒ Done)(ExecutionContext.global)
-        }
-    }(ExecutionContext.global)*/
-
-  val cShutdown = CoordinatedShutdown(classicSystem)
-
   Http()
-    .bindAndHandle(new HttpRoutes(ringMaster, jvmMetricsSrc)(classicSystem.toTyped).route, hostName, port)
+    .bindAndHandle(new HttpRoutes(ringMaster, jvmMetricsSrc, shardName)(classicSystem.toTyped).route, hostName, port)
     .onComplete {
       case Failure(ex) ⇒
         classicSystem.log.error(s"Shutting down because can't bind on $hostName:$port", ex)
-        cShutdown.run(Bootstrap.BindFailure)
+        shutdown.run(Bootstrap.BindFailure)
       case Success(binding) ⇒
         classicSystem.log.info(s"★ ★ ★ Listening for HTTP connections on ${binding.localAddress} * * *")
-        cShutdown.addTask(PhaseBeforeServiceUnbind, "before-unbind") { () ⇒
+        shutdown.addTask(PhaseBeforeServiceUnbind, "before-unbind") { () ⇒
           Future {
             classicSystem.log.info("CoordinatedShutdown [before-unbind]")
             Done
           }
         }
 
-        cShutdown.addTask(PhaseServiceUnbind, "http-api.unbind") { () ⇒
+        shutdown.addTask(PhaseServiceUnbind, "http-api.unbind") { () ⇒
           //No new connections are accepted. Existing connections are still allowed to perform request/response cycles
           binding.unbind().map { done ⇒
             classicSystem.log.info("CoordinatedShutdown [http-api.unbind]")
@@ -96,7 +67,7 @@ class Bootstrap(
           }*/
 
         //graceful termination request being handled on this connection
-        cShutdown.addTask(PhaseServiceRequestsDone, "http-api.terminate") { () ⇒
+        shutdown.addTask(PhaseServiceRequestsDone, "http-api.terminate") { () ⇒
           /**
             * It doesn't accept new connection but it drains the existing connections
             * Until the `terminationDeadline` all the req that have been accepted will be completed
@@ -109,14 +80,14 @@ class Bootstrap(
         }
 
         //forcefully kills connections that are still open
-        cShutdown.addTask(PhaseServiceStop, "close.connections") { () ⇒
+        shutdown.addTask(PhaseServiceStop, "close.connections") { () ⇒
           Http().shutdownAllConnectionPools().map { _ ⇒
             classicSystem.log.info("CoordinatedShutdown [close.connections]")
             Done
           }
         }
 
-        cShutdown.addTask(PhaseActorSystemTerminate, "sys.term") { () ⇒
+        shutdown.addTask(PhaseActorSystemTerminate, "sys.term") { () ⇒
           Future.successful {
             classicSystem.log.info("CoordinatedShutdown [sys.term]")
             Done

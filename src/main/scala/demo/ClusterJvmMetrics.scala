@@ -92,8 +92,8 @@ object ClusterJvmMetrics {
       }
       .receiveSignal {
         case (ctx, PostStop) ⇒
-          ctx.log.warn("PostStop")
-          source ! StreamFailure(new Exception("JvmMetrics should never stop"))
+          ctx.log.debug("ClusterJvmMetrics.PostStop")
+          source.tell(StreamFailure(new Exception("JvmMetrics should never stop")))
           Behaviors.stopped
       }
 }

@@ -157,9 +157,7 @@ object Application extends Ops {
               av
             )
             ctx.log.info(runtimeInfo)
-
             cluster.subscriptions ! Unsubscribe(ctx.self)
-            val shutdown = CoordinatedShutdown(ctx.system.toClassic)
 
             //resume all possible errors so that it never fails
             val behavior = Behaviors
@@ -177,7 +175,7 @@ object Application extends Ops {
               )
               .narrow[ClusterJvmMetrics.Confirm]
 
-            new Bootstrap(ringMaster, jvmMetrics, cluster.selfMember.address.host.get, httpPort)
+            Bootstrap(shardName, ringMaster, jvmMetrics, cluster.selfMember.address.host.get, httpPort)
 
             val proxy = ctx.spawn(
               ShardRegionProxy(
@@ -193,7 +191,7 @@ object Application extends Ops {
             Behaviors.receiveSignal {
               case (_, Terminated(`proxy`)) ⇒
                 ctx.log.error(s"Proxy $proxy has failed/stopped. Shutting down...")
-                shutdown.run(Bootstrap.CriticalError)
+                CoordinatedShutdown(ctx.system.toClassic).run(Bootstrap.CriticalError)
                 Behaviors.same
             }
         }
@@ -217,17 +215,14 @@ object Application extends Ops {
         Behaviors.receive[SelfUp] {
           case (ctx, _ @SelfUp(_)) ⇒
             ctx.log.warn(
-              "★ ★ ★ {} {} bytes Seed {}:{} joined cluster ★ ★ ★",
+              "★ ★ ★ {} Seed {}:{} joined cluster ★ ★ ★",
               shardName,
-              config.getMemorySize("akka.remote.artery.advanced.maximum-frame-size"),
               config.getString(AKKA_HOST),
               config.getInt(AKKA_PORT)
             )
 
             ctx.log.info(runtimeInfo)
             cluster.subscriptions ! Unsubscribe(ctx.self)
-
-            val shutdown = CoordinatedShutdown(ctx.system.toClassic)
 
             //resume all possible errors so that it never fails
             val behavior = Behaviors
@@ -245,7 +240,7 @@ object Application extends Ops {
               )
               .narrow[ClusterJvmMetrics.Confirm]
 
-            new Bootstrap(ringMaster, jvmMetrics, cluster.selfMember.address.host.get, httpPort)
+            Bootstrap(shardName, ringMaster, jvmMetrics, cluster.selfMember.address.host.get, httpPort)
 
             val proxy = ctx.spawn(
               ShardRegionProxy(
@@ -261,7 +256,7 @@ object Application extends Ops {
             Behaviors.receiveSignal {
               case (_, Terminated(`proxy`)) ⇒
                 ctx.log.error(s"Proxy $proxy has failed/stopped. Shutting down...")
-                shutdown.run(Bootstrap.CriticalError)
+                CoordinatedShutdown(ctx.system.toClassic).run(Bootstrap.CriticalError)
                 Behaviors.same
             }
         }
