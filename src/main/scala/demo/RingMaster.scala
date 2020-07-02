@@ -16,7 +16,13 @@ import akka.cluster.sharding.external.ExternalShardAllocation
 
 object RingMaster {
 
-  val domainKey = ServiceKey[ShardRegionCmd]("domain")
+  private val retryLimit = 1 << 3
+
+  //get info timeout
+  private val replyTimeout = 1000.millis
+
+  private val timeoutKey = "to"
+  val domainKey          = ServiceKey[ShardRegionCmd]("domain")
 
   case class ClusterStateResponse(state: String)
 
@@ -37,10 +43,9 @@ object RingMaster {
 
   case class Ping(id: Long) extends Command
 
-  case object ToKey
+  case object Shutdown extends Command
 
-  //ActorRef[ShardRegionCmd], 127.0.0.1-2551
-  case class Replica(ref: ActorRef[ShardRegionCmd], shardHost: String)
+  case class Replica(ref: ActorRef[ShardRegionCmd], shardHost: String) //ActorRef[ShardRegionCmd], 127.0.0.1-2551
 
   /*val onTerminate: PartialFunction[(ActorContext[ClusterDomainEvent], Signal), Behavior[ClusterDomainEvent]] = {
     case (ctx, Terminated(actor)) ⇒
@@ -52,9 +57,6 @@ object RingMaster {
     hashRing: Option[HashRing] = None, //hash ring for shards
     replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica]
   ) //grouped replicas by shard name
-
-  private val retryLimit   = 4
-  private val replyTimeout = 1000.millis
 
   def apply(): Behavior[Command] =
     Behaviors.withStash(1 << 6) { buf ⇒
@@ -101,7 +103,7 @@ object RingMaster {
     numOfTry: Int = 0
   ): Behavior[Command] =
     Behaviors.withTimers { ctx ⇒
-      ctx.startSingleTimer(ToKey, ReplyTimeout, replyTimeout)
+      ctx.startSingleTimer(timeoutKey, ReplyTimeout, replyTimeout)
       head.tell(GetShardInfo(self))
       awaitInfo(self, head, tail, state, stash, ctx, numOfTry)
     }
@@ -119,7 +121,7 @@ object RingMaster {
       msg match {
         //ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
         case ShardInfo(shardName, shardProxy, shardAddress) ⇒
-          timer.cancel(ToKey)
+          timer.cancel(timeoutKey)
 
           //For any shardId that has not been allocated it will be allocated to the requesting node. To make explicit allocations:
           //val shardAllocationClient = ExternalShardAllocation(ctx.system).clientFor(DeviceShadowEntity.entityKey.name)

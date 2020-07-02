@@ -158,7 +158,7 @@ object Application extends Ops {
 
             cluster.subscriptions ! Unsubscribe(ctx.self)
             val shutdown = CoordinatedShutdown(ctx.system.toClassic)
-            val ring = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring"))
+            val ring     = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring"))
 
             val jvmMetrics = ctx
               .spawn(
@@ -222,7 +222,10 @@ object Application extends Ops {
             cluster.subscriptions ! Unsubscribe(ctx.self)
 
             val shutdown = CoordinatedShutdown(ctx.system.toClassic)
-            val ringMaster = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring-master"))
+            val ringMaster = ClusterSingleton(ctx.system).init(
+              SingletonActor(RingMaster(), "ring-master")
+                .withStopMessage(RingMaster.Shutdown)
+            )
             ctx.watch(ringMaster)
 
             val jvmMetrics = ctx
