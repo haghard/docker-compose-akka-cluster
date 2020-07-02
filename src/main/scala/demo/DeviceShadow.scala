@@ -1,3 +1,4 @@
+/*
 package demo
 
 import akka.cluster.sharding.ShardRegion
@@ -20,10 +21,10 @@ object DeviceShadow {
 }
 
 /**
-  * akka://dc@127.0.0.1:2551/system/sharding/devices/127.0.0.1-2551/127.0.0.1-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
-  * akka://dc@127.0.0.2:2551/system/sharding/devices/127.0.0.2-2551/127.0.0.2-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
-  * akka://dc@127.0.0.3:2551/system/sharding/devices/127.0.0.3-2551/127.0.0.3-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
-  */
+ * akka://dc@127.0.0.1:2551/system/sharding/devices/127.0.0.1-2551/127.0.0.1-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
+ * akka://dc@127.0.0.2:2551/system/sharding/devices/127.0.0.2-2551/127.0.0.2-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
+ * akka://dc@127.0.0.3:2551/system/sharding/devices/127.0.0.3-2551/127.0.0.3-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
+ */
 class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
 
   /*override def preStart(): Unit =
@@ -31,7 +32,7 @@ class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
 
   override def postStop(): Unit =
     log.warning("* * *   postStop: {} * * * ", replicaName)
-   */
+ */
 
   def active: Receive = {
     case PingDevice(id, _) ⇒
@@ -45,7 +46,7 @@ class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
       log.warning("* * *  Wake up device: {}  * * *", replicaName)
       //TODO: start replicator for the replicaName here !!!
       context.become(active)
-     */
+ */
     case cmd: PingDevice ⇒
       log.warning("* * *  Wake up device by ping: {}  * * *", replicaName)
       //TODO: start replicator for the replicaName here !!!
@@ -56,3 +57,4 @@ class DeviceShadow(replicaName: String) extends Actor with ActorLogging {
 
   override def receive: Receive = active //await
 }
+ */

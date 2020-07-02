@@ -40,7 +40,7 @@ object RingMaster {
   case object ToKey
 
   //ActorRef[ShardRegionCmd], 127.0.0.1-2551
-  case class Replica(shardProxy: ActorRef[ShardRegionCmd], shardHost: String)
+  case class Replica(ref: ActorRef[ShardRegionCmd], shardHost: String)
 
   /*val onTerminate: PartialFunction[(ActorContext[ClusterDomainEvent], Signal), Behavior[ClusterDomainEvent]] = {
     case (ctx, Terminated(actor)) ⇒
@@ -174,14 +174,14 @@ object RingMaster {
           case Ping(deviceId) ⇒
             state.hashRing.foreach { hashRing ⇒
               //pick shard
-              val shard = hashRing.lookup(deviceId).head
+              val shardName = hashRing.lookup(deviceId).head
               //randomly pick a shard replica
-              val rs      = state.replicas.get(shard).toVector
-              val ind     = ThreadLocalRandom.current.nextInt(0, rs.size)
-              val replica = rs(ind).shardProxy
+              val replicas   = state.replicas.get(shardName).toVector
+              val ind        = ThreadLocalRandom.current.nextInt(0, replicas.size)
+              val replicaRef = replicas(ind).ref
 
               //127.0.0.1-2551 or 127.0.0.1-2552 or ...
-              val replicaName = rs(ind).shardHost
+              val replicaName = replicas(ind).shardHost
 
               //TODO: validate
               //val shardAllocationClient = ExternalShardAllocation(ctx.system).clientFor(DeviceShadowEntity.entityKey.name)
@@ -200,9 +200,9 @@ object RingMaster {
                 }
                */
 
-              ctx.log.warn("{} -> [{} - {}:{}]", deviceId, shard, replica, state.replicas.size)
-              if (rs.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shard")
-              else replica.tell(PingDevice(deviceId, replicaName))
+              ctx.log.warn("{} -> [{} - {}:{}]", deviceId, shardName, replicaRef, state.replicas.size)
+              if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shardName")
+              else replicaRef.tell(PingDevice(deviceId, replicaName))
             }
             Behaviors.same
           case m @ MembershipChanged(rs) ⇒
@@ -226,7 +226,7 @@ object RingMaster {
             //state.shardHash.foreach(r ⇒ replyTo.tell(CropCircleView(r.toCropCircle)))
 
             val circle = state.replicas.keySet.foldLeft(CropCircle("circle")) { (circle, c) ⇒
-              state.replicas.get(c).map(_.shardProxy.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
+              state.replicas.get(c).map(_.ref.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
                 circle :+ (c, actorPath)
               }
             }

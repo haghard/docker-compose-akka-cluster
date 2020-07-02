@@ -20,8 +20,7 @@ import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 
 class HttpRoutes(
   ringMaster: ActorRef[RingMaster.Command],
-  jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
-  shardRegion: ActorRef[DeviceCommand]
+  jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm]
 )(implicit sys: ActorSystem[Nothing])
     extends Directives {
 
@@ -123,6 +122,7 @@ class HttpRoutes(
 
   def route: Route =
     path("ring")(get(complete(queryForMembers))) ~
+    /*
     path("shards") {
       get {
         import akka.actor.typed.scaladsl.adapter._
@@ -133,7 +133,8 @@ class HttpRoutes(
             .map(stats ⇒ "\n" + stats.regions.mkString("\n"))
         }
       }
-    } ~ pingRoute ~ path("metrics")(
+    } */
+    pingRoute ~ path("metrics")(
       get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
     ) ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys)) ~ cropCircleRoute //(sch)
 

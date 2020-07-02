@@ -158,12 +158,7 @@ object Application extends Ops {
 
             cluster.subscriptions ! Unsubscribe(ctx.self)
             val shutdown = CoordinatedShutdown(ctx.system.toClassic)
-
-            val shardRegion = SharedDomain(shardName, ctx.system)
-
             val ring = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring"))
-
-            //ctx.spawn(RingMaster(shardName), "ring", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
 
             val jvmMetrics = ctx
               .spawn(
@@ -176,7 +171,6 @@ object Application extends Ops {
             new Bootstrap(
               shutdown,
               ring,
-              shardRegion,
               jvmMetrics,
               cluster.selfMember.address.host.get,
               httpPort
@@ -184,7 +178,6 @@ object Application extends Ops {
 
             ctx.spawn(
               ShardRegionProxy(
-                shardRegion,
                 shardName,
                 cluster.selfMember.address.host
                   .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"$h-$p"))
@@ -229,9 +222,6 @@ object Application extends Ops {
             cluster.subscriptions ! Unsubscribe(ctx.self)
 
             val shutdown = CoordinatedShutdown(ctx.system.toClassic)
-
-            val shardRegion = SharedDomain(shardName, ctx.system)
-
             val ringMaster = ClusterSingleton(ctx.system).init(SingletonActor(RingMaster(), "ring-master"))
             ctx.watch(ringMaster)
 
@@ -246,7 +236,6 @@ object Application extends Ops {
             new Bootstrap(
               shutdown,
               ringMaster,
-              shardRegion,
               jvmMetrics,
               cluster.selfMember.address.host.get,
               httpPort
@@ -254,7 +243,6 @@ object Application extends Ops {
 
             ctx.spawn(
               ShardRegionProxy(
-                shardRegion,
                 shardName,
                 cluster.selfMember.address.host
                   .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"$h-$p"))

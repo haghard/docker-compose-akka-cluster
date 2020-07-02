@@ -20,7 +20,6 @@ object Bootstrap {
 class Bootstrap(
   shutdown: CoordinatedShutdown,
   ringMaster: ActorRef[RingMaster.Command],
-  shardRegion: ActorRef[DeviceCommand],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   hostName: String,
   port: Int
@@ -38,7 +37,7 @@ class Bootstrap(
     }).run()*/
 
   Http()
-    .bindAndHandle(new HttpRoutes(ringMaster, jvmMetricsSrc, shardRegion).route, hostName, port)
+    .bindAndHandle(new HttpRoutes(ringMaster, jvmMetricsSrc).route, hostName, port)
     .onComplete {
       case Failure(ex) ⇒
         classicSystem.log.error(ex, s"Shutting down because can't bind to $hostName:$port")

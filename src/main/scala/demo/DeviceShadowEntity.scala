@@ -2,7 +2,7 @@ package demo
 
 import akka.actor.typed.{Behavior, Signal}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
+import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 
 /**
   * akka://dc/system/sharding/devices/127.0.0.1-2551/127.0.0.1-2551
@@ -16,29 +16,10 @@ object DeviceShadowEntity {
   val entityKey: EntityTypeKey[DeviceCommand] =
     EntityTypeKey[DeviceCommand]("devices")
 
-  def apply(entityId: String, replicaName: String): Behavior[DeviceCommand] =
-    Behaviors.setup { ctx ⇒
-      //For any shardId that has not been allocated it will be allocated to the requesting node.
-      // To make explicit allocations:
-      /*implicit val ec = system.executionContext
-      val shardAllocation = ExternalShardAllocation(system).clientFor(DeviceShadowEntity.entityKey.name)
-      shardAllocation
-        .shardLocations()
-        .filter(_.locations.find(_._1 == entityId).isEmpty)
-        .flatMap { _ =>
-          // the entityId becomes the akka-shard-id
-          shardAllocation.updateShardLocation(entityId, system.address)
-        }
-       */
-
-      ctx.log.warn("* * *  Wake up sharded entity for replicator {}  * * *", replicaName)
-      await(ctx.log, replicaName, entityId) //orElse idle(ctx.log)
-    }
-
-  def apply(replicaName: String): Behavior[DeviceCommand] =
+  def apply(entityCtx: EntityContext[DeviceCommand], replicaName: String): Behavior[DeviceCommand] =
     Behaviors.setup { ctx ⇒
       ctx.log.warn("* * *  Wake up sharded entity for replicator {}  * * *", replicaName)
-      await(ctx.log, replicaName) //orElse idle(ctx.log)
+      await(ctx.log, replicaName, entityCtx.entityId) //orElse idle(ctx.log)
     }
 
   //expect only akka.actor.typed.internal.PoisonPill
@@ -53,7 +34,7 @@ object DeviceShadowEntity {
     log: org.slf4j.Logger
   ): PartialFunction[(ActorContext[DeviceCommand], Signal), Behavior[DeviceCommand]] = {
     case (_, signal) ⇒
-      log.warn(s"* * *  Passivate sharded entity for replicator ${signal.getClass.getName}  * * *")
+      log.warn(s"Passivate sharded entity for replicator ${signal.getClass.getName}")
       Behaviors.stopped[DeviceCommand]
   }
 
@@ -67,7 +48,14 @@ object DeviceShadowEntity {
       }
       .receiveSignal(onSignal(log))
 
-  private def await(log: org.slf4j.Logger, replicaName: String): Behavior[DeviceCommand] =
+  /*
+  def apply(replicaName: String): Behavior[DeviceCommand] =
+    Behaviors.setup { ctx ⇒
+      ctx.log.warn("* * *  Wake up sharded entity for replicator {}  * * *", replicaName)
+      await(ctx.log, replicaName) //orElse idle(ctx.log)
+    }
+
+  def await(log: org.slf4j.Logger, replicaName: String): Behavior[DeviceCommand] =
     Behaviors
       .receiveMessage[DeviceCommand] {
         case PingDevice(id, _) ⇒
@@ -76,4 +64,5 @@ object DeviceShadowEntity {
           await(log, replicaName) //orElse idle(log)
       }
       .receiveSignal(onSignal(log))
+   */
 }

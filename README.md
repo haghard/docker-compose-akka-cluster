@@ -47,7 +47,7 @@ All replicas that have the same shard name should be responsible to the same ran
     
     `export AKKA_PORT=2551`
     
-    `export HOST=192.168.77.10`
+    `export HOST=192.168.178.10`
     
     `export TZ=UTC`
     
