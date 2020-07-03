@@ -171,7 +171,12 @@ object Application extends Ops {
 
             Bootstrap(shardName, ringMaster, jvmMetrics, cluster.selfMember.address.host.get, httpPort)
 
-            val replicator = ctx.spawn(DeviceReplicator(shardName), "replicator")
+            val replicator = ctx.spawn(
+              Behaviors
+                .supervise(DeviceReplicator(shardName))
+                .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true)),
+              "replicator"
+            )
 
             val proxy = ctx.spawn(
               ShardRegionProxy(
@@ -237,7 +242,13 @@ object Application extends Ops {
 
             Bootstrap(shardName, ringMaster, jvmMetrics, cluster.selfMember.address.host.get, httpPort)
 
-            val replicator = ctx.spawn(DeviceReplicator(shardName), "replicator")
+            val replicator = ctx.spawn(
+              Behaviors
+                .supervise(DeviceReplicator(shardName))
+                .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true)),
+              "replicator"
+            )
+
             val proxy = ctx.spawn(
               ShardRegionProxy(
                 replicator,
