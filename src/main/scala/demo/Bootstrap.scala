@@ -1,9 +1,9 @@
 package demo
 
 import akka.Done
-import akka.actor.CoordinatedShutdown
 import akka.http.scaladsl.Http
 import akka.actor.typed.ActorRef
+import akka.actor.CoordinatedShutdown
 import akka.actor.CoordinatedShutdown.{PhaseActorSystemTerminate, PhaseBeforeServiceUnbind, PhaseServiceRequestsDone, PhaseServiceStop, PhaseServiceUnbind, Reason}
 
 import scala.concurrent.Future
@@ -14,8 +14,6 @@ import akka.actor.typed.scaladsl.adapter._
 object Bootstrap {
   case object BindFailure   extends Reason
   case object CriticalError extends Reason
-
-  val terminationDeadline = 4.seconds
 }
 
 case class Bootstrap(
@@ -27,6 +25,11 @@ case class Bootstrap(
 )(implicit classicSystem: akka.actor.ActorSystem) {
 
   implicit val ex = classicSystem.dispatcher
+
+  val terminationDeadline = classicSystem.settings.config
+    .getDuration("akka.coordinated-shutdown.default-phase-timeout")
+    .getSeconds
+    .second
 
   /*Http().bind(hostName, port)
     .to(akka.stream.scaladsl.Sink.foreach { con =>
@@ -72,7 +75,7 @@ case class Bootstrap(
             * Until the `terminationDeadline` all the req that have been accepted will be completed
             * and only than the shutdown will continue
             */
-          binding.terminate(Bootstrap.terminationDeadline).map { _ ⇒
+          binding.terminate(terminationDeadline).map { _ ⇒
             classicSystem.log.info("CoordinatedShutdown [http-api.terminate]")
             Done
           }

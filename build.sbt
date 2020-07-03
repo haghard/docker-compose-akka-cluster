@@ -35,6 +35,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-typed"           % Akka,
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
   "com.typesafe.akka" %% "akka-distributed-data"       % Akka,
+  "io.moia"           %% "streamee"                    % "5.0.0",
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
   "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.8",
