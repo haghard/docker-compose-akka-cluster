@@ -16,7 +16,7 @@ Therefore, if we have the following set of shards:
 alpha, betta, gamma then we also have 3 independently running shard regions, each of which knows nothing about each other. 
 Each shard region is being used only inside a particular shard and each sharded entity become a replica of the shard. 
 
-Each shard becomes its own distributed system as each sharded entity of each shard runs its own replicator (Not implemented yet).
+Each shard becomes its own distributed system as each sharded entity of each shard runs its own replicator
 
 On each node that belongs to alpha we allocate only one sharded entity. Combination of host ip and port is used as shard and entity names, therefore it guarantees that each node runs only one instance of sharded entity. Each sharded entity has the replicator actor inside.  
 

@@ -3,7 +3,6 @@ package demo
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.Cluster
-import akka.cluster.ddata.Replicator.WriteTo
 import akka.cluster.ddata.{PNCounterMap, PNCounterMapKey}
 import akka.cluster.ddata.typed.scaladsl.Replicator.{Command, ModifyFailure, StoreFailure, UpdateDataDeleted, UpdateSuccess, UpdateTimeout}
 import akka.cluster.ddata.typed.scaladsl.{Replicator, ReplicatorSettings}
@@ -25,7 +24,7 @@ object DeviceReplicator {
 
   private case class InternalOnUpdateResponse(chg: Replicator.SubscribeResponse[PNCounterMap[Long]]) extends Protocol
 
-  private val Key = PNCounterMapKey[Long]("cnt")
+  private val Key = PNCounterMapKey[Long]("device-counters")
 
   def replicatorConfig(role: String): Config =
     ConfigFactory.parseString(
@@ -77,12 +76,12 @@ object DeviceReplicator {
           """.stripMargin
     )
 
-  def apply(role: String, to: FiniteDuration = 2.seconds): Behavior[Protocol] =
+  def apply(role: String, to: FiniteDuration = 1.seconds): Behavior[Protocol] =
     Behaviors.setup[Protocol] { ctx ⇒
       implicit val cl = Cluster(ctx.system.toClassic)
 
       //WriteMajority(to) respects in reachable nodes
-      val wc = WriteLocal /*WriteMajority(to) WriteTo(2, to)*/
+      val wc = WriteLocal //WriteMajority(to) WriteTo(2, to)
 
       val ddConf = replicatorConfig(role)
       val akkaReplicator: ActorRef[Command] =
@@ -93,7 +92,7 @@ object DeviceReplicator {
 
       def update: PartialFunction[Protocol, Behavior[Protocol]] = {
         case Ping(deviceId) ⇒
-          ctx.log.warn(s"Write key:${Key._id}  device:$deviceId")
+          ctx.log.warn(s"Write key:${Key._id} - device:$deviceId")
           adapter.askUpdate(
             askReplyTo ⇒ Replicator.Update(Key, PNCounterMap.empty[Long], wc, askReplyTo)(_.increment(deviceId, 1)),
             InternalUpdateResponse(_)
