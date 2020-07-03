@@ -37,8 +37,8 @@ class HttpRoutes(
   val circlePage  = "view.html"
   val circlePage1 = "view1.html"
 
-  implicit val t  = akka.util.Timeout(2.seconds)
-  implicit val ec = sys.dispatchers.lookup(DispatcherSelector.fromConfig(metricsDispatcherName))
+  implicit val timeout = akka.util.Timeout(2.seconds)
+  implicit val ec      = sys.dispatchers.lookup(DispatcherSelector.fromConfig(metricsDispatcherName))
 
   val (ref, metricsSource) =
     ActorSource
@@ -86,7 +86,7 @@ class HttpRoutes(
           Iterator.range(1, 64).map(created(_, 1)) ++ Iterator.range(1, 32).filter(_ % 2 == 0).map(delete(_))
           ++ Iterator.range(1, 32).filter(_ % 2 == 0).map(created(_, 1))
         )
-        .zipWith(Source.tick(0.second, 500.millis, ()))((a, _) ⇒ a)
+        .zipWith(Source.tick(0.second, 100.millis, ()))((a, _) ⇒ a)
     )
   }
 
@@ -134,15 +134,15 @@ class HttpRoutes(
         complete {
           ClusterSharding(sys).shardState
             .ask[ClusterShardingStats](
-              akka.cluster.sharding.typed.GetClusterShardingStats(DeviceShadowEntity.entityKey, t.duration, _)
+              akka.cluster.sharding.typed.GetClusterShardingStats(DeviceShadowEntity.entityKey, timeout.duration, _)
             )
             .map(stats ⇒ shardName + "\n" + stats.regions.mkString("\n"))
         }
       }
     } ~
-    pingRoute ~ path("metrics")(
+    pingRoute ~ ringRoute ~ path("metrics")(
       get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
-    ) ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys)) ~ cropCircleRoute //(sch)
+    ) ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys)) ~ cropCircleRoute
 
   def queryRing: Future[HttpResponse] =
     ringMaster

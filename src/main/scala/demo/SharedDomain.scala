@@ -1,5 +1,6 @@
 package demo
 
+import akka.actor.typed.ActorRef
 import akka.cluster.sharding.external.{scaladsl, ExternalShardAllocation, ExternalShardAllocationStrategy}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
@@ -9,7 +10,19 @@ import scala.concurrent.duration._
 
 object SharedDomain {
 
-  val passivationTO = 120.seconds //TODO: make it configurable
+  object DeviceMsgExtractor {
+    def apply[T <: DeviceCommand]: ShardingMessageExtractor[T, T] =
+      new ShardingMessageExtractor[T, T] {
+
+        override def entityId(cmd: T): String = cmd.replica
+
+        override def shardId(entityId: String): String = entityId
+
+        override def unwrapMessage(cmd: T): T = cmd
+      }
+  }
+
+  val passivationTO = 30.seconds //TODO: make it configurable
 
   /**
     * The default ShardAllocationStrategy will allocate shards on the least-loaded nodes. See
@@ -17,7 +30,8 @@ object SharedDomain {
     * https://doc.akka.io/docs/akka/current/cluster-sharding.html#shard-location.
     */
   def apply(
-    shardName: String,
+    replicator: ActorRef[DeviceReplicator.Protocol],
+    role: String, //alpha|betta|gamma
     system: akka.actor.typed.ActorSystem[_]
   ): akka.actor.typed.ActorRef[DeviceCommand] = {
 
@@ -44,7 +58,7 @@ object SharedDomain {
         .withRememberEntities(false)
         .withStateStoreMode(StateStoreModeDData)
         .withPassivateIdleEntityAfter(passivationTO)
-        .withRole(shardName)
+        .withRole(role)
 
     //val allocStrategy = sharding.defaultShardAllocationStrategy(settings)
     /*
@@ -61,17 +75,16 @@ object SharedDomain {
     )
      */
 
-    val entity = Entity(DeviceShadowEntity.entityKey)(DeviceShadowEntity(_, shardName))
-      .withMessageExtractor(
-        new ShardingMessageExtractor[DeviceCommand, DeviceCommand] {
+    val entity = Entity(DeviceShadowEntity.entityKey)(DeviceShadowEntity(_, replicator, role))
+      .withMessageExtractor(DeviceMsgExtractor[DeviceCommand])
+      /*new ShardingMessageExtractor[DeviceCommand, DeviceCommand] {
           override def entityId(cmd: DeviceCommand): String             = cmd.replica
           override def shardId(entityId: String): String                = entityId
           override def unwrapMessage(cmd: DeviceCommand): DeviceCommand = cmd
-        }
-      )
+        }*/
       //default AllocationStrategy
-      //.withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 10))
-      .withAllocationStrategy(new ExternalShardAllocationStrategy(system, DeviceShadowEntity.entityKey.name))
+      .withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 5))
+      //.withAllocationStrategy(new ExternalShardAllocationStrategy(system, DeviceShadowEntity.entityKey.name))
       .withSettings(settings)
       .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("akka.shard-dispatcher"))
 

@@ -9,7 +9,7 @@ import spray.json.{JsArray, JsNumber, JsObject, JsString}
   This is an immutable data structure and therefore all modification operations return new instance of HashRing.
 
   Similar to https://github.com/justin-db/JustinDB/blob/844a3f6f03192ff3e8248a15712fecd754e06fbc/justin-ring/src/main/scala/justin/db/consistenthashing/Ring.scala
-  and https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/dht/Murmur3Partitioner.javas
+  and https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/dht/Murmur3Partitioner.java
  */
 case class HashRing(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
 

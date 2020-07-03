@@ -1,11 +1,8 @@
-//import _root_.sbtdocker.DockerPlugin.autoImport._
 import sbt._
 import sbtdocker.ImageName
 
 val scalaV = "2.13.2"
 val Akka   = "2.6.6"
-
-//"2.6.0-M4"
 
 val akkaHttpVersion = "10.1.12"
 
@@ -33,12 +30,11 @@ scalacOptions in (Compile, console) := Seq(
 scalaVersion := scalaV
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-cluster-metrics"  % Akka,
-  "com.typesafe.akka" %% "akka-cluster-typed"    % Akka,
-  "com.typesafe.akka" %% "akka-stream-typed"     % Akka,
-  //"com.typesafe.akka" %% "akka-cluster-sharding" % Akka,
-  //"com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
+  "com.typesafe.akka" %% "akka-cluster-metrics"        % Akka,
+  "com.typesafe.akka" %% "akka-cluster-typed"          % Akka,
+  "com.typesafe.akka" %% "akka-stream-typed"           % Akka,
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
+  "com.typesafe.akka" %% "akka-distributed-data"       % Akka,
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
   "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.8",
@@ -46,18 +42,13 @@ libraryDependencies ++= Seq(
   //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
   "com.typesafe.akka"      %% "akka-slf4j"               % Akka,
   "org.scala-lang.modules" %% "scala-collection-contrib" % "0.2.1",
+
   //custom build for 2.13
   //"io.moia" %% "streamee" % "5.0.0-M1+1-691a3938+20190726-1217",
 
-  //local build for 2.13 /Users/haghard/.ivy2/local/com.github.TanUkkii007/akka-cluster-custom-downing_2.13/0.0.13-SNAPSHOT/jars/akka-cluster-custom-downing_2.13.jar
-  //"com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.13-SNAPSHOT",
-  //"org.sisioh"             %% "akka-cluster-custom-downing" % "0.1.0",
-
-  //"com.swissborg"          %% "lithium"  %  "0.11.1", //brings cats
-
-  "com.typesafe.akka"      %% "akka-http"                   % akkaHttpVersion,
-  "com.typesafe.akka"      %% "akka-http-spray-json"        % akkaHttpVersion,
-  "ch.qos.logback"         % "logback-classic"              % "1.2.3",
+  "com.typesafe.akka"      %% "akka-http"                % akkaHttpVersion,
+  "com.typesafe.akka"      %% "akka-http-spray-json"     % akkaHttpVersion,
+  "ch.qos.logback"         % "logback-classic"           % "1.2.3",
   ("com.lihaoyi" % "ammonite" % "2.1.4" % "test").cross(CrossVersion.full)
 )
 
@@ -147,10 +138,10 @@ dockerfile in docker := {
       "-XX:MinRAMPercentage=50",
       "-XX:+PreferContainerQuotaForCPUCount", //Added in JDK11. Support for using the cpu_quota instead of cpu_shares for
       // picking the number of cores the JVM uses to makes decisions such as how many compiler threads, GC threads and sizing of the fork join pool
-      s"-DseedHost=${sys.env.get("MASTER_DNS").getOrElse(???)}",
-      s"-DseedPort=${sys.env.get("AKKA_PORT").getOrElse(???)}",
-      s"-DhttpPort=${sys.env.get("HTTP_PORT").getOrElse(???)}",
-      s"-Duser.timezone=${sys.env.get("TZ").getOrElse(???)}",
+      s"-DseedHost=${sys.env.get("SEED_DNS").getOrElse(throw new Exception("env var SEED_DNS is expected"))}",
+      s"-DseedPort=${sys.env.get("AKKA_PORT").getOrElse(throw new Exception("env var AKKA_PORT is expected"))}",
+      s"-DhttpPort=${sys.env.get("HTTP_PORT").getOrElse(throw new Exception("env var HTTP_PORT is expected"))}",
+      s"-Duser.timezone=${sys.env.get("TZ").getOrElse(throw new Exception("env var TZ is expected"))}",
       "-jar",
       artifactTargetPath
     )
@@ -177,7 +168,7 @@ fork in run := true
 //sbt -DSHARD=docker docker
 
 
-val shard = sys.props.getOrElse("SHARD", "docker") //throw new Exception("Couldn't find SHARD env variable !!!")
+val shard = sys.props.getOrElse("SHARD", "docker")
 
 
 // https://stackoverflow.com/questions/26244115/how-to-execute-runmain-from-custom-task
@@ -233,16 +224,16 @@ shard match {
   case "a" => {
     println("---- SET SHARD alpha ----")
     //envVars in runMain := Map("NODE_TYPE" -> "master", "SHARD" -> "alpha")
-    envVars := Map("NODE_TYPE" -> "master", "SHARD" -> "alpha")
+    envVars := Map("NODE_TYPE" -> "seed", "SHARD" -> "alpha")
 
   }
   case "b" => {
     println("---- SET SHARD betta ----")
-    envVars := Map("NODE_TYPE" -> "worker", "SHARD" -> "betta")
+    envVars := Map("NODE_TYPE" -> "shard", "SHARD" -> "betta")
   }
   case "g" => {
     println("---- SET SHARD gamma ----")
-    envVars := Map("NODE_TYPE" -> "worker", "SHARD" -> "gamma")
+    envVars := Map("NODE_TYPE" -> "shard", "SHARD" -> "gamma")
   }
   case "docker" => {
     println("docker")

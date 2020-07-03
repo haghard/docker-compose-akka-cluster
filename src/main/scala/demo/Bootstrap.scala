@@ -87,9 +87,9 @@ case class Bootstrap(
           }
         }
 
-        shutdown.addTask(PhaseActorSystemTerminate, "sys.term") { () ⇒
+        shutdown.addTask(PhaseActorSystemTerminate, "system.term") { () ⇒
           Future.successful {
-            classicSystem.log.info("CoordinatedShutdown [sys.term]")
+            classicSystem.log.info("CoordinatedShutdown [system.term]")
             Done
           }
         }

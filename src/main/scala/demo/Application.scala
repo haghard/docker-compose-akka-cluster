@@ -6,7 +6,7 @@ import java.net.NetworkInterface
 import akka.actor.{Address, CoordinatedShutdown}
 import akka.actor.typed._
 import akka.actor.typed.scaladsl.Behaviors
-import akka.cluster.typed.{Cluster, ClusterSingleton, ClusterSingletonSettings, Join, SelfUp, SingletonActor, Subscribe, Unsubscribe}
+import akka.cluster.typed.{Cluster, ClusterSingleton, Join, SelfUp, SingletonActor, Subscribe, Unsubscribe}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.jdk.CollectionConverters._
@@ -40,8 +40,6 @@ object Application extends Ops {
 
   val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
 
-  val Name = "domain"
-
   val BufferSize = 1 << 5
 
   def createConfig(host: String, port: String, shardName: String): Config =
@@ -67,7 +65,7 @@ object Application extends Ops {
     val nodeType  = sys.env.get("NODE_TYPE").getOrElse(???)
     val shardName = sys.env.get("SHARD").getOrElse(???)
 
-    val isMasterNode = nodeType equals "master"
+    val isSeedNode = nodeType == "seed"
 
     val port = sys.props
       .get(sysPropSeedPort)
@@ -86,7 +84,7 @@ object Application extends Ops {
     //val extraCfg = new File(s"$confDir/$nodeType.conf")
     val cfg = hostAddress.fold(
       //docker
-      if (isMasterNode) createConfig(seedHostAddress, port, shardName)
+      if (isSeedNode) createConfig(seedHostAddress, port, shardName)
       else {
         val dockerInternalAddress = NetworkInterface
           .getByName("eth0")
@@ -119,19 +117,15 @@ object Application extends Ops {
       .append("=================================================================================================")
       .toString()
 
-    val address = Address("akka", SystemName, seedHostAddress, port.toInt)
+    val seedAddress = Address("akka", SystemName, seedHostAddress, port.toInt)
 
-    if (isMasterNode)
-      ActorSystem[Nothing](
-        master(cfg, address, shardName, runtimeInfo, httpPort.toInt),
-        SystemName,
-        cfg
-      )
+    if (isSeedNode)
+      ActorSystem[Nothing](seed(cfg, seedAddress, shardName, runtimeInfo, httpPort.toInt), SystemName, cfg)
     else
-      ActorSystem[Nothing](worker(cfg, address, shardName, runtimeInfo, httpPort.toInt), SystemName, cfg)
+      ActorSystem[Nothing](shard(cfg, seedAddress, shardName, runtimeInfo, httpPort.toInt), SystemName, cfg)
   }
 
-  def worker(
+  def shard(
     cfg: Config,
     seedAddress: Address,
     shardName: String,
@@ -150,7 +144,7 @@ object Application extends Ops {
           case (ctx, _ @SelfUp(state)) ⇒
             val av = state.members.filter(_.status == MemberStatus.Up).map(_.address)
             ctx.log.warn(
-              "★ ★ ★ {} Worker {}:{} joined cluster with existing members:[{}] ★ ★ ★",
+              "★ ★ ★ {} {}:{} joined cluster with existing members:[{}] ★ ★ ★",
               shardName,
               cfg.getString(AKKA_HOST),
               cfg.getInt(AKKA_PORT),
@@ -177,17 +171,18 @@ object Application extends Ops {
 
             Bootstrap(shardName, ringMaster, jvmMetrics, cluster.selfMember.address.host.get, httpPort)
 
+            val replicator = ctx.spawn(DeviceReplicator(shardName), "replicator")
+
             val proxy = ctx.spawn(
               ShardRegionProxy(
+                replicator,
                 shardName,
-                cluster.selfMember.address.host
-                  .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"$h-$p"))
-                  .getOrElse("none")
+                cluster.selfMember.address.host.getOrElse(throw new Exception("Address lookup error"))
               ),
-              Name
+              "shard-proxy"
             )
-
             ctx.watch(proxy)
+
             Behaviors.receiveSignal {
               case (_, Terminated(`proxy`)) ⇒
                 ctx.log.error(s"Proxy $proxy has failed/stopped. Shutting down...")
@@ -198,7 +193,7 @@ object Application extends Ops {
       }
       .narrow
 
-  def master(
+  def seed(
     config: Config,
     seedAddress: Address,
     shardName: String,
@@ -242,17 +237,17 @@ object Application extends Ops {
 
             Bootstrap(shardName, ringMaster, jvmMetrics, cluster.selfMember.address.host.get, httpPort)
 
+            val replicator = ctx.spawn(DeviceReplicator(shardName), "replicator")
             val proxy = ctx.spawn(
               ShardRegionProxy(
+                replicator,
                 shardName,
-                cluster.selfMember.address.host
-                  .flatMap(h ⇒ cluster.selfMember.address.port.map(p ⇒ s"$h-$p"))
-                  .getOrElse("none")
+                cluster.selfMember.address.host.getOrElse(throw new Exception("Address lookup error"))
               ),
-              Name
+              "shard-proxy"
             )
-
             ctx.watch(proxy)
+
             Behaviors.receiveSignal {
               case (_, Terminated(`proxy`)) ⇒
                 ctx.log.error(s"Proxy $proxy has failed/stopped. Shutting down...")

@@ -41,7 +41,7 @@ All replicas that have the same shard name should be responsible to the same ran
   
   * First of all we need to export these env vars
     
-    `export MASTER_DNS=master`
+    `export SEED_DNS=master`
 
     `export HTTP_PORT=9000`
     
@@ -55,9 +55,9 @@ All replicas that have the same shard name should be responsible to the same ran
   
   * Start one seed node and one worker node `docker-compose -f docker-compose2.yml up -d`
      
-  * Scale up the number of workers `docker-compose -f docker-compose2.yml scale workerA=3`
+  * Scale up the number of workers `docker-compose -f docker-compose2.yml scale alpha=3`
    
-  * Scale down the number of workers `docker-compose -f docker-compose2.yml scale workerA=2`
+  * Scale down the number of workers `docker-compose -f docker-compose2.yml scale alpha=2`
   
   * Stop all processes `docker-compose -f docker-compose2.yml stop`
   
@@ -164,6 +164,9 @@ https://github.com/mckeeh3/akka-java-cluster-kubernetes/tree/d714ad5651ee4dc8446
 https://doc.akka.io/docs/akka-management/current/cluster-http-management.html
 
 ExternalShardAllocation https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
+
+
+https://www.lightbend.com/blog/how-to-distribute-application-state-with-akka-cluster-part-1-getting-started
 
 ### Docker  
 

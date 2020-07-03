@@ -1,6 +1,6 @@
 package demo
 
-import akka.actor.typed.{Behavior, Signal}
+import akka.actor.typed.{ActorRef, Behavior, Signal}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 
@@ -16,21 +16,17 @@ object DeviceShadowEntity {
   val entityKey: EntityTypeKey[DeviceCommand] =
     EntityTypeKey[DeviceCommand]("devices")
 
-  def apply(entityCtx: EntityContext[DeviceCommand], replicaName: String): Behavior[DeviceCommand] =
+  def apply(
+    entityCtx: EntityContext[DeviceCommand],
+    replicator: ActorRef[DeviceReplicator.Protocol],
+    replicaName: String
+  ): Behavior[DeviceCommand] =
     Behaviors.setup { ctx ⇒
-      ctx.log.warn("* * *  Wake up sharded entity for replicator {}  * * *", replicaName)
-      await(ctx.log, replicaName, entityCtx.entityId) //orElse idle(ctx.log)
+      ctx.log.warn("* * *  Wake up sharded entity for replicator {}: {} * * *", replicaName, entityCtx.entityId)
+      active(replicator, replicaName, entityCtx)(ctx.log) //orElse idle(ctx.log)
     }
 
-  //expect only akka.actor.typed.internal.PoisonPill
-  /*def idle(log: org.slf4j.Logger): Behavior[DeviceCommand] =
-    Behaviors.receiveSignal {
-      case (_, signal) ⇒
-        log.warn(s"* * *  Passivate sharded entity for replicator ${signal.getClass.getName}  * * *")
-        Behaviors.stopped
-    }*/
-
-  def onSignal(
+  private def onSignal(
     log: org.slf4j.Logger
   ): PartialFunction[(ActorContext[DeviceCommand], Signal), Behavior[DeviceCommand]] = {
     case (_, signal) ⇒
@@ -38,13 +34,17 @@ object DeviceShadowEntity {
       Behaviors.stopped[DeviceCommand]
   }
 
-  private def await(log: org.slf4j.Logger, replicaName: String, entityId: String): Behavior[DeviceCommand] =
+  private def active(
+    replicator: ActorRef[DeviceReplicator.Protocol],
+    replicaName: String,
+    entityCtx: EntityContext[DeviceCommand]
+  )(implicit log: org.slf4j.Logger): Behavior[DeviceCommand] =
     Behaviors
       .receiveMessage[DeviceCommand] {
-        case PingDevice(id, _) ⇒
-          log.warn("* * *  ping replicator {}:{}  * * *", replicaName, id)
-          //TODO: start replicator for the replicaName here !!!
-          await(log, replicaName, entityId) //orElse idle(log)
+        case PingDevice(deviceId, _) ⇒
+          log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
+          replicator.tell(DeviceReplicator.Ping(deviceId))
+          active(replicator, replicaName, entityCtx) //orElse idle(log)
       }
       .receiveSignal(onSignal(log))
 
@@ -65,4 +65,12 @@ object DeviceShadowEntity {
       }
       .receiveSignal(onSignal(log))
    */
+
+  //expect only akka.actor.typed.internal.PoisonPill
+  /*def idle(log: org.slf4j.Logger): Behavior[DeviceCommand] =
+    Behaviors.receiveSignal {
+      case (_, signal) ⇒
+        log.warn(s"* * *  Passivate sharded entity for replicator ${signal.getClass.getName}  * * *")
+        Behaviors.stopped
+    }*/
 }

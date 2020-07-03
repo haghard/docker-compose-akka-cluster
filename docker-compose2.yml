@@ -1,53 +1,55 @@
 version: '2.4'
 services:
 
-  master:
+  seed:
     image: haghard/docker-cluster:0.3
-    hostname: ${MASTER_DNS}
+    hostname: ${SEED_DNS}
     ports:
       - "${HTTP_PORT}:${HTTP_PORT}"
     mem_limit: 250m
     mem_reservation: 200m
     cpu_shares: 3072  #3 -cores
     environment:
-      NODE_TYPE: master
+      NODE_TYPE: seed
       SHARD: alpha
 
-  workerA:
+  alpha:
     image: haghard/docker-cluster:0.3
     environment:
-      NODE_TYPE: worker
+      NODE_TYPE: shard
       SHARD: alpha
     mem_limit: 250m
     mem_reservation: 200m
     cpu_shares: 1048  #1 -core
     depends_on:
-      - master
+      - seed
     links:
-     - "master:${MASTER_DNS}"
+     - "seed:${SEED_DNS}"
 
-  workerB:
+  betta:
     image: haghard/docker-cluster:0.3
     environment:
-      NODE_TYPE: worker
+      NODE_TYPE: shard
       SHARD: betta
     mem_limit: 250m
     mem_reservation: 200m
     cpu_shares: 1048  #1 -core
     depends_on:
-      - master
+      - seed
     links:
-      - "master:${MASTER_DNS}"
+      - "seed:${SEED_DNS}"
 
-  workerG:
+  gamma:
     image: haghard/docker-cluster:0.3
     environment:
-      NODE_TYPE: worker
+      NODE_TYPE: shard
       SHARD: gamma
     mem_limit: 250m
     mem_reservation: 200m
     cpu_shares: 1048  #1 -core
     depends_on:
-      - master
+      - seed
     links:
-      - "master:${MASTER_DNS}"
+      - "seed:${SEED_DNS}"
+
+
