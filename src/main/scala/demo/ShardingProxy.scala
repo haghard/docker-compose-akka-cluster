@@ -4,7 +4,7 @@ import demo.RingMaster.ShardInfo
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 
-object ShardRegionProxy {
+object ShardingProxy {
 
   def apply(
     replicator: ActorRef[DeviceReplicator.Protocol],

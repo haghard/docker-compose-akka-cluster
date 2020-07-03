@@ -81,7 +81,6 @@ object Application extends Ops {
 
     val hostAddress = sys.props.get(sysPropsHost)
 
-    //val extraCfg = new File(s"$confDir/$nodeType.conf")
     val cfg = hostAddress.fold(
       //docker
       if (isSeedNode) createConfig(seedHostAddress, port, shardName)
@@ -104,28 +103,27 @@ object Application extends Ops {
     val runtimeInfo = new StringBuilder()
       .append("=================================================================================================")
       .append('\n')
-      .append(s"Cores:${Runtime.getRuntime.availableProcessors}")
+      .append(s"★ ★ ★ Cores:${Runtime.getRuntime.availableProcessors}")
       .append('\n')
-      .append(" Total Memory:" + Runtime.getRuntime.totalMemory / 1000000 + "Mb")
+      .append("★ ★ ★  Total Memory:" + Runtime.getRuntime.totalMemory / 1000000 + "Mb")
       .append('\n')
-      .append(" Max Memory:" + Runtime.getRuntime.maxMemory / 1000000 + "Mb")
+      .append("★ ★ ★ Max Memory:" + Runtime.getRuntime.maxMemory / 1000000 + "Mb")
       .append('\n')
-      .append(" Free Memory:" + Runtime.getRuntime.freeMemory / 1000000 + "Mb")
+      .append("★ ★ ★ Free Memory:" + Runtime.getRuntime.freeMemory / 1000000 + "Mb")
       .append('\n')
-      .append(" RAM:" + memorySize / 1000000 + "Mb")
+      .append("★ ★ ★ RAM:" + memorySize / 1000000 + "Mb")
       .append('\n')
       .append("=================================================================================================")
       .toString()
 
-    val seedAddress = Address("akka", SystemName, seedHostAddress, port.toInt)
-
-    if (isSeedNode)
-      ActorSystem[Nothing](seed(cfg, seedAddress, shardName, runtimeInfo, httpPort.toInt), SystemName, cfg)
-    else
-      ActorSystem[Nothing](shard(cfg, seedAddress, shardName, runtimeInfo, httpPort.toInt), SystemName, cfg)
+    ActorSystem[Nothing](
+      start(cfg, Address("akka", SystemName, seedHostAddress, port.toInt), shardName, runtimeInfo, httpPort.toInt),
+      SystemName,
+      cfg
+    )
   }
 
-  def shard(
+  def start(
     cfg: Config,
     seedAddress: Address,
     shardName: String,
@@ -179,78 +177,7 @@ object Application extends Ops {
             )
 
             val proxy = ctx.spawn(
-              ShardRegionProxy(
-                replicator,
-                shardName,
-                cluster.selfMember.address.host.getOrElse(throw new Exception("Address lookup error"))
-              ),
-              "shard-proxy"
-            )
-            ctx.watch(proxy)
-
-            Behaviors.receiveSignal {
-              case (_, Terminated(`proxy`)) ⇒
-                ctx.log.error(s"Proxy $proxy has failed/stopped. Shutting down...")
-                CoordinatedShutdown(ctx.system.toClassic).run(Bootstrap.CriticalError)
-                Behaviors.same
-            }
-        }
-      }
-      .narrow
-
-  def seed(
-    config: Config,
-    seedAddress: Address,
-    shardName: String,
-    runtimeInfo: String,
-    httpPort: Int
-  ): Behavior[Nothing] =
-    Behaviors
-      .setup[SelfUp] { ctx ⇒
-        implicit val classicSystem = ctx.system.toClassic
-        val cluster                = Cluster(ctx.system)
-        cluster.manager tell Join(seedAddress)
-        cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
-
-        Behaviors.receive[SelfUp] {
-          case (ctx, _ @SelfUp(_)) ⇒
-            ctx.log.warn(
-              "★ ★ ★ {} Seed {}:{} joined cluster ★ ★ ★",
-              shardName,
-              config.getString(AKKA_HOST),
-              config.getInt(AKKA_PORT)
-            )
-
-            ctx.log.info(runtimeInfo)
-            cluster.subscriptions ! Unsubscribe(ctx.self)
-
-            //resume all possible errors so that it never fails
-            val behavior = Behaviors
-              .supervise(RingMaster())
-              .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true))
-
-            val ringMaster = ClusterSingleton(ctx.system)
-              .init(SingletonActor(behavior, "ring-master").withStopMessage(RingMaster.Shutdown))
-
-            val jvmMetrics = ctx
-              .spawn(
-                ClusterJvmMetrics(BufferSize),
-                "jvm-metrics",
-                DispatcherSelector.fromConfig("akka.metrics-dispatcher")
-              )
-              .narrow[ClusterJvmMetrics.Confirm]
-
-            Bootstrap(shardName, ringMaster, jvmMetrics, cluster.selfMember.address.host.get, httpPort)
-
-            val replicator = ctx.spawn(
-              Behaviors
-                .supervise(DeviceReplicator(shardName))
-                .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true)),
-              "replicator"
-            )
-
-            val proxy = ctx.spawn(
-              ShardRegionProxy(
+              ShardingProxy(
                 replicator,
                 shardName,
                 cluster.selfMember.address.host.getOrElse(throw new Exception("Address lookup error"))
