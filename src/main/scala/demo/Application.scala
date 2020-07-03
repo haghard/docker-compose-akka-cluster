@@ -152,12 +152,16 @@ object Application extends Ops {
             cluster.subscriptions ! Unsubscribe(ctx.self)
 
             //resume all possible errors so that it never fails
-            val behavior = Behaviors
-              .supervise(RingMaster())
-              .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true))
 
             val ringMaster = ClusterSingleton(ctx.system)
-              .init(SingletonActor(behavior, "ring-master").withStopMessage(RingMaster.Shutdown))
+              .init(
+                SingletonActor(
+                  Behaviors
+                    .supervise(RingMaster())
+                    .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true)),
+                  "ring-master"
+                ).withStopMessage(RingMaster.Shutdown)
+              )
 
             val jvmMetrics = ctx
               .spawn(
