@@ -14,8 +14,7 @@ import scala.concurrent.Future
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.stream.typed.scaladsl.ActorSource
-import akka.cluster.sharding.ShardRegion.{ClusterShardingStats, GetClusterShardingStats}
-import akka.cluster.sharding.typed.ClusterShardingQuery
+import akka.cluster.sharding.ShardRegion.ClusterShardingStats
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes

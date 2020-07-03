@@ -21,13 +21,8 @@ object SharedDomain {
       }
   }
 
-  val passivationTO = 30.seconds //TODO: make it configurable
+  private val passivationTO = 120.seconds //TODO: make it configurable
 
-  /**
-    * The default ShardAllocationStrategy will allocate shards on the least-loaded nodes. See
-    * https://github.com/akka/akka/blob/master/akka-cluster-sharding/src/main/scala/akka/cluster/sharding/ShardCoordinator.scala#L71 and
-    * https://doc.akka.io/docs/akka/current/cluster-sharding.html#shard-location.
-    */
   def apply(
     replicator: ActorRef[DeviceReplicator.Protocol],
     role: String, //alpha|betta|gamma
@@ -82,6 +77,11 @@ object SharedDomain {
           override def unwrapMessage(cmd: DeviceCommand): DeviceCommand = cmd
         }*/
       //default AllocationStrategy
+      /**
+        * The default ShardAllocationStrategy will allocate shards on the least-loaded nodes. See
+        * https://github.com/akka/akka/blob/master/akka-cluster-sharding/src/main/scala/akka/cluster/sharding/ShardCoordinator.scala#L71 and
+        * https://doc.akka.io/docs/akka/current/cluster-sharding.html#shard-location.
+        */
       .withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 5))
       //.withAllocationStrategy(new ExternalShardAllocationStrategy(system, DeviceShadowEntity.entityKey.name))
       .withSettings(settings)
