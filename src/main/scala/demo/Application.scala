@@ -167,8 +167,6 @@ object Application extends Ops {
               )
               .narrow[ClusterJvmMetrics.Confirm]
 
-            Bootstrap(shardName, ringMaster, jvmMetrics, cluster.selfMember.address.host.get, httpPort)
-
             val replicator = ctx.spawn(
               Behaviors
                 .supervise(DeviceReplicator(shardName))
@@ -176,15 +174,18 @@ object Application extends Ops {
               "replicator"
             )
 
+            val hostName = cluster.selfMember.address.host.get
             val proxy = ctx.spawn(
               ShardingProxy(
                 replicator,
                 shardName,
-                cluster.selfMember.address.host.getOrElse(throw new Exception("Address lookup error"))
+                hostName
               ),
               "shard-proxy"
             )
             ctx.watch(proxy)
+
+            Bootstrap(shardName, ringMaster, jvmMetrics, hostName, httpPort)
 
             Behaviors.receiveSignal {
               case (_, Terminated(`proxy`)) ⇒

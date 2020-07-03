@@ -27,7 +27,6 @@ case class Bootstrap(
 )(implicit classicSystem: akka.actor.ActorSystem) {
 
   implicit val ex = classicSystem.dispatcher
-  val shutdown    = CoordinatedShutdown(classicSystem)
 
   /*Http().bind(hostName, port)
     .to(akka.stream.scaladsl.Sink.foreach { con =>
@@ -41,17 +40,17 @@ case class Bootstrap(
     .onComplete {
       case Failure(ex) ⇒
         classicSystem.log.error(s"Shutting down because can't bind on $hostName:$port", ex)
-        shutdown.run(Bootstrap.BindFailure)
+        CoordinatedShutdown(classicSystem).run(Bootstrap.BindFailure)
       case Success(binding) ⇒
         classicSystem.log.info(s"★ ★ ★ Listening for HTTP connections on ${binding.localAddress} * * *")
-        shutdown.addTask(PhaseBeforeServiceUnbind, "before-unbind") { () ⇒
+        CoordinatedShutdown(classicSystem).addTask(PhaseBeforeServiceUnbind, "before-unbind") { () ⇒
           Future {
             classicSystem.log.info("CoordinatedShutdown [before-unbind]")
             Done
           }
         }
 
-        shutdown.addTask(PhaseServiceUnbind, "http-api.unbind") { () ⇒
+        CoordinatedShutdown(classicSystem).addTask(PhaseServiceUnbind, "http-api.unbind") { () ⇒
           //No new connections are accepted. Existing connections are still allowed to perform request/response cycles
           binding.unbind().map { done ⇒
             classicSystem.log.info("CoordinatedShutdown [http-api.unbind]")
@@ -67,7 +66,7 @@ case class Bootstrap(
           }*/
 
         //graceful termination request being handled on this connection
-        shutdown.addTask(PhaseServiceRequestsDone, "http-api.terminate") { () ⇒
+        CoordinatedShutdown(classicSystem).addTask(PhaseServiceRequestsDone, "http-api.terminate") { () ⇒
           /**
             * It doesn't accept new connection but it drains the existing connections
             * Until the `terminationDeadline` all the req that have been accepted will be completed
@@ -80,14 +79,14 @@ case class Bootstrap(
         }
 
         //forcefully kills connections that are still open
-        shutdown.addTask(PhaseServiceStop, "close.connections") { () ⇒
+        CoordinatedShutdown(classicSystem).addTask(PhaseServiceStop, "close.connections") { () ⇒
           Http().shutdownAllConnectionPools().map { _ ⇒
             classicSystem.log.info("CoordinatedShutdown [close.connections]")
             Done
           }
         }
 
-        shutdown.addTask(PhaseActorSystemTerminate, "system.term") { () ⇒
+        CoordinatedShutdown(classicSystem).addTask(PhaseActorSystemTerminate, "system.term") { () ⇒
           Future.successful {
             classicSystem.log.info("CoordinatedShutdown [system.term]")
             Done
