@@ -99,7 +99,8 @@ dockerfile in docker := {
   val d3TargetDirPath    = s"${imageAppBaseDir}/d3"
 
   new sbtdocker.mutable.Dockerfile {
-    from("adoptopenjdk:11.0.6_10-jdk-hotspot")
+    from("adoptopenjdk/openjdk11")
+    //from("adoptopenjdk:11.0.6_10-jdk-hotspot")
 
     //from("openjdk:8-jre")
     //from("adoptopenjdk/openjdk11:jdk-11.0.1.13")
