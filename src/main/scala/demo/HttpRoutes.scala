@@ -98,20 +98,15 @@ class HttpRoutes(
     pathPrefix("d3" / Remaining)(file ⇒ encodeResponse(getFromFile(folderName + "/" + file))) ~
     path("events") {
       handleWebSocketMessages(
-        flowWithHeartbeat().mapAsync(1) {
-          case TextMessage.Strict(_) ⇒
+        flowWithHeartbeat()
+          .flatMapConcat(
+            _.asTextMessage.getStreamedText.fold("")(_ + _)
+          ) //the web socket spec says that a single msg over web socket can be streamed (multiple chunks)
+          .mapAsync(1) { _ ⇒
             ringMaster
               .ask[HttpRoutes.CropCircleView](RingMaster.GetCropCircle(_))
               .map(r ⇒ TextMessage.Strict(r.json))
-          case other ⇒
-            throw new Exception(s"Unexpected message $other !!!")
-        }
-        /*flowWithHeartbeat().collect {
-          case TextMessage.Strict(cmd) ⇒
-            //log.info("ws cmd: {}", cmd)
-            tree.setMemberType("akka://dc@172.20.0.3:2551", "http-server")
-            TextMessage.Strict(tree.toJson)
-        }*/
+          }
       )
     }
 
