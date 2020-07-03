@@ -42,7 +42,7 @@ object DeviceShadowEntity {
     Behaviors
       .receiveMessage[DeviceCommand] {
         case PingDevice(deviceId, _) ⇒
-          log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
+          //log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
           replicator.tell(DeviceReplicator.Ping(deviceId))
           active(replicator, replicaName, entityCtx) //orElse idle(log)
       }
