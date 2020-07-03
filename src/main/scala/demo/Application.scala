@@ -59,13 +59,10 @@ object Application extends Ops {
     //val confDir  = System.getenv("EXTRA_CONF_DIR")
     //System.setProperty("NODE_TYPE", "master")
     //java.lang.System.getenv().put("NODE_TYPE", "master")
-
     //println("Env: " + System.getenv().keySet().asScala.mkString(","))
 
-    val nodeType  = sys.env.get("NODE_TYPE").getOrElse(???)
-    val shardName = sys.env.get("SHARD").getOrElse(???)
-
-    val isSeedNode = nodeType == "seed"
+    val nodeType  = sys.env.get("NODE_TYPE").getOrElse(throw new Exception("env var NODE_TYPE is expected"))
+    val shardName = sys.env.get("SHARD").getOrElse(throw new Exception("env var SHARD is expected"))
 
     val port = sys.props
       .get(sysPropSeedPort)
@@ -83,7 +80,7 @@ object Application extends Ops {
 
     val cfg = hostAddress.fold(
       //docker
-      if (isSeedNode) createConfig(seedHostAddress, port, shardName)
+      if (nodeType == "seed") createConfig(seedHostAddress, port, shardName)
       else {
         val dockerInternalAddress = NetworkInterface
           .getByName("eth0")
@@ -140,18 +137,16 @@ object Application extends Ops {
 
         Behaviors.receive[SelfUp] {
           case (ctx, _ @SelfUp(state)) ⇒
-            val av = state.members.filter(_.status == MemberStatus.Up).map(_.address)
+            val clusterMembers = state.members.filter(_.status == MemberStatus.Up).map(_.address)
             ctx.log.warn(
               "★ ★ ★ {} {}:{} joined cluster with existing members:[{}] ★ ★ ★",
               shardName,
               cfg.getString(AKKA_HOST),
               cfg.getInt(AKKA_PORT),
-              av
+              clusterMembers
             )
             ctx.log.info(runtimeInfo)
             cluster.subscriptions ! Unsubscribe(ctx.self)
-
-            //resume all possible errors so that it never fails
 
             val ringMaster = ClusterSingleton(ctx.system)
               .init(
