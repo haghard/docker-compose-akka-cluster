@@ -22,7 +22,7 @@ object ClusterJvmMetrics {
   case class StreamFailure(ex: Throwable)   extends JvmMetrics
   case object Completed                     extends JvmMetrics
 
-  def apply(bs: Int): Behavior[ClusterMetricsEvent] =
+  def apply(bs: Int = 1 << 5): Behavior[ClusterMetricsEvent] =
     Behaviors.receive[ClusterMetricsEvent] {
       case (ctx, _ @Connect(src)) ⇒
         val ex = ClusterMetricsExtension(ctx.system.toClassic)

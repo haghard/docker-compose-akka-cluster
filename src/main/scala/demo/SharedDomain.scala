@@ -1,7 +1,6 @@
 package demo
 
 import akka.actor.typed.ActorRef
-import akka.cluster.sharding.external.{scaladsl, ExternalShardAllocation, ExternalShardAllocationStrategy}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
 import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtractor}

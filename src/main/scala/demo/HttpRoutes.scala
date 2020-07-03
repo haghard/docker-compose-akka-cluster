@@ -49,7 +49,7 @@ class HttpRoutes(
         { case ClusterJvmMetrics.StreamFailure(ex) ⇒ ex }
       )
       .collect { case ClusterJvmMetrics.ClusterMetrics(bt) ⇒ bt }
-      .toMat(BroadcastHub.sink[ByteString](BufferSize))(Keep.both) //one to many
+      .toMat(BroadcastHub.sink[ByteString](1 << 3))(Keep.both) //one to many
       .run()
 
   jvmMetricsSrc.tell(ClusterJvmMetrics.Connect(ref))

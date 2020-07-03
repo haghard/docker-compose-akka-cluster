@@ -17,7 +17,6 @@ import akka.cluster.MemberStatus
 -Duser.timezone=UTC
 TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
 
-
 Instant.now
 java.util.TimeZone.setDefault(TimeZone.getTimeZone("America/New_York"))
 //val tz = java.util.TimeZone.getDefault.getID
@@ -39,8 +38,6 @@ object Application extends Ops {
   val sysPropsHttpPort = "httpPort"
 
   val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
-
-  val BufferSize = 1 << 5
 
   def createConfig(host: String, port: String, shardName: String): Config =
     ConfigFactory
@@ -160,7 +157,7 @@ object Application extends Ops {
 
             val jvmMetrics = ctx
               .spawn(
-                ClusterJvmMetrics(BufferSize),
+                ClusterJvmMetrics(),
                 "jvm-metrics",
                 DispatcherSelector.fromConfig("akka.metrics-dispatcher")
               )
