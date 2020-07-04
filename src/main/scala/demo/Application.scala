@@ -48,8 +48,8 @@ object Application extends Ops {
       .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$host"))
       .withFallback(ConfigFactory.parseString(s"$AKKA_PORT=$port"))
       .withFallback(ConfigFactory.parseString(s"akka.cluster.roles = [ $shardName ]"))
-      .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.host=$host"))
-      .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.port=$port"))
+      .withFallback(ConfigFactory.parseString(s"akka.management.http.hostname=$host"))
+      .withFallback(ConfigFactory.parseString(s"akka.management.http.port=$port"))
       .withFallback(
         ConfigFactory.parseString(s"akka.management.cluster.bootstrap.contact-point-discovery.discovery-method=$dm")
       )

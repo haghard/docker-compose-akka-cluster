@@ -39,14 +39,12 @@ libraryDependencies ++= Seq(
   //"io.moia"           %% "streamee"                    % "5.0.0",
 
   "com.typesafe.akka"             %% "akka-discovery"                    % Akka,
-  "com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % AkkaManagement,
+  //"com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % AkkaManagement,
   "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % AkkaManagement,
-
-  //a module that provides HTTP endpoints for introspecting and managing Akka clusters
   "com.lightbend.akka.management" %% "akka-management-cluster-http"      % AkkaManagement,
 
 
-  //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.103",
+  //"com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.1",
   //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
   "com.typesafe.akka"      %% "akka-slf4j"               % Akka,
   "org.scala-lang.modules" %% "scala-collection-contrib" % "0.2.1",
@@ -108,7 +106,6 @@ dockerfile in docker := {
 
   new sbtdocker.mutable.Dockerfile {
     from("adoptopenjdk/openjdk11")
-    //from("adoptopenjdk:11.0.6_10-jdk-hotspot")
 
     //from("openjdk:8-jre")
     //from("adoptopenjdk/openjdk11:jdk-11.0.1.13")

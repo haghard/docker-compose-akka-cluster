@@ -39,7 +39,7 @@ case class Bootstrap(
     }).run()*/
 
   Http()
-    .bindAndHandle(new HttpRoutes(ringMaster, jvmMetricsSrc, shardName)(classicSystem.toTyped).route, hostName, port)
+    .bindAndHandle(HttpRoutes(ringMaster, jvmMetricsSrc, shardName)(classicSystem.toTyped).route, hostName, port)
     .onComplete {
       case Failure(ex) ⇒
         classicSystem.log.error(s"Shutting down because can't bind on $hostName:$port", ex)

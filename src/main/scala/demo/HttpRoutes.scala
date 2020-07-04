@@ -24,7 +24,7 @@ object HttpRoutes {
   case class CropCircleView(json: String)
 }
 
-class HttpRoutes(
+case class HttpRoutes(
   ringMaster: ActorRef[RingMaster.Command],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   shardName: String
