@@ -1,7 +1,7 @@
 package demo
 
 import demo.RingMaster.ShardInfo
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 
 /**
@@ -11,14 +11,22 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 object ShardManager {
 
   def apply(
-    replicator: ActorRef[DeviceReplicator.Protocol],
     shardName: String,   //"alpha"
     shardAddress: String //"172.20.0.3-2551"
   ): Behavior[ShardRegionCmd] =
     Behaviors.setup[ShardRegionCmd] { ctx ⇒
       ctx.system.receptionist tell akka.actor.typed.receptionist.Receptionist
         .Register(RingMaster.domainKey, ctx.self)
+
+      val replicator = ctx.spawn(
+        Behaviors
+          .supervise(DeviceReplicator(shardName))
+          .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true)),
+        "replicator"
+      )
+
       val shardRegion = SharedDomain(replicator, shardName, ctx.system)
+
       active(shardRegion, shardName, shardAddress)(ctx)
     }
 

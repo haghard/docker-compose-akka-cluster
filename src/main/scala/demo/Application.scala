@@ -163,22 +163,9 @@ object Application extends Ops {
               )
               .narrow[ClusterJvmMetrics.Confirm]
 
-            val replicator = ctx.spawn(
-              Behaviors
-                .supervise(DeviceReplicator(shardName))
-                .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true)),
-              "replicator"
-            )
+            val hostName     = cluster.selfMember.address.host.get
+            val shardManager = ctx.spawn(ShardManager(shardName, hostName), "shard-manager")
 
-            val hostName = cluster.selfMember.address.host.get
-            val shardManager = ctx.spawn(
-              ShardManager(
-                replicator,
-                shardName,
-                hostName
-              ),
-              "shard-manager"
-            )
             ctx.watch(shardManager)
 
             Bootstrap(shardName, ringMaster, jvmMetrics, hostName, httpPort)
