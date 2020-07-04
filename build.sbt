@@ -3,6 +3,7 @@ import sbtdocker.ImageName
 
 val scalaV = "2.13.2"
 val Akka   = "2.6.6"
+val AkkaManagement = "1.0.8"
 
 val akkaHttpVersion = "10.1.12"
 
@@ -35,15 +36,16 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-typed"           % Akka,
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
   "com.typesafe.akka" %% "akka-distributed-data"       % Akka,
-  "io.moia"           %% "streamee"                    % "5.0.0",
+  //"io.moia"           %% "streamee"                    % "5.0.0",
 
   "com.typesafe.akka"             %% "akka-discovery"                    % Akka,
-  "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % "1.0.8",
-  "com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % "1.0.8",
-
+  "com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % AkkaManagement,
+  "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % AkkaManagement,
 
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
-  //"com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.8",
+  "com.lightbend.akka.management" %% "akka-management-cluster-http"      % AkkaManagement,
+
+
   //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.103",
   //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
   "com.typesafe.akka"      %% "akka-slf4j"               % Akka,
@@ -231,16 +233,16 @@ shard match {
   case "a" => {
     println("---- SET SHARD alpha ----")
     //envVars in runMain := Map("NODE_TYPE" -> "master", "SHARD" -> "alpha")
-    envVars := Map("NODE_TYPE" -> "seed", "SHARD" -> "alpha")
+    envVars := Map("NODE_TYPE" -> "seed", "SHARD" -> "alpha", "DM" -> "config")
 
   }
   case "b" => {
     println("---- SET SHARD betta ----")
-    envVars := Map("NODE_TYPE" -> "shard", "SHARD" -> "betta")
+    envVars := Map("NODE_TYPE" -> "shard", "SHARD" -> "betta", "DM" -> "config")
   }
   case "g" => {
     println("---- SET SHARD gamma ----")
-    envVars := Map("NODE_TYPE" -> "shard", "SHARD" -> "gamma")
+    envVars := Map("NODE_TYPE" -> "shard", "SHARD" -> "gamma", "DM" -> "config")
   }
   case "docker" => {
     println("docker")

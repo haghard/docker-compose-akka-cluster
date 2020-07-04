@@ -50,6 +50,8 @@ All replicas that have the same shard name should be responsible to the same ran
     `export HOST=192.168.178.10`
     
     `export TZ=UTC`
+
+    `export DM=config`
     
   * Build and publish the image `sbt -DSHARD=docker docker`
   
@@ -101,15 +103,15 @@ sbt -DSHARD=g runG2
 
 ### Cluster members
 
-   `http GET 127.0.0.1:9000/cluster/members`
+   `http GET :9000/cluster/members`
     
 
 ### Jvm metrics 
-  `curl --no-buffer 192.168.77.10:9000/metrics`
+  `curl --no-buffer :9000/metrics`
 
 ### Ping device
   
-  `http GET 192.168.77.10:9000/device/1`  
+  `http GET :9000/device/1`  
 
 ### Query shard regions
 
@@ -177,12 +179,3 @@ https://github.com/chbatey/docker-jvm-akka/blob/master/docker-compose.yml
 https://dzone.com/articles/docker-container-resource-management-cpu-ram-and-i
 
 http://www.batey.info/docker-jvm-k8s.html
-
-
-
-Ring [alpha -> 127.0.0.1-2551,127.0.0.2-2551,127.0.0.3-2551] 
-
-akka://dc@127.0.0.1:2551/system/sharding/devices/127.0.0.1-2551/127.0.0.1-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
-akka://dc@127.0.0.2:2551/system/sharding/devices/127.0.0.2-2551/127.0.0.2-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
-akka://dc@127.0.0.3:2551/system/sharding/devices/127.0.0.3-2551/127.0.0.3-2551] demo.DeviceShadow - * * *  Wake up device: alpha  * * *
- 

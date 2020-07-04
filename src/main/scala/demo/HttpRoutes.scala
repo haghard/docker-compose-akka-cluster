@@ -135,8 +135,7 @@ class HttpRoutes(
     } ~
     pingRoute ~ ringRoute ~ path("metrics")(
       get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
-    ) ~ cropCircleRoute
-  //~ akka.management.cluster.scaladsl.ClusterHttpManagementRoutes(akka.cluster.Cluster(sys))
+    ) ~ cropCircleRoute ~ akka.management.cluster.scaladsl.ClusterHttpManagementRoutes(akka.cluster.Cluster(sys))
 
   def queryRing: Future[HttpResponse] =
     ringMaster

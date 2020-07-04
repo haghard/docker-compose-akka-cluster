@@ -55,5 +55,3 @@ services:
       - seed
     links:
       - "seed:${SEED_DNS}"
-
-
