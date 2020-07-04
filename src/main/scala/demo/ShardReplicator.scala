@@ -22,7 +22,7 @@ object ShardReplicator {
 
   private final case class InternalUpdateResponse(rsp: UpdateResponse[PNCounterMap[Long]]) extends Protocol
 
-  private case class InternalChangeAccepted(chg: Replicator.SubscribeResponse[PNCounterMap[Long]]) extends Protocol
+  private case class InternalDataUpdated(chg: Replicator.SubscribeResponse[PNCounterMap[Long]]) extends Protocol
 
   private val Key = PNCounterMapKey[Long]("device-counters")
 
@@ -81,7 +81,7 @@ object ShardReplicator {
         ctx.spawn(akka.cluster.ddata.typed.scaladsl.Replicator.behavior(ReplicatorSettings(ddConf)), "ddata-replicator")
 
       val adapter = ReplicatorMessageAdapter[Protocol, PNCounterMap[Long]](ctx, akkaReplicator, to)
-      adapter.subscribe(Key, InternalChangeAccepted.apply)
+      adapter.subscribe(Key, InternalDataUpdated.apply)
 
       def behavior: PartialFunction[Protocol, Behavior[Protocol]] = {
         case Ping(deviceId) ⇒
@@ -96,7 +96,7 @@ object ShardReplicator {
           ctx.log.warn(s"UpdateSuccess: [${res.key}: ${res.request}]")
           Behaviors.same
 
-        case InternalChangeAccepted(change @ Replicator.Changed(Key)) ⇒
+        case InternalDataUpdated(change @ Replicator.Changed(Key)) ⇒
           ctx.log.warn(s"[$shardName] - keys:[${change.get(Key).entries.mkString(",")}]")
           Behaviors.same
 

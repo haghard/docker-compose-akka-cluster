@@ -172,7 +172,7 @@ object Application extends Ops {
 
             Behaviors.receiveSignal {
               case (_, Terminated(shardManager)) ⇒
-                ctx.log.error(s"Proxy $shardManager has failed/stopped. Shutting down...")
+                ctx.log.error(s"ShardManager $shardManager has failed/stopped. Shutting down...")
                 CoordinatedShutdown(ctx.system.toClassic).run(Bootstrap.CriticalError)
                 Behaviors.same
             }
