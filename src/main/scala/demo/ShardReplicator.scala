@@ -14,7 +14,7 @@ import akka.cluster.ddata.typed.scaladsl.ReplicatorMessageAdapter
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
 
-object DeviceReplicator {
+object ShardReplicator {
 
   sealed trait Protocol
 
@@ -22,111 +22,106 @@ object DeviceReplicator {
 
   private final case class InternalUpdateResponse(rsp: UpdateResponse[PNCounterMap[Long]]) extends Protocol
 
-  private case class InternalOnUpdateResponse(chg: Replicator.SubscribeResponse[PNCounterMap[Long]]) extends Protocol
+  private case class InternalChangeAccepted(chg: Replicator.SubscribeResponse[PNCounterMap[Long]]) extends Protocol
 
   private val Key = PNCounterMapKey[Long]("device-counters")
 
   def replicatorConfig(role: String): Config =
     ConfigFactory.parseString(
       s"""
-           | role = $role
-           |
-           | gossip-interval = 1 s
-           |
-           | use-dispatcher = "akka.actor.default-dispatcher"
-           |
-           | notify-subscribers-interval = 2000 ms
-           |
-           | max-delta-elements = 100
-           |
-           | # How often the Replicator checks for pruning of data associated with
-           | # removed cluster nodes. If this is set to 'off' the pruning feature will
-           | # be completely disabled.
-           | pruning-interval = 120 s
-           |
-           | max-pruning-dissemination = 300 s
-           |
-           | pruning-marker-time-to-live = 6 h
-           |
-           | serializer-cache-time-to-live = 10s
-           |
-           | prefer-oldest = off
-           |
-           | delta-crdt {
-           |   enabled = on
-           |
-           |   # Some complex deltas grow in size for each update and above this
-           |   # threshold such deltas are discarded and sent as full state instead.
-           |   # This is number of elements or similar size hint, not size in bytes.
-           |   max-delta-size = 50
-           | }
-           |
-           | durable {
-           |  keys = []
-           |  pruning-marker-time-to-live = 10 d
-           |  store-actor-class = akka.cluster.ddata.LmdbDurableStore
-           |  pinned-store {
-           |    type = PinnedDispatcher
-           |    executor = thread-pool-executor
-           |  }
-           |
-           |  use-dispatcher = akka.cluster.distributed-data.durable.pinned-store
-           | }
-           |
-          """.stripMargin
+         | role = $role
+         |
+         | gossip-interval = 1 s
+         |
+         | use-dispatcher = "akka.actor.default-dispatcher"
+         |
+         | notify-subscribers-interval = 2000 ms
+         |
+         | max-delta-elements = 100
+         |
+         | pruning-interval = 120 s
+         |
+         | max-pruning-dissemination = 300 s
+         |
+         | pruning-marker-time-to-live = 6 h
+         |
+         | serializer-cache-time-to-live = 10s
+         |
+         | prefer-oldest = off
+         |
+         | delta-crdt {
+         |   enabled = on
+         |   max-delta-size = 50
+         | }
+         |
+         | durable {
+         |  keys = []
+         |  pruning-marker-time-to-live = 10 d
+         |  store-actor-class = akka.cluster.ddata.LmdbDurableStore
+         |  pinned-store {
+         |    type = PinnedDispatcher
+         |    executor = thread-pool-executor
+         |  }
+         |
+         |  use-dispatcher = akka.cluster.distributed-data.durable.pinned-store
+         | }
+         |
+        """.stripMargin
     )
 
-  def apply(role: String, to: FiniteDuration = 1.seconds): Behavior[Protocol] =
+  def apply(shardName: String, to: FiniteDuration = 1.seconds): Behavior[Protocol] =
     Behaviors.setup[Protocol] { ctx ⇒
       implicit val cl = Cluster(ctx.system.toClassic)
 
       //WriteMajority(to) respects in reachable nodes
       val wc = WriteLocal //WriteMajority(to) WriteTo(2, to)
 
-      val ddConf = replicatorConfig(role)
+      val ddConf = replicatorConfig(shardName)
       val akkaReplicator: ActorRef[Command] =
-        ctx.spawn(akka.cluster.ddata.typed.scaladsl.Replicator.behavior(ReplicatorSettings(ddConf)), "akka-repl")
+        ctx.spawn(akka.cluster.ddata.typed.scaladsl.Replicator.behavior(ReplicatorSettings(ddConf)), "ddata-replicator")
 
       val adapter = ReplicatorMessageAdapter[Protocol, PNCounterMap[Long]](ctx, akkaReplicator, to)
-      adapter.subscribe(Key, InternalOnUpdateResponse.apply)
+      adapter.subscribe(Key, InternalChangeAccepted.apply)
 
-      def update: PartialFunction[Protocol, Behavior[Protocol]] = {
+      def behavior: PartialFunction[Protocol, Behavior[Protocol]] = {
         case Ping(deviceId) ⇒
-          ctx.log.warn(s"Write key:${Key._id} - device:$deviceId")
+          ctx.log.warn(s"Write key:${Key.id} - device:$deviceId")
           adapter.askUpdate(
-            askReplyTo ⇒ Replicator.Update(Key, PNCounterMap.empty[Long], wc, askReplyTo)(_.increment(deviceId, 1)),
+            replyTo ⇒ Replicator.Update(Key, PNCounterMap.empty[Long], wc, replyTo)(_.increment(deviceId, 1)),
             InternalUpdateResponse(_)
           )
           Behaviors.same
 
-        case InternalOnUpdateResponse(change @ Replicator.Changed(Key)) ⇒
-          ctx.log.warn(s"$role - keys:[${change.get(Key).entries.mkString(",")}]")
+        case InternalUpdateResponse(res: UpdateSuccess[PNCounterMap[Long]]) ⇒
+          ctx.log.warn(s"UpdateSuccess: [${res.key}: ${res.request}]")
           Behaviors.same
 
-        /*case InternalUpdateResponse(res: UpdateSuccess[PNCounterMap[Long]], replyTo) ⇒ {
-          //replyTo ! WSuccess(sessionId)
+        case InternalChangeAccepted(change @ Replicator.Changed(Key)) ⇒
+          ctx.log.warn(s"[$shardName] - keys:[${change.get(Key).entries.mkString(",")}]")
           Behaviors.same
-        }
 
+        /*
         case InternalUpdateResponse(_: UpdateDataDeleted[PNCounterMap[Long]] @unchecked, replyTo) ⇒
-          //replyTo ! WSuccess(sessionId)
+          replyTo ! WSuccess(sessionId)
           Behaviors.same
 
         case InternalUpdateResponse(_: UpdateTimeout[PNCounterMap[Long]] @unchecked, replyTo) ⇒
           //doesn't happen with WriteMajority
           //happens with WriteTo
-          //replyTo ! WFailure(sessionId, "UpdateTimeout. Not all replicas responded on time")
+          replyTo ! WFailure(sessionId, "UpdateTimeout. Not all replicas responded on time")
           Behaviors.same
 
         case InternalUpdateResponse(_: ModifyFailure[PNCounterMap[Long]] @unchecked, replyTo) ⇒
-          //replyTo ! WFailure(sessionId, "ModifyFailure")
+          replyTo ! WFailure(sessionId, "ModifyFailure")
           Behaviors.same
 
         case InternalUpdateResponse(_: StoreFailure[PNCounterMap[Long]] @unchecked, replyTo) ⇒
-          //replyTo ! WFailure(sessionId, "StoreFailure")
-          Behaviors.same*/
-        case _ ⇒
+          replyTo ! WFailure(sessionId, "StoreFailure")
           Behaviors.same
+         */
+        case other ⇒
+          ctx.log.warn(s"Unexpected message in ${getClass.getSimpleName}: $other")
+          Behaviors.ignore
       }
 
       //Behaviors.receive(onMessage: (ActorContext[T], T) => Behavior[T]) - to get an AC and a message
@@ -135,7 +130,7 @@ object DeviceReplicator {
       //Behaviors.receivePartial(onMessage: PartialFunction[(ActorContext[T], T), Behavior[T]]) - to get an AC and a message and ignore unmatched messages
       //Behaviors.receiveMessagePartial(onMessage: PartialFunction[T, Behavior[T]]) //if onMessage doesn't match it returns Behaviors.inhandled
 
-      Behaviors.receiveMessage(update)
+      Behaviors.receiveMessage(behavior)
     /*.receiveSignal {
           case (ctx, MessageAdaptionFailure(err)) =>
             ctx.log.error(s"Failure: ", err)

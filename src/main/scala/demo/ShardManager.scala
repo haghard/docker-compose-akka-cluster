@@ -20,7 +20,7 @@ object ShardManager {
 
       val replicator = ctx.spawn(
         Behaviors
-          .supervise(DeviceReplicator(shardName))
+          .supervise(ShardReplicator(shardName))
           .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true)),
         "replicator"
       )

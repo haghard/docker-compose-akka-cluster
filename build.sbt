@@ -37,8 +37,13 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-distributed-data"       % Akka,
   "io.moia"           %% "streamee"                    % "5.0.0",
 
+  "com.typesafe.akka"             %% "akka-discovery"                    % Akka,
+  "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % "1.0.8",
+  "com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % "1.0.8",
+
+
   //a module that provides HTTP endpoints for introspecting and managing Akka clusters
-  "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.8",
+  //"com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.8",
   //"com.typesafe.akka" %% "akka-persistence-cassandra" % "0.103",
   //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
   "com.typesafe.akka"      %% "akka-slf4j"               % Akka,

@@ -17,7 +17,6 @@ import akka.stream.typed.scaladsl.ActorSource
 import akka.cluster.sharding.ShardRegion.ClusterShardingStats
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
 import ExtraHttpDirectives._
 
 object HttpRoutes {
@@ -136,7 +135,8 @@ class HttpRoutes(
     } ~
     pingRoute ~ ringRoute ~ path("metrics")(
       get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
-    ) ~ ClusterHttpManagementRoutes(akka.cluster.Cluster(sys)) ~ cropCircleRoute
+    ) ~ cropCircleRoute
+  //~ akka.management.cluster.scaladsl.ClusterHttpManagementRoutes(akka.cluster.Cluster(sys))
 
   def queryRing: Future[HttpResponse] =
     ringMaster

@@ -18,7 +18,7 @@ object DeviceShadowEntity {
 
   def apply(
     entityCtx: EntityContext[DeviceCommand],
-    replicator: ActorRef[DeviceReplicator.Protocol],
+    replicator: ActorRef[ShardReplicator.Protocol],
     replicaName: String
   ): Behavior[DeviceCommand] =
     Behaviors.setup { ctx ⇒
@@ -35,7 +35,7 @@ object DeviceShadowEntity {
   }
 
   private def active(
-    replicator: ActorRef[DeviceReplicator.Protocol],
+    replicator: ActorRef[ShardReplicator.Protocol],
     replicaName: String,
     entityCtx: EntityContext[DeviceCommand]
   )(implicit log: org.slf4j.Logger): Behavior[DeviceCommand] =
@@ -43,7 +43,7 @@ object DeviceShadowEntity {
       .receiveMessage[DeviceCommand] {
         case PingDevice(deviceId, _) ⇒
           //log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
-          replicator.tell(DeviceReplicator.Ping(deviceId))
+          replicator.tell(ShardReplicator.Ping(deviceId))
           active(replicator, replicaName, entityCtx) //orElse idle(log)
       }
       .receiveSignal(onSignal(log))
