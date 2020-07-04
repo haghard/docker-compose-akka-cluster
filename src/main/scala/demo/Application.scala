@@ -171,7 +171,7 @@ object Application extends Ops {
             )
 
             val hostName = cluster.selfMember.address.host.get
-            val proxy = ctx.spawn(
+            val shardManager = ctx.spawn(
               ShardManager(
                 replicator,
                 shardName,
@@ -179,13 +179,13 @@ object Application extends Ops {
               ),
               "shard-manager"
             )
-            ctx.watch(proxy)
+            ctx.watch(shardManager)
 
             Bootstrap(shardName, ringMaster, jvmMetrics, hostName, httpPort)
 
             Behaviors.receiveSignal {
-              case (_, Terminated(`proxy`)) ⇒
-                ctx.log.error(s"Proxy $proxy has failed/stopped. Shutting down...")
+              case (_, Terminated(shardManager)) ⇒
+                ctx.log.error(s"Proxy $shardManager has failed/stopped. Shutting down...")
                 CoordinatedShutdown(ctx.system.toClassic).run(Bootstrap.CriticalError)
                 Behaviors.same
             }
