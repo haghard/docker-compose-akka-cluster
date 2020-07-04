@@ -69,7 +69,7 @@ object RingMaster {
   def converge(state: HashRingState, buf: StashBuffer[Command])(implicit
     ctx: ActorContext[Command]
   ): Behavior[Command] =
-    Behaviors.receiveMessagePartial {
+    Behaviors.receiveMessage {
       case MembershipChanged(rs) ⇒
         ctx.log.warn("MembershipChanged: [{}]", rs.mkString(", "))
         if (rs.nonEmpty) reqInfo(ctx.self, rs.head, rs.tail, state, buf) else Behaviors.same
@@ -77,12 +77,9 @@ object RingMaster {
         //TODO: respond fast, because we're not ready yet
         ctx.log.warn("{} respond fast, because we're not ready yet", cmd)
         Behaviors.same
-      /*
-      case ReplyTimeout ⇒ Behaviors.same
       case other ⇒
-        ctx.log.warn("other: {}", other)
+        ctx.log.warn(s"Unexpected $other in ${getClass.getSimpleName}: converge")
         Behaviors.same
-       */
     }
 
   def reqInfo(
