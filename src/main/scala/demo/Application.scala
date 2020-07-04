@@ -172,12 +172,12 @@ object Application extends Ops {
 
             val hostName = cluster.selfMember.address.host.get
             val proxy = ctx.spawn(
-              ShardingProxy(
+              ShardManager(
                 replicator,
                 shardName,
                 hostName
               ),
-              "shard-proxy"
+              "shard-manager"
             )
             ctx.watch(proxy)
 

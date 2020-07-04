@@ -4,7 +4,11 @@ import demo.RingMaster.ShardInfo
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 
-object ShardingProxy {
+/**
+  * Starts a shard region with specified shard name and
+  * forwards all incoming messages to the shard region
+  */
+object ShardManager {
 
   def apply(
     replicator: ActorRef[DeviceReplicator.Protocol],
