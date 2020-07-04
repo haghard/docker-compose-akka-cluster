@@ -12,6 +12,8 @@ import com.typesafe.config.{Config, ConfigFactory}
 import scala.jdk.CollectionConverters._
 import akka.actor.typed.scaladsl.adapter._
 import akka.cluster.MemberStatus
+import akka.management.cluster.bootstrap.ClusterBootstrap
+import akka.management.scaladsl.AkkaManagement
 
 /*
 -Duser.timezone=UTC
@@ -39,7 +41,7 @@ object Application extends Ops {
 
   val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
 
-  def createConfig(host: String, port: String, shardName: String): Config =
+  def createConfig(host: String, port: String, shardName: String, dm: String): Config =
     ConfigFactory
       .empty()
       .withFallback(ConfigFactory.parseString(s"$AKKA_HOST=$host"))
@@ -47,6 +49,7 @@ object Application extends Ops {
       .withFallback(ConfigFactory.parseString(s"akka.cluster.roles = [ $shardName ]"))
       .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.host=$host"))
       .withFallback(ConfigFactory.parseString(s"akka.management.cluster.http.port=$port"))
+      .withFallback(ConfigFactory.parseString(s"akka.cluster.bootstrap.contact-point-discovery.discovery-method=$dm"))
       .withFallback(ConfigFactory.load())
 
   def main(args: Array[String]): Unit = {
@@ -60,6 +63,7 @@ object Application extends Ops {
 
     val nodeType  = sys.env.get("NODE_TYPE").getOrElse(throw new Exception("env var NODE_TYPE is expected"))
     val shardName = sys.env.get("SHARD").getOrElse(throw new Exception("env var SHARD is expected"))
+    val dm        = sys.env.get("DM").getOrElse(throw new Exception("env var DM is expected"))
 
     val port = sys.props
       .get(sysPropSeedPort)
@@ -77,7 +81,7 @@ object Application extends Ops {
 
     val cfg = hostAddress.fold(
       //docker
-      if (nodeType == "seed") createConfig(seedHostAddress, port, shardName)
+      if (nodeType == "seed") createConfig(seedHostAddress, port, shardName, dm)
       else {
         val dockerInternalAddress = NetworkInterface
           .getByName("eth0")
@@ -85,10 +89,10 @@ object Application extends Ops {
           .asScala
           .find(_.getHostAddress.matches(ipExpression))
           .fold(throw new Exception("Couldn't find docker address"))(identity)
-        createConfig(dockerInternalAddress.getHostAddress, port, shardName)
+        createConfig(dockerInternalAddress.getHostAddress, port, shardName, dm)
       }
     ) {
-      createConfig(_, port, shardName)
+      createConfig(_, port, shardName, dm)
     }
 
     val memorySize = ManagementFactory.getOperatingSystemMXBean
@@ -110,14 +114,17 @@ object Application extends Ops {
       .append("=================================================================================================")
       .toString()
 
-    ActorSystem[Nothing](
-      start(cfg, Address("akka", SystemName, seedHostAddress, port.toInt), shardName, runtimeInfo, httpPort.toInt),
+    val classicSystem = ActorSystem[Nothing](
+      guardian(cfg, Address("akka", SystemName, seedHostAddress, port.toInt), shardName, runtimeInfo, httpPort.toInt),
       SystemName,
       cfg
-    )
+    ).toClassic
+
+    AkkaManagement(classicSystem).start()
+    ClusterBootstrap(classicSystem).start()
   }
 
-  def start(
+  def guardian(
     cfg: Config,
     seedAddress: Address,
     shardName: String,

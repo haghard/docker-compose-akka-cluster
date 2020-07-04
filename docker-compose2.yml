@@ -12,12 +12,14 @@ services:
     environment:
       NODE_TYPE: seed
       SHARD: alpha
+      DM: config
 
   alpha:
     image: haghard/docker-cluster:0.3
     environment:
       NODE_TYPE: shard
       SHARD: alpha
+      DM: config
     mem_limit: 250m
     mem_reservation: 200m
     cpu_shares: 1048  #1 -core
@@ -31,6 +33,7 @@ services:
     environment:
       NODE_TYPE: shard
       SHARD: betta
+      DM: config
     mem_limit: 250m
     mem_reservation: 200m
     cpu_shares: 1048  #1 -core
@@ -44,6 +47,7 @@ services:
     environment:
       NODE_TYPE: shard
       SHARD: gamma
+      DM: config
     mem_limit: 250m
     mem_reservation: 200m
     cpu_shares: 1048  #1 -core
