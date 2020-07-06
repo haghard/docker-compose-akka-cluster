@@ -75,10 +75,8 @@ object ShardReplicator {
 
   def apply(shardName: String, to: FiniteDuration = 1.seconds): Behavior[Protocol] =
     Behaviors.setup[Protocol] { ctx ⇒
-      implicit val cl = Cluster(ctx.system.toClassic)
-
-      //WriteMajority(to) respects in reachable nodes
-      val wc = WriteLocal //WriteMajority(to) WriteTo(2, to)
+      //WriteMajority(to) WriteTo(2, to)
+      implicit val clusterCluster = Cluster(ctx.system.toClassic)
 
       val ddConf = replicatorConfig(shardName)
       val akkaReplicator: ActorRef[Command] =
@@ -91,7 +89,7 @@ object ShardReplicator {
         case PingReplicator(deviceId, replyTo) ⇒
           ctx.log.warn(s"Write key:${Key.id} - device:$deviceId")
           adapter.askUpdate(
-            replyTo ⇒ Replicator.Update(Key, PNCounterMap.empty[Long], wc, replyTo)(_.increment(deviceId, 1)),
+            replyTo ⇒ Replicator.Update(Key, PNCounterMap.empty[Long], WriteLocal, replyTo)(_.increment(deviceId, 1)),
             InternalUpdateResponse(_, replyTo)
           )
           Behaviors.same
