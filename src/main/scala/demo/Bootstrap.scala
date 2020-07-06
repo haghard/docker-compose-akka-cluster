@@ -54,7 +54,7 @@ case class Bootstrap(
         classicSystem.log.info(s"★ ★ ★ Listening for HTTP connections on ${binding.localAddress} * * *")
         CoordinatedShutdown(classicSystem).addTask(PhaseBeforeServiceUnbind, "before-unbind") { () ⇒
           Future {
-            classicSystem.log.info("CoordinatedShutdown [before-unbind]")
+            classicSystem.log.info("★ ★ ★ CoordinatedShutdown [before-unbind] ★ ★ ★")
             Done
           }
         }
@@ -62,7 +62,7 @@ case class Bootstrap(
         CoordinatedShutdown(classicSystem).addTask(PhaseServiceUnbind, "http-api.unbind") { () ⇒
           //No new connections are accepted. Existing connections are still allowed to perform request/response cycles
           binding.unbind().map { done ⇒
-            classicSystem.log.info("CoordinatedShutdown [http-api.unbind]")
+            classicSystem.log.info("★ ★ ★ CoordinatedShutdown [http-api.unbind] ★ ★ ★")
             done
           }
         }
@@ -82,7 +82,7 @@ case class Bootstrap(
             * and only than the shutdown will continue
             */
           binding.terminate(terminationDeadline).map { _ ⇒
-            classicSystem.log.info("CoordinatedShutdown [http-api.terminate]")
+            classicSystem.log.info("★ ★ ★ CoordinatedShutdown [http-api.terminate]  ★ ★ ★")
             Done
           }
         }

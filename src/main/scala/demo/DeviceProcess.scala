@@ -1,11 +1,11 @@
 package demo
 
+import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.{ActorRef, Scheduler}
 import akka.util.Timeout
 import demo.RingMaster.{Ping, PingDeviceReply}
 import io.moia.streamee.Process
-import io.moia.streamee.either.{tapErrors, EitherFlowWithContextOps}
-import akka.actor.typed.scaladsl.AskPattern._
+import io.moia.streamee.either.{EitherFlowWithContextOps, tapErrors}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -23,7 +23,7 @@ object DeviceProcess {
     tapErrors { errorTap ⇒
       Process[Long, Either[CounterError, String]]
         .map { deviceId ⇒
-          if (deviceId <= 0) Left(CounterError("DeviceId should be positive")) else Right(deviceId)
+          if (deviceId <= 0) Left(CounterError("DeviceId should more than 0")) else Right(deviceId)
         }
         .errorTo(errorTap)
         .mapAsync(config.parallelism) { deviceId ⇒
