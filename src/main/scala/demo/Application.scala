@@ -12,6 +12,9 @@ import com.typesafe.config.{Config, ConfigFactory}
 import scala.jdk.CollectionConverters._
 import akka.actor.typed.scaladsl.adapter._
 import akka.cluster.MemberStatus
+import pureconfig.ConfigSource
+
+import scala.concurrent.duration._
 
 /*
 -Duser.timezone=UTC
@@ -53,7 +56,7 @@ object Application extends Ops {
       .withFallback(
         ConfigFactory.parseString(s"akka.management.cluster.bootstrap.contact-point-discovery.discovery-method=$dm")
       )
-      .withFallback(ConfigFactory.load())
+      .withFallback(ConfigSource.default.at(SystemName).loadOrThrow[Config])
   }
 
   def main(args: Array[String]): Unit = {
@@ -133,7 +136,10 @@ object Application extends Ops {
   ): Behavior[Nothing] =
     Behaviors
       .setup[SelfUp] { ctx ⇒
-        implicit val classicSystem = ctx.system.toClassic
+        val classicSystem = ctx.system.toClassic
+        implicit val sys  = ctx.system
+        implicit val ex   = sys.executionContext
+        implicit val sch  = sys.scheduler
 
         val cluster = Cluster(ctx.system)
         cluster.manager tell Join(seedAddress)
@@ -175,7 +181,16 @@ object Application extends Ops {
 
             ctx.watch(shardManager)
 
-            Bootstrap(shardName, ringMaster, jvmMetrics, hostName, httpPort)
+            val processorCfg = CounterProcess.Config(2.seconds, 6)
+            val processor =
+              io.moia.streamee.FrontProcessor(
+                CounterProcess(processorCfg, ringMaster),
+                processorCfg.timeout,
+                "cnt-processor",
+                1 << 5
+              )
+
+            Bootstrap(processor, shardName, ringMaster, jvmMetrics, hostName, httpPort)(classicSystem)
 
             Behaviors.receiveSignal {
               case (_, Terminated(shardManager)) ⇒

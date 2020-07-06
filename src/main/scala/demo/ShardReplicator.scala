@@ -10,6 +10,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import akka.actor.typed.scaladsl.adapter._
 import akka.cluster.ddata.typed.scaladsl.Replicator._
 import akka.cluster.ddata.typed.scaladsl.ReplicatorMessageAdapter
+import demo.RingMaster.PingDeviceReply
 
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
@@ -18,9 +19,12 @@ object ShardReplicator {
 
   sealed trait Protocol
 
-  final case class Ping(deviceId: Long) extends Protocol
+  final case class PingReplicator(deviceId: Long, replyTo: ActorRef[PingDeviceReply]) extends Protocol
 
-  private final case class InternalUpdateResponse(rsp: UpdateResponse[PNCounterMap[Long]]) extends Protocol
+  private final case class InternalUpdateResponse(
+    rsp: UpdateResponse[PNCounterMap[Long]],
+    replyTo: ActorRef[PingDeviceReply]
+  ) extends Protocol
 
   private case class InternalDataUpdated(chg: Replicator.SubscribeResponse[PNCounterMap[Long]]) extends Protocol
 
@@ -84,16 +88,21 @@ object ShardReplicator {
       adapter.subscribe(Key, InternalDataUpdated.apply)
 
       def behavior: PartialFunction[Protocol, Behavior[Protocol]] = {
-        case Ping(deviceId) ⇒
+        case PingReplicator(deviceId, replyTo) ⇒
           ctx.log.warn(s"Write key:${Key.id} - device:$deviceId")
           adapter.askUpdate(
             replyTo ⇒ Replicator.Update(Key, PNCounterMap.empty[Long], wc, replyTo)(_.increment(deviceId, 1)),
-            InternalUpdateResponse(_)
+            InternalUpdateResponse(_, replyTo)
           )
           Behaviors.same
 
-        case InternalUpdateResponse(res: UpdateSuccess[PNCounterMap[Long]]) ⇒
-          ctx.log.warn(s"UpdateSuccess: [${res.key}: ${res.request}]")
+        case InternalUpdateResponse(res: UpdateSuccess[PNCounterMap[Long]], replyTo) ⇒
+          ctx.log.warn(s"UpdateSuccess: [${res.key.id}: ${res.request}]")
+          replyTo.tell(RingMaster.PingDeviceReply(res.key.id))
+          Behaviors.same
+
+        case InternalUpdateResponse(res: UpdateTimeout[PNCounterMap[Long]], _) ⇒
+          ctx.log.warn(s"UpdateTimeout: [${res.key.id}: ${res.request}]")
           Behaviors.same
 
         case InternalDataUpdated(change @ Replicator.Changed(Key)) ⇒
@@ -101,18 +110,8 @@ object ShardReplicator {
           Behaviors.same
 
         /*
-        case InternalUpdateResponse(_: UpdateDataDeleted[PNCounterMap[Long]] @unchecked, replyTo) ⇒
-          replyTo ! WSuccess(sessionId)
-          Behaviors.same
-
-        case InternalUpdateResponse(_: UpdateTimeout[PNCounterMap[Long]] @unchecked, replyTo) ⇒
-          //doesn't happen with WriteMajority
-          //happens with WriteTo
-          replyTo ! WFailure(sessionId, "UpdateTimeout. Not all replicas responded on time")
-          Behaviors.same
-
         case InternalUpdateResponse(_: ModifyFailure[PNCounterMap[Long]] @unchecked, replyTo) ⇒
-          replyTo ! WFailure(sessionId, "ModifyFailure")
+          //replyTo ! WFailure(sessionId, "ModifyFailure")
           Behaviors.same
 
         case InternalUpdateResponse(_: StoreFailure[PNCounterMap[Long]] @unchecked, replyTo) ⇒
@@ -121,7 +120,7 @@ object ShardReplicator {
          */
         case other ⇒
           ctx.log.warn(s"Unexpected message in ${getClass.getSimpleName}: $other")
-          Behaviors.ignore
+          Behaviors.same
       }
 
       //Behaviors.receive(onMessage: (ActorContext[T], T) => Behavior[T]) - to get an AC and a message

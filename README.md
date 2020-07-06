@@ -167,7 +167,6 @@ https://doc.akka.io/docs/akka-management/current/cluster-http-management.html
 
 ExternalShardAllocation https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
 
-
 https://www.lightbend.com/blog/how-to-distribute-application-state-with-akka-cluster-part-1-getting-started
 
 ### Docker  

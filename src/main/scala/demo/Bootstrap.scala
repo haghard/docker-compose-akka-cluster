@@ -10,6 +10,7 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 import akka.actor.typed.scaladsl.adapter._
+import demo.CounterProcess.CounterError
 
 object Bootstrap {
   case object BindFailure   extends Reason
@@ -17,6 +18,7 @@ object Bootstrap {
 }
 
 case class Bootstrap(
+  frontProcessor: io.moia.streamee.FrontProcessor[Long, Either[CounterError, String]],
   shardName: String,
   ringMaster: ActorRef[RingMaster.Command],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
@@ -39,7 +41,11 @@ case class Bootstrap(
     }).run()*/
 
   Http()
-    .bindAndHandle(HttpRoutes(ringMaster, jvmMetricsSrc, shardName)(classicSystem.toTyped).route, hostName, port)
+    .bindAndHandle(
+      HttpRoutes(ringMaster, frontProcessor, jvmMetricsSrc, shardName)(classicSystem.toTyped).route,
+      hostName,
+      port
+    )
     .onComplete {
       case Failure(ex) ⇒
         classicSystem.log.error(s"Shutting down because can't bind on $hostName:$port", ex)

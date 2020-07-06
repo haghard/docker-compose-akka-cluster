@@ -7,17 +7,17 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.{Route, _}
 import akka.stream.scaladsl._
 import akka.util.ByteString
-import demo.RingMaster.Ping
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import akka.actor.typed.scaladsl.AskPattern._
-import akka.http.scaladsl.model.StatusCodes.OK
+import akka.http.scaladsl.model.StatusCodes.{BadRequest, OK}
 import akka.stream.typed.scaladsl.ActorSource
 import akka.cluster.sharding.ShardRegion.ClusterShardingStats
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import ExtraHttpDirectives._
+import demo.CounterProcess.CounterError
 
 object HttpRoutes {
 
@@ -26,6 +26,7 @@ object HttpRoutes {
 
 case class HttpRoutes(
   ringMaster: ActorRef[RingMaster.Command],
+  frontProcessor: io.moia.streamee.FrontProcessor[Long, Either[CounterError, String]],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   shardName: String
 )(implicit sys: ActorSystem[Nothing])
@@ -112,9 +113,9 @@ case class HttpRoutes(
   val pingRoute = extractLog { implicit log ⇒
     aroundRequest(logLatency(log)) {
       path("device" / LongNumber) { deviceId ⇒
-        get {
-          ringMaster.tell(Ping(deviceId))
-          complete(OK)
+        onSuccess(frontProcessor.offer(deviceId)) {
+          case Left(err)      ⇒ complete(BadRequest → err.msg)
+          case Right(counter) ⇒ complete(OK → s"""{"cnt":"$counter"}""")
         }
       }
     }

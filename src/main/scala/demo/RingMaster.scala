@@ -34,6 +34,8 @@ object RingMaster {
     replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica]
   ) //grouped replicas by shard name
 
+  case class PingDeviceReply(key: String)
+
   sealed trait Command
 
   case class ClusterStateRequest(replyTo: ActorRef[ClusterStateResponse]) extends Command
@@ -47,7 +49,7 @@ object RingMaster {
 
   case class GetCropCircle(replyTo: ActorRef[HttpRoutes.CropCircleView]) extends Command
 
-  case class Ping(id: Long) extends Command
+  case class Ping(id: Long, replyTo: ActorRef[PingDeviceReply]) extends Command
 
   case object Shutdown extends Command
 
@@ -155,7 +157,7 @@ object RingMaster {
   def converged(state: HashRingState)(implicit ctx: ActorContext[Command]): Behavior[Command] =
     Behaviors.withStash(bSize) { buf ⇒
       Behaviors.receiveMessage {
-        case Ping(deviceId) ⇒
+        case Ping(deviceId, replyTo) ⇒
           state.hashRing.foreach { hashRing ⇒
             //pick shard
             val shardName = hashRing.lookup(deviceId).head
@@ -168,7 +170,7 @@ object RingMaster {
             val replicaName = replicas(ind).shardHost
             ctx.log.warn("{} -> [{} - {}:{}]", deviceId, shardName, replicaRef, state.replicas.size)
             if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shardName")
-            else replicaRef.tell(PingDevice(deviceId, replicaName))
+            else replicaRef.tell(PingDevice(deviceId, replicaName, replyTo))
           }
           Behaviors.same
         case m @ MembershipChanged(rs) ⇒

@@ -41,9 +41,9 @@ object DeviceShadowEntity {
   )(implicit log: org.slf4j.Logger): Behavior[DeviceCommand] =
     Behaviors
       .receiveMessage[DeviceCommand] {
-        case PingDevice(deviceId, _) ⇒
+        case PingDevice(deviceId, _, replyTo) ⇒
           //log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
-          replicator.tell(ShardReplicator.Ping(deviceId))
+          replicator.tell(ShardReplicator.PingReplicator(deviceId, replyTo))
           active(replicator, replicaName, entityCtx) //orElse idle(log)
       }
       .receiveSignal(onSignal(log))

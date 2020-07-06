@@ -31,12 +31,13 @@ scalacOptions in (Compile, console) := Seq(
 scalaVersion := scalaV
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-cluster-metrics"        % Akka,
-  "com.typesafe.akka" %% "akka-cluster-typed"          % Akka,
-  "com.typesafe.akka" %% "akka-stream-typed"           % Akka,
-  "com.typesafe.akka" %% "akka-cluster-sharding-typed" % Akka,
-  "com.typesafe.akka" %% "akka-distributed-data"       % Akka,
-  //"io.moia"           %% "streamee"                    % "5.0.0",
+  "com.typesafe.akka"       %% "akka-cluster-metrics"        % Akka,
+  "com.typesafe.akka"       %% "akka-cluster-typed"          % Akka,
+  "com.typesafe.akka"       %% "akka-stream-typed"           % Akka,
+  "com.typesafe.akka"       %% "akka-cluster-sharding-typed" % Akka,
+  "com.typesafe.akka"       %% "akka-distributed-data"       % Akka,
+  "io.moia"                 %% "streamee"                    % "5.0.0",
+  "com.github.pureconfig"   %% "pureconfig"                  % "0.12.3",
 
   "com.typesafe.akka"             %% "akka-discovery"                    % Akka,
   //"com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % AkkaManagement,
