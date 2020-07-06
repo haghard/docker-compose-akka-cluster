@@ -198,7 +198,7 @@ object Application extends Ops {
               * 100 * 0.1 = 10
               *
               * Give the numbers above, the Little’s Law shows that on average, having
-              * queue size == 50,
+              * queue size == 100,
               * parallelism factor == 10
               * average latency of single request == 100 millis
               * we can keep up with throughput = 100 rps
@@ -210,7 +210,7 @@ object Application extends Ops {
                 DeviceProcess(processorCfg, ringMaster),
                 processorCfg.timeout,
                 "device-processor",
-                50
+                100
               )
 
             Bootstrap(processor, shardName, ringMaster, jvmMetrics, hostName, httpPort)(ctx.system.toClassic)
