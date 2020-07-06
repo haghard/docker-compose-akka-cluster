@@ -19,13 +19,16 @@ object ShardReplicator {
 
   sealed trait Protocol
 
+  //TODO: serialization/des
   final case class PingReplicator(deviceId: Long, replyTo: ActorRef[PingDeviceReply]) extends Protocol
 
+  //TODO: serialization/des
   private final case class InternalUpdateResponse(
     rsp: UpdateResponse[PNCounterMap[Long]],
     replyTo: ActorRef[PingDeviceReply]
   ) extends Protocol
 
+  //TODO: serialization/des
   private case class InternalDataUpdated(chg: Replicator.SubscribeResponse[PNCounterMap[Long]]) extends Protocol
 
   private val Key = PNCounterMapKey[Long]("device-counters")
@@ -96,7 +99,7 @@ object ShardReplicator {
 
         case InternalUpdateResponse(res: UpdateSuccess[PNCounterMap[Long]], replyTo) ⇒
           ctx.log.warn(s"UpdateSuccess: [${res.key.id}: ${res.request}]")
-          replyTo.tell(RingMaster.PingDeviceReply.Success(res.key.id))
+          replyTo.tell(RingMaster.PingDeviceReply.Success)
           Behaviors.same
 
         case InternalUpdateResponse(res: UpdateTimeout[PNCounterMap[Long]], replyTo) ⇒

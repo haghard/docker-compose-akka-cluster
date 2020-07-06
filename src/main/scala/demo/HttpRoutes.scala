@@ -26,7 +26,7 @@ object HttpRoutes {
 
 case class HttpRoutes(
   ringMaster: ActorRef[RingMaster.Command],
-  frontProcessor: io.moia.streamee.FrontProcessor[Long, Either[CounterError, String]],
+  frontProcessor: io.moia.streamee.FrontProcessor[Long, Either[CounterError, Unit]],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   shardName: String
 )(implicit sys: ActorSystem[Nothing])
@@ -114,8 +114,8 @@ case class HttpRoutes(
     aroundRequest(logLatency(log)) {
       path("device" / LongNumber) { deviceId ⇒
         onSuccess(frontProcessor.offer(deviceId)) {
-          case Left(err)      ⇒ complete(BadRequest → err.errMsg)
-          case Right(counter) ⇒ complete(OK → s"""{"key":"$counter"}""")
+          case Left(err) ⇒ complete(BadRequest → err.errMsg)
+          case Right(_)  ⇒ complete(OK)
         }
       }
     }

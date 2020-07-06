@@ -34,10 +34,11 @@ object RingMaster {
     replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica]
   ) //grouped replicas by shard name
 
+  //TODO: serialization/des
   sealed trait PingDeviceReply
   object PingDeviceReply {
-    case class Success(key: String) extends PingDeviceReply
-    case class Error(err: String)   extends PingDeviceReply
+    case object Success           extends PingDeviceReply
+    case class Error(err: String) extends PingDeviceReply
   }
 
   sealed trait Command
@@ -53,7 +54,8 @@ object RingMaster {
 
   case class GetCropCircle(replyTo: ActorRef[HttpRoutes.CropCircleView]) extends Command
 
-  case class Ping(id: Long, replyTo: ActorRef[PingDeviceReply]) extends Command
+  //TODO: serialization/des
+  case class Ping(deviceId: Long, replyTo: ActorRef[PingDeviceReply]) extends Command
 
   case object Shutdown extends Command
 

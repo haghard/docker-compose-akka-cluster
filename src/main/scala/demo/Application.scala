@@ -186,7 +186,7 @@ object Application extends Ops {
 
             /**
               * https://en.wikipedia.org/wiki/Little%27s_law
-              * 
+              *
               * L = λ * W
               * L – the average number of items in a queuing system (queue size)
               * λ – the average number of items arriving at the system per unit of time
@@ -202,7 +202,6 @@ object Application extends Ops {
               * parallelism factor == 10
               * average latency of single request == 100 millis
               * we can keep up with throughput = 100 rps
-              *
               */
             val processorCfg = DeviceProcess.Config(1.seconds, 10)
             val processor =

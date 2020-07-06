@@ -18,7 +18,7 @@ object Bootstrap {
 }
 
 case class Bootstrap(
-  frontProcessor: io.moia.streamee.FrontProcessor[Long, Either[CounterError, String]],
+  frontProcessor: io.moia.streamee.FrontProcessor[Long, Either[CounterError, Unit]],
   shardName: String,
   ringMaster: ActorRef[RingMaster.Command],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],

@@ -18,10 +18,10 @@ object DeviceProcess {
   def apply(
     config: Config,
     ringMaster: ActorRef[Ping]
-  )(implicit sch: Scheduler): Process[Long, Either[CounterError, String]] = {
+  )(implicit sch: Scheduler): Process[Long, Either[CounterError, Unit]] = {
     implicit val timeout: Timeout = config.timeout
     tapErrors { errorTap ⇒
-      Process[Long, Either[CounterError, String]]
+      Process[Long, Either[CounterError, Unit]]
         .map { deviceId ⇒
           if (deviceId <= 0) Left(CounterError("DeviceId should more than 0")) else Right(deviceId)
         }
@@ -30,8 +30,8 @@ object DeviceProcess {
           ringMaster.ask[PingDeviceReply](RingMaster.Ping(deviceId, _))
         }
         .map {
-          case PingDeviceReply.Error(err)   ⇒ Left(CounterError(err))
-          case PingDeviceReply.Success(key) ⇒ Right(key)
+          case PingDeviceReply.Error(err) ⇒ Left(CounterError(err))
+          case PingDeviceReply.Success    ⇒ Right(())
         }
         .errorTo(errorTap)
     }
