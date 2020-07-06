@@ -1,0 +1,29 @@
+#https://github.com/elleFlorio/akka-cluster-playground.git
+
+version: '3.5'
+
+networks:
+  cluster-network:
+
+services:
+  master:
+    networks:
+      - cluster-network
+    image: haghard/docker-cluster:0.3
+    ports:
+      - '8000:8000'
+    environment:
+      SERVER_IP: 0.0.0.0
+      CLUSTER_IP: master
+      CLUSTER_SEED_IP: master
+
+  worker:
+    networks:
+      - cluster-network
+    image: haghard/docker-cluster:0.3
+    environment:
+      SERVER_IP: 0.0.0.0
+      CLUSTER_IP: worker
+      CLUSTER_PORT: 1600
+      CLUSTER_SEED_IP: master
+      CLUSTER_SEED_PORT: 2552

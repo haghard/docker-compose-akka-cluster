@@ -34,7 +34,11 @@ object RingMaster {
     replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica]
   ) //grouped replicas by shard name
 
-  case class PingDeviceReply(key: String)
+  sealed trait PingDeviceReply
+  object PingDeviceReply {
+    case class Success(key: String) extends PingDeviceReply
+    case class Error(err: String)   extends PingDeviceReply
+  }
 
   sealed trait Command
 

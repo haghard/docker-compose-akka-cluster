@@ -17,7 +17,7 @@ import akka.cluster.sharding.ShardRegion.ClusterShardingStats
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import ExtraHttpDirectives._
-import demo.CounterProcess.CounterError
+import demo.DeviceProcess.CounterError
 
 object HttpRoutes {
 
@@ -114,8 +114,8 @@ case class HttpRoutes(
     aroundRequest(logLatency(log)) {
       path("device" / LongNumber) { deviceId ⇒
         onSuccess(frontProcessor.offer(deviceId)) {
-          case Left(err)      ⇒ complete(BadRequest → err.msg)
-          case Right(counter) ⇒ complete(OK → s"""{"cnt":"$counter"}""")
+          case Left(err)      ⇒ complete(BadRequest → err.errMsg)
+          case Right(counter) ⇒ complete(OK → s"""{"key":"$counter"}""")
         }
       }
     }

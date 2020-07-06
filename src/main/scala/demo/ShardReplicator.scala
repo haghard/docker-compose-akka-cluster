@@ -98,11 +98,12 @@ object ShardReplicator {
 
         case InternalUpdateResponse(res: UpdateSuccess[PNCounterMap[Long]], replyTo) ⇒
           ctx.log.warn(s"UpdateSuccess: [${res.key.id}: ${res.request}]")
-          replyTo.tell(RingMaster.PingDeviceReply(res.key.id))
+          replyTo.tell(RingMaster.PingDeviceReply.Success(res.key.id))
           Behaviors.same
 
-        case InternalUpdateResponse(res: UpdateTimeout[PNCounterMap[Long]], _) ⇒
+        case InternalUpdateResponse(res: UpdateTimeout[PNCounterMap[Long]], replyTo) ⇒
           ctx.log.warn(s"UpdateTimeout: [${res.key.id}: ${res.request}]")
+          replyTo.tell(RingMaster.PingDeviceReply.Error(s"UpdateTimeout: [${res.key.id}]"))
           Behaviors.same
 
         case InternalDataUpdated(change @ Replicator.Changed(Key)) ⇒

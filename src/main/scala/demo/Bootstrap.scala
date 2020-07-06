@@ -10,7 +10,7 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 import akka.actor.typed.scaladsl.adapter._
-import demo.CounterProcess.CounterError
+import demo.DeviceProcess.CounterError
 
 object Bootstrap {
   case object BindFailure   extends Reason

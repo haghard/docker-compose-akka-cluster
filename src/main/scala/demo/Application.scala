@@ -56,7 +56,7 @@ object Application extends Ops {
       .withFallback(
         ConfigFactory.parseString(s"akka.management.cluster.bootstrap.contact-point-discovery.discovery-method=$dm")
       )
-      .withFallback(ConfigSource.default.at(SystemName).loadOrThrow[Config])
+      .withFallback(ConfigSource.default.loadOrThrow[Config]) //.at(SystemName)
   }
 
   def main(args: Array[String]): Unit = {
@@ -136,10 +136,9 @@ object Application extends Ops {
   ): Behavior[Nothing] =
     Behaviors
       .setup[SelfUp] { ctx ⇒
-        val classicSystem = ctx.system.toClassic
-        implicit val sys  = ctx.system
-        implicit val ex   = sys.executionContext
-        implicit val sch  = sys.scheduler
+        implicit val sys = ctx.system
+        implicit val ex  = sys.executionContext
+        implicit val sch = sys.scheduler
 
         val cluster = Cluster(ctx.system)
         cluster.manager tell Join(seedAddress)
@@ -181,16 +180,16 @@ object Application extends Ops {
 
             ctx.watch(shardManager)
 
-            val processorCfg = CounterProcess.Config(2.seconds, 6)
+            val processorCfg = DeviceProcess.Config(2.seconds, 6)
             val processor =
               io.moia.streamee.FrontProcessor(
-                CounterProcess(processorCfg, ringMaster),
+                DeviceProcess(processorCfg, ringMaster),
                 processorCfg.timeout,
-                "cnt-processor",
+                "device-processor",
                 1 << 5
               )
 
-            Bootstrap(processor, shardName, ringMaster, jvmMetrics, hostName, httpPort)(classicSystem)
+            Bootstrap(processor, shardName, ringMaster, jvmMetrics, hostName, httpPort)(ctx.system.toClassic)
 
             Behaviors.receiveSignal {
               case (_, Terminated(shardManager)) ⇒
