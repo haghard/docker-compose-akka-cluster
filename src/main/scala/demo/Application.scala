@@ -117,12 +117,16 @@ object Application extends Ops {
       .append("=================================================================================================")
       .toString()
 
-    val classicSystem = ActorSystem[Nothing](
+    val classicSystem = akka.actor.ActorSystem(SystemName, cfg)
+    /*val classicSystem = ActorSystem[Nothing](
       guardian(cfg, Address("akka", SystemName, seedHostAddress, port.toInt), shardName, runtimeInfo, httpPort.toInt),
       SystemName,
       cfg
-    ).toClassic
+    ).toClassic*/
 
+    val address = Address("akka", SystemName, seedHostAddress, port.toInt)
+    //to avoid the error with top-level actor creation in streamee
+    classicSystem.spawn(guardian(cfg, address, shardName, runtimeInfo, httpPort.toInt), "guardian")
     //akka.management.scaladsl.AkkaManagement(classicSystem).start()
     akka.management.cluster.bootstrap.ClusterBootstrap(classicSystem).start()
   }
@@ -133,7 +137,7 @@ object Application extends Ops {
     shardName: String,
     runtimeInfo: String,
     httpPort: Int
-  ): Behavior[Nothing] =
+  ): Behavior[SelfUp] =
     Behaviors
       .setup[SelfUp] { ctx ⇒
         implicit val sys = ctx.system
@@ -180,13 +184,33 @@ object Application extends Ops {
 
             ctx.watch(shardManager)
 
-            val processorCfg = DeviceProcess.Config(2.seconds, 6)
+            /**
+              * https://en.wikipedia.org/wiki/Little%27s_law
+              * 
+              * L = λ * W
+              * L – the average number of items in a queuing system (queue size)
+              * λ – the average number of items arriving at the system per unit of time
+              * W – the average waiting time an item spends in a queuing system
+              *
+              * Question: How many processes running in parallel we need given
+              * throughput = 100 rps and average latency = 100 millis  ?
+              *
+              * 100 * 0.1 = 10
+              *
+              * Give the numbers above, the Little’s Law shows that on average, having
+              * queue size == 50,
+              * parallelism factor == 10
+              * average latency of single request == 100 millis
+              * we can keep up with throughput = 100 rps
+              *
+              */
+            val processorCfg = DeviceProcess.Config(1.seconds, 10)
             val processor =
               io.moia.streamee.FrontProcessor(
                 DeviceProcess(processorCfg, ringMaster),
                 processorCfg.timeout,
                 "device-processor",
-                1 << 5
+                50
               )
 
             Bootstrap(processor, shardName, ringMaster, jvmMetrics, hostName, httpPort)(ctx.system.toClassic)
@@ -199,5 +223,4 @@ object Application extends Ops {
             }
         }
       }
-      .narrow
 }

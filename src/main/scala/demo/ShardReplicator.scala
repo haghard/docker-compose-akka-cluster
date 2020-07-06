@@ -129,7 +129,7 @@ object ShardReplicator {
       //Behaviors.receiveMessagePartial(onMessage: PartialFunction[T, Behavior[T]]) //if onMessage doesn't match it returns Behaviors.inhandled
 
       Behaviors.receiveMessage(behavior)
-    /*.receiveSignal {
+      /*.receiveSignal {
           case (ctx, MessageAdaptionFailure(err)) =>
             ctx.log.error(s"Failure: ", err)
             Behaviors.same
