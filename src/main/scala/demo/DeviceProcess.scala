@@ -5,7 +5,7 @@ import akka.actor.typed.{ActorRef, Scheduler}
 import akka.util.Timeout
 import demo.RingMaster.{Ping, PingDeviceReply}
 import io.moia.streamee.Process
-import io.moia.streamee.either.{EitherFlowWithContextOps, tapErrors}
+import io.moia.streamee.either.{tapErrors, EitherFlowWithContextOps}
 
 import scala.concurrent.duration.FiniteDuration
 
