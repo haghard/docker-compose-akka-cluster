@@ -1,11 +1,17 @@
 package demo
 
-import demo.RingMaster.{PingDeviceReply, ShardInfo}
-import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import io.moia.streamee.{IntoableProcessor, Process, ProcessSinkRef, Step}
+import java.util.concurrent.ThreadLocalRandom
+
+import akka.actor.CoordinatedShutdown
+import akka.actor.CoordinatedShutdown.Reason
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import akka.actor.typed.{ActorRef, Behavior, PostStop, SupervisorStrategy}
+import akka.stream.StreamRefAttributes
 import akka.util.Timeout
+import demo.RingMaster.{PingDeviceReply, ShardInfo}
+import io.moia.streamee.{IntoableProcessor, Process, ProcessSinkRef}
+
 import scala.concurrent.duration._
 
 /**
@@ -15,17 +21,25 @@ import scala.concurrent.duration._
 object ShardManager {
 
   sealed trait Protocol
-  case class GetShardInfo(replyTo: akka.actor.typed.ActorRef[demo.RingMaster.Command]) extends Protocol
-  case class PingDevice(deviceId: Long, replica: String)                               extends Protocol
+  case class GetShardInfo(replyTo: akka.actor.typed.ActorRef[demo.RingMaster.Command])  extends Protocol
+  case class GetSinkRef(replyTo: ActorRef[ProcessSinkRef[PingDevice, PingDeviceReply]]) extends Protocol
 
-  final case class GetSinkRef(replyTo: ActorRef[ProcessSinkRef[PingDevice, PingDeviceReply]]) extends Protocol
+  case class Config(timeout: FiniteDuration, parallelism: Int, bufferSize: Int)
+
+  case object ProcessorCompleted extends Protocol
+
+  case object ShardManagerOutage extends Reason
 
   def apply(
-    shardName: String,   //"alpha"
-    shardAddress: String //"172.20.0.3-2551"
+    shardName: String,    //"alpha"
+    shardAddress: String, //"172.20.0.3-2551"
+    config: Config
   ): Behavior[ShardManager.Protocol] =
     Behaviors.setup[ShardManager.Protocol] { ctx ⇒
-      ctx.system.receptionist tell akka.actor.typed.receptionist.Receptionist
+      implicit val sys         = ctx.system
+      implicit val to: Timeout = Timeout(config.timeout)
+
+      ctx.system.receptionist ! akka.actor.typed.receptionist.Receptionist
         .Register(RingMaster.shardManagerKey, ctx.self)
 
       val replicator = ctx.spawn(
@@ -36,51 +50,47 @@ object ShardManager {
       )
 
       val shardRegion = SharedDomain(replicator, shardName, ctx.system)
-      active(shardRegion, shardName, shardAddress)(ctx)
+      val mergeHub = IntoableProcessor(
+        Process[PingDevice, PingDeviceReply]
+          .mapAsync(config.parallelism)(req ⇒
+            shardRegion.ask[PingDeviceReply](DeviceShadowEntity.PingDevice(req.deviceId, req.replica, _))
+          ),
+        "shard-input",
+        config.bufferSize
+      )
+
+      mergeHub.whenDone.onComplete { _ ⇒
+        ctx.self.tell(ProcessorCompleted)
+      }(ctx.system.executionContext)
+
+      active(mergeHub, shardName, shardAddress, config)(ctx)
     }
 
-  def active(shardRegion: ActorRef[DeviceShadowEntity.DeviceCommand], shardName: String, shardAddress: String)(implicit
-    ctx: ActorContext[ShardManager.Protocol]
-  ): Behavior[ShardManager.Protocol] =
-    Behaviors.receiveMessage {
-      case ShardManager.GetShardInfo(ringMaster) ⇒
-        implicit val sys = ctx.system
-        ringMaster.tell(ShardInfo(shardName, ctx.self, shardAddress))
-        /*Step[PingDevice, Ctx]
-          .mapAsync(1) { words =>
-            ???
-          }*/
+  def active(
+    processor: IntoableProcessor[PingDevice, PingDeviceReply],
+    shardName: String,
+    shardAddress: String,
+    config: Config
+  )(implicit ctx: ActorContext[ShardManager.Protocol]): Behavior[ShardManager.Protocol] =
+    Behaviors
+      .receiveMessage[ShardManager.Protocol] {
+        case ShardManager.GetShardInfo(ringMaster) ⇒
+          ringMaster.tell(ShardInfo(shardName, ctx.self, shardAddress))
+          Behaviors.same
 
-        val processor = IntoableProcessor(
-          Process[PingDevice, PingDeviceReply]
-            .mapAsync(4) { ping ⇒
-              shardRegion
-                .ask[PingDeviceReply](DeviceShadowEntity.PingDevice(ping.deviceId, ping.replica, _))(
-                  Timeout(1.second),
-                  sys.scheduler
-                )
-            },
-          "consumer",
-          4
-        )
+        case ShardManager.GetSinkRef(replyTo) ⇒
+          ctx.log.info(s"GetSinkRef for $shardName")
+          implicit val s = ctx.system
+          replyTo.tell(processor.sinkRef(StreamRefAttributes.subscriptionTimeout(config.timeout)))
+          Behaviors.same
 
-        /*
-        processor.whenDone.onComplete { reason =>
-          ctx.log.warn(s"Process completed: $reason")
-          ctx.self ! StopShardRegionManager
-        }(???)
-         */
-
-        Behaviors.receiveMessagePartial {
-          case GetSinkRef(replyTo) ⇒
-            replyTo ! processor.sinkRef()
-            Behaviors.same
-        }
-
-      /*case cmd: DeviceCommand ⇒
-        //forward the message to shardRegion
-        shardRegion.tell(cmd)
-        Behaviors.same
-       */
-    }
+        case ShardManager.ProcessorCompleted ⇒
+          Behaviors.stopped
+      }
+      .receiveSignal {
+        case (ctx, PostStop) ⇒
+          processor.shutdown()
+          CoordinatedShutdown(ctx.system).run(ShardManagerOutage)
+          Behaviors.same
+      }
 }

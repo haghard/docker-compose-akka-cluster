@@ -10,7 +10,7 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 import akka.actor.typed.scaladsl.adapter._
-import demo.DeviceProcess.CounterError
+import demo.ShardInputProcess.CounterError
 
 object Bootstrap {
   case object BindFailure   extends Reason
@@ -18,7 +18,7 @@ object Bootstrap {
 }
 
 case class Bootstrap(
-  frontProcessor: io.moia.streamee.FrontProcessor[Long, Either[CounterError, Unit]],
+  //frontProcessor: io.moia.streamee.FrontProcessor[Long, Either[CounterError, Unit]],
   shardName: String,
   ringMaster: ActorRef[RingMaster.Command],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
@@ -42,7 +42,7 @@ case class Bootstrap(
 
   Http()
     .bindAndHandle(
-      HttpRoutes(ringMaster, frontProcessor, jvmMetricsSrc, shardName)(classicSystem.toTyped).route,
+      HttpRoutes(ringMaster, jvmMetricsSrc, shardName)(classicSystem.toTyped).route,
       hostName,
       port
     )

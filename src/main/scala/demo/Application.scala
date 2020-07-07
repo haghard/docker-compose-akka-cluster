@@ -3,18 +3,17 @@ package demo
 import java.lang.management.ManagementFactory
 import java.net.NetworkInterface
 
-import akka.actor.{Address, CoordinatedShutdown}
 import akka.actor.typed._
 import akka.actor.typed.scaladsl.Behaviors
-import akka.cluster.typed.{Cluster, ClusterSingleton, Join, SelfUp, SingletonActor, Subscribe, Unsubscribe}
-import com.typesafe.config.{Config, ConfigFactory}
-
-import scala.jdk.CollectionConverters._
 import akka.actor.typed.scaladsl.adapter._
+import akka.actor.{Address, CoordinatedShutdown}
 import akka.cluster.MemberStatus
+import akka.cluster.typed._
+import com.typesafe.config.{Config, ConfigFactory}
 import pureconfig.ConfigSource
 
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
 /*
 -Duser.timezone=UTC
@@ -179,10 +178,7 @@ object Application extends Ops {
               )
               .narrow[ClusterJvmMetrics.Confirm]
 
-            val hostName     = cluster.selfMember.address.host.get
-            val shardManager = ctx.spawn(ShardManager(shardName, hostName), "shard-manager")
-
-            ctx.watch(shardManager)
+            val hostName = cluster.selfMember.address.host.get
 
             /**
               * https://en.wikipedia.org/wiki/Little%27s_law
@@ -203,20 +199,16 @@ object Application extends Ops {
               * average latency of single request == 100 millis
               * we can keep up with throughput = 100 rps
               */
-            val processorCfg = DeviceProcess.Config(1.seconds, 10)
-            val processor =
-              io.moia.streamee.FrontProcessor(
-                DeviceProcess(processorCfg, ringMaster),
-                processorCfg.timeout,
-                "device-processor",
-                100
-              )
+            val cfg0 = ShardManager.Config(1.second, 10, 100)
+            val shardManager =
+              ctx.spawn(ShardManager(shardName, hostName, cfg0), "shard-manager")
+            ctx.watch(shardManager)
 
-            Bootstrap(processor, shardName, ringMaster, jvmMetrics, hostName, httpPort)(ctx.system.toClassic)
+            Bootstrap(shardName, ringMaster, jvmMetrics, hostName, httpPort)(ctx.system.toClassic)
 
             Behaviors.receiveSignal {
               case (_, Terminated(shardManager)) ⇒
-                ctx.log.error(s"ShardManager $shardManager has failed/stopped. Shutting down...")
+                ctx.log.warn(s"$shardManager has been stopped. Shutting down...")
                 CoordinatedShutdown(ctx.system.toClassic).run(Bootstrap.CriticalError)
                 Behaviors.same
             }

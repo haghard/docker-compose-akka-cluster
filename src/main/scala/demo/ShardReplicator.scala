@@ -1,5 +1,7 @@
 package demo
 
+import java.util.concurrent.ThreadLocalRandom
+
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.Cluster
@@ -99,6 +101,8 @@ object ShardReplicator {
 
         case InternalUpdateResponse(res: UpdateSuccess[PNCounterMap[Long]], replyTo) ⇒
           ctx.log.warn(s"UpdateSuccess: [${res.key.id}: ${res.request}]")
+          //To simulate io.moia.streamee.package$ResponseTimeoutException: No response within 1 second!
+          //if (ThreadLocalRandom.current().nextDouble() > .5) Thread.sleep(1100)
           replyTo.tell(RingMaster.PingDeviceReply.Success)
           Behaviors.same
 
