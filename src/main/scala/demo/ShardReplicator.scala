@@ -20,7 +20,7 @@ object ShardReplicator {
   sealed trait Protocol
 
   //TODO: serialization/des
-  final case class PingReplicator(deviceId: Long, replyTo: ActorRef[PingDeviceReply]) extends Protocol
+  final case class PingDeviceReplicator(deviceId: Long, replyTo: ActorRef[PingDeviceReply]) extends Protocol
 
   //TODO: serialization/des
   private final case class InternalUpdateResponse(
@@ -89,7 +89,7 @@ object ShardReplicator {
       adapter.subscribe(Key, InternalDataUpdated.apply)
 
       def behavior: PartialFunction[Protocol, Behavior[Protocol]] = {
-        case PingReplicator(deviceId, replyTo) ⇒
+        case PingDeviceReplicator(deviceId, replyTo) ⇒
           ctx.log.warn(s"Write key:${Key.id} - device:$deviceId")
           adapter.askUpdate(
             replyTo ⇒ Replicator.Update(Key, PNCounterMap.empty[Long], WriteLocal, replyTo)(_.increment(deviceId, 1)),

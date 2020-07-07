@@ -10,7 +10,7 @@ import scala.concurrent.duration._
 object SharedDomain {
 
   object DeviceMsgExtractor {
-    def apply[T <: DeviceCommand]: ShardingMessageExtractor[T, T] =
+    def apply[T <: DeviceShadowEntity.DeviceCommand]: ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
 
         override def entityId(cmd: T): String = cmd.replica
@@ -27,7 +27,7 @@ object SharedDomain {
     replicator: ActorRef[ShardReplicator.Protocol],
     role: String, //alpha|betta|gamma
     system: akka.actor.typed.ActorSystem[_]
-  ): akka.actor.typed.ActorRef[DeviceCommand] = {
+  ): akka.actor.typed.ActorRef[DeviceShadowEntity.DeviceCommand] = {
 
     //Allocation strategy which decides on which nodes to allocate new shards.
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
@@ -70,7 +70,7 @@ object SharedDomain {
      */
 
     val entity = Entity(DeviceShadowEntity.entityKey)(DeviceShadowEntity(_, replicator, role))
-      .withMessageExtractor(DeviceMsgExtractor[DeviceCommand])
+      .withMessageExtractor(DeviceMsgExtractor[DeviceShadowEntity.DeviceCommand])
       /*new ShardingMessageExtractor[DeviceCommand, DeviceCommand] {
           override def entityId(cmd: DeviceCommand): String             = cmd.replica
           override def shardId(entityId: String): String                = entityId

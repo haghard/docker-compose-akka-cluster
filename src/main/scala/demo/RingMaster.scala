@@ -12,6 +12,7 @@ import demo.hashing.{CropCircle, HashRing}
 
 import scala.collection.immutable.SortedMultiDict
 import akka.cluster.sharding.external.ExternalShardAllocation
+import demo.ShardManager.PingDevice
 
 object RingMaster {
 
@@ -21,13 +22,13 @@ object RingMaster {
   private val replyTimeout = 1000.millis
 
   private val timeoutKey = "to"
-  val domainKey          = ServiceKey[ShardRegionCmd]("domain")
+  val shardManagerKey    = ServiceKey[ShardManager.Protocol]("shard-manager")
 
   private val bSize = 1 << 6
 
   case class ClusterStateResponse(state: String)
 
-  case class Replica(ref: ActorRef[ShardRegionCmd], shardHost: String) //ActorRef[ShardRegionCmd], 127.0.0.1-2551
+  case class Replica(ref: ActorRef[ShardManager.Protocol], shardHost: String) // 127.0.0.1-2551
 
   case class HashRingState(
     hashRing: Option[HashRing] = None, //hash ring for shards
@@ -45,17 +46,18 @@ object RingMaster {
 
   case class ClusterStateRequest(replyTo: ActorRef[ClusterStateResponse]) extends Command
 
-  case class MembershipChanged(replicas: Set[ActorRef[ShardRegionCmd]]) extends Command
+  case class MembershipChanged(replicas: Set[ActorRef[ShardManager.Protocol]]) extends Command
 
-  case class ShardInfo(shardName: String, shardProxy: ActorRef[ShardRegionCmd], shardAddress: String) extends Command
+  case class ShardInfo(shardName: String, shardProxy: ActorRef[ShardManager.Protocol], shardAddress: String)
+      extends Command
 
-  case class RolesInfo(m: Map[String, Set[ActorRef[ShardRegionCmd]]]) extends Command
-  case object ReplyTimeout                                            extends Command
+  //case class RolesInfo(m: Map[String, Set[ActorRef[ShardManager.Protocol]]]) extends Command
+  case object ReplyTimeout extends Command
 
   case class GetCropCircle(replyTo: ActorRef[HttpRoutes.CropCircleView]) extends Command
 
   //TODO: serialization/des
-  case class Ping(deviceId: Long, replyTo: ActorRef[PingDeviceReply]) extends Command
+  case class Ping(deviceId: Long /*, replyTo: ActorRef[PingDeviceReply]*/ ) extends Command
 
   case object Shutdown extends Command
 
@@ -64,9 +66,9 @@ object RingMaster {
       Behaviors.setup { ctx ⇒
         ctx.system.receptionist.tell(
           Receptionist.Subscribe(
-            RingMaster.domainKey,
+            RingMaster.shardManagerKey,
             ctx.messageAdapter[Receptionist.Listing] {
-              case RingMaster.domainKey.Listing(replicas) ⇒ MembershipChanged(replicas)
+              case RingMaster.shardManagerKey.Listing(replicas) ⇒ MembershipChanged(replicas)
             }
           )
         )
@@ -92,22 +94,22 @@ object RingMaster {
 
   def reqInfo(
     self: ActorRef[Command],
-    head: ActorRef[ShardRegionCmd],
-    tail: Set[ActorRef[ShardRegionCmd]],
+    head: ActorRef[ShardManager.Protocol],
+    tail: Set[ActorRef[ShardManager.Protocol]],
     state: HashRingState,
     stash: StashBuffer[Command],
     numOfTry: Int = 0
   )(implicit ctx: ActorContext[Command]): Behavior[Command] =
     Behaviors.withTimers { timer ⇒
       timer.startSingleTimer(timeoutKey, ReplyTimeout, replyTimeout)
-      head.tell(GetShardInfo(self))
+      head.tell(ShardManager.GetShardInfo(self))
       awaitInfo(self, head, tail, state, stash, timer, numOfTry)(ctx)
     }
 
   def awaitInfo(
     self: ActorRef[Command],
-    head: ActorRef[ShardRegionCmd],
-    tail: Set[ActorRef[ShardRegionCmd]],
+    head: ActorRef[ShardManager.Protocol],
+    tail: Set[ActorRef[ShardManager.Protocol]],
     state: HashRingState,
     buf: StashBuffer[Command],
     timer: TimerScheduler[Command],
@@ -145,7 +147,7 @@ object RingMaster {
       case m @ MembershipChanged(rs) if rs.nonEmpty ⇒
         buf.stash(m)
         Behaviors.same
-      case cmd: PingDevice ⇒
+      case cmd: ShardManager.PingDevice ⇒
         //TODO: respond false, because we're not ready yet
         ctx.log.warn("{} respond fast, because we're not ready yet", cmd)
         Behaviors.same
@@ -163,7 +165,7 @@ object RingMaster {
   def converged(state: HashRingState)(implicit ctx: ActorContext[Command]): Behavior[Command] =
     Behaviors.withStash(bSize) { buf ⇒
       Behaviors.receiveMessage {
-        case Ping(deviceId, replyTo) ⇒
+        case Ping(deviceId /*, replyTo*/ ) ⇒
           state.hashRing.foreach { hashRing ⇒
             //pick shard
             val shardName = hashRing.lookup(deviceId).head
@@ -176,7 +178,7 @@ object RingMaster {
             val replicaName = replicas(ind).shardHost
             ctx.log.warn("{} -> [{} - {}:{}]", deviceId, shardName, replicaRef, state.replicas.size)
             if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shardName")
-            else replicaRef.tell(PingDevice(deviceId, replicaName, replyTo))
+            else replicaRef.tell(ShardManager.PingDevice(deviceId, replicaName /*replyTo*/ ))
           }
           Behaviors.same
         case m @ MembershipChanged(rs) ⇒

@@ -58,7 +58,7 @@ package object crdt {
   val aborted  = ReplicatedJob(Aborted)
   val failed   = ReplicatedJob(Failed)
   val finished = ReplicatedJob(Finished)
-  */
+   */
 
   final case class Status(name: String)(preds: ⇒ Set[Status], succs: ⇒ Set[Status]) extends ReplicatedData {
     type T = Status

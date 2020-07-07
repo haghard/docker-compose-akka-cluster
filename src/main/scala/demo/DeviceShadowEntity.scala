@@ -3,6 +3,7 @@ package demo
 import akka.actor.typed.{ActorRef, Behavior, Signal}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
+import demo.RingMaster.PingDeviceReply
 
 /**
   * akka://dc/system/sharding/devices/127.0.0.1-2551/127.0.0.1-2551
@@ -12,6 +13,11 @@ import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
   * Should start a replicator instance for the given replica name
   */
 object DeviceShadowEntity {
+
+  sealed trait DeviceCommand {
+    def replica: String
+  }
+  case class PingDevice(id: Long, replica: String, reply: ActorRef[PingDeviceReply]) extends DeviceCommand
 
   val entityKey: EntityTypeKey[DeviceCommand] =
     EntityTypeKey[DeviceCommand]("devices")
@@ -40,10 +46,10 @@ object DeviceShadowEntity {
     entityCtx: EntityContext[DeviceCommand]
   )(implicit log: org.slf4j.Logger): Behavior[DeviceCommand] =
     Behaviors
-      .receiveMessage[DeviceCommand] {
-        case PingDevice(deviceId, _, replyTo) ⇒
+      .receiveMessage[DeviceShadowEntity.DeviceCommand] {
+        case DeviceShadowEntity.PingDevice(deviceId, _, replyTo) ⇒
           //log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
-          replicator.tell(ShardReplicator.PingReplicator(deviceId, replyTo))
+          replicator.tell(ShardReplicator.PingDeviceReplicator(deviceId, replyTo))
           active(replicator, replicaName, entityCtx) //orElse idle(log)
       }
       .receiveSignal(onSignal(log))
