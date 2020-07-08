@@ -78,7 +78,7 @@ object ShardReplicator {
         """.stripMargin
     )
 
-  def apply(shardName: String, to: FiniteDuration = 1.seconds): Behavior[Protocol] =
+  def apply(shardName: String, to: FiniteDuration = 1.second): Behavior[Protocol] =
     Behaviors.setup[Protocol] { ctx ⇒
       //WriteMajority(to) WriteTo(2, to)
       implicit val clusterCluster = Cluster(ctx.system.toClassic)
