@@ -178,3 +178,13 @@ https://github.com/chbatey/docker-jvm-akka/blob/master/docker-compose.yml
 https://dzone.com/articles/docker-container-resource-management-cpu-ram-and-i
 
 http://www.batey.info/docker-jvm-k8s.html
+
+
+### Why Streamee
+
+Goals: lossless deployment, back-pressure throughout the whole req/res pipeline.
+
+We have 2 node Alice and Bob. Both host actors and accept incoming requests via rest api. When we shutdown either of node we could lose request.
+In particular, if we shutdown Bob while actors on Bob haven't yet replied to actors on Alice, the requests that have started on Alice won't be 
+completed. The solution being is that leaving nodes should drain both incoming and outgoing channels. 
+Draining of incoming(local) requests channel (what CoordinatedShutdown give you) is not enough.

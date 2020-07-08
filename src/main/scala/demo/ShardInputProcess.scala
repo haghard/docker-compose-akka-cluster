@@ -39,7 +39,7 @@ object ShardInputProcess {
      */
 
     val shardingSink =
-      RestartSink.withBackoff(200.millis, 500.millis, 0.1)(() ⇒ Sink.futureSink(getSinkRef().map(_.sink)))
+      RestartSink.withBackoff(100.millis, 500.millis, 0.1)(() ⇒ Sink.futureSink(getSinkRef().map(_.sink)))
 
     either.tapErrors { errorTap ⇒
       Process[PingDevice, Either[CounterError, PingDeviceReply]]

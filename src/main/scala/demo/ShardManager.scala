@@ -24,7 +24,7 @@ object ShardManager {
   case class GetShardInfo(replyTo: akka.actor.typed.ActorRef[demo.RingMaster.Command])  extends Protocol
   case class GetSinkRef(replyTo: ActorRef[ProcessSinkRef[PingDevice, PingDeviceReply]]) extends Protocol
 
-  case class Config(timeout: FiniteDuration, parallelism: Int, bufferSize: Int)
+  case class Config(timeout: FiniteDuration, parallelism: Int)
 
   case object ProcessorCompleted extends Protocol
 
@@ -55,8 +55,7 @@ object ShardManager {
           .mapAsync(config.parallelism)(req ⇒
             shardRegion.ask[PingDeviceReply](DeviceShadowEntity.PingDevice(req.deviceId, req.replica, _))
           ),
-        "shard-input",
-        config.bufferSize
+        "shard-input"
       )
 
       mergeHub.whenDone.onComplete { _ ⇒

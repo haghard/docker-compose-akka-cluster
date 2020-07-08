@@ -187,9 +187,30 @@ object RingMaster {
 
             val updated =
               if (state.processors.get(shardManager).isEmpty) {
+
+                /**
+                  * https://en.wikipedia.org/wiki/Little%27s_law
+                  *
+                  * L = λ * W
+                  * L – the average number of items in a queuing system (queue size)
+                  * λ – the average number of items arriving at the system per unit of time
+                  * W – the average waiting time an item spends in a queuing system
+                  *
+                  * Question: How many processes running in parallel we need given
+                  * throughput = 100 rps and average latency = 100 millis  ?
+                  *
+                  * 100 * 0.1 = 10
+                  *
+                  * Give the numbers above, the Little’s Law shows that on average, having
+                  * queue size == 100,
+                  * parallelism factor == 10
+                  * average latency of single request == 100 millis
+                  * we can keep up with throughput = 100 rps
+                  */
                 val cfg = ShardInputProcess.Config(1.second, 10)
                 val shardingInput =
-                  FrontProcessor(ShardInputProcess(shardManager, cfg)(ctx.system), cfg.processorTimeout, "input")
+                  FrontProcessor(ShardInputProcess(shardManager, cfg)(ctx.system), cfg.processorTimeout, name = "input", bufferSize =100)
+
                 state.copy(processors = state.processors + (shardManager → shardingInput))
               } else state
 
@@ -203,7 +224,7 @@ object RingMaster {
               //TODO
               inputProcessor
                 .offer(PingDevice(deviceId, replicaName))
-                .onComplete(r ⇒ println(s"Ping result: ${r}"))(ctx.executionContext)
+                .onComplete(r ⇒ println(s"Ping result: $r"))(ctx.executionContext)
 
             converged(updated)
           }

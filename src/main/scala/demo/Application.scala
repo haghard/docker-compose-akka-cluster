@@ -180,26 +180,7 @@ object Application extends Ops {
 
             val hostName = cluster.selfMember.address.host.get
 
-            /**
-              * https://en.wikipedia.org/wiki/Little%27s_law
-              *
-              * L = λ * W
-              * L – the average number of items in a queuing system (queue size)
-              * λ – the average number of items arriving at the system per unit of time
-              * W – the average waiting time an item spends in a queuing system
-              *
-              * Question: How many processes running in parallel we need given
-              * throughput = 100 rps and average latency = 100 millis  ?
-              *
-              * 100 * 0.1 = 10
-              *
-              * Give the numbers above, the Little’s Law shows that on average, having
-              * queue size == 100,
-              * parallelism factor == 10
-              * average latency of single request == 100 millis
-              * we can keep up with throughput = 100 rps
-              */
-            val cfg0 = ShardManager.Config(1.second, 10, 100)
+            val cfg0 = ShardManager.Config(1.second, 10)
             val shardManager =
               ctx.spawn(ShardManager(shardName, hostName, cfg0), "shard-manager")
             ctx.watch(shardManager)
