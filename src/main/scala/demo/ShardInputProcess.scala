@@ -14,7 +14,7 @@ object ShardInputProcess {
 
   final case class CounterError(errMsg: String)
 
-  case class Config(processorTimeout: FiniteDuration, parallelism: Int)
+  case class Config(processorTimeout: FiniteDuration, parallelism: Int, bufferSize: Int)
 
   /**
     * A long-running process that links

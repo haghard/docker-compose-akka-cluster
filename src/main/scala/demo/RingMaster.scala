@@ -207,9 +207,14 @@ object RingMaster {
                   * average latency of single request == 100 millis
                   * we can keep up with throughput = 100 rps
                   */
-                val cfg = ShardInputProcess.Config(1.second, 10)
+                val cfg = ShardInputProcess.Config(1.second, 10, 100)
                 val shardingInput =
-                  FrontProcessor(ShardInputProcess(shardManager, cfg)(ctx.system), cfg.processorTimeout, name = "input", bufferSize =100)
+                  FrontProcessor(
+                    ShardInputProcess(shardManager, cfg)(ctx.system),
+                    cfg.processorTimeout,
+                    name = "input",
+                    bufferSize = cfg.bufferSize
+                  )
 
                 state.copy(processors = state.processors + (shardManager → shardingInput))
               } else state

@@ -8,9 +8,10 @@ import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, SupervisorStrategy}
 import akka.stream.StreamRefAttributes
+import akka.stream.scaladsl.{Flow, FlowWithContext}
 import akka.util.Timeout
 import demo.RingMaster.{PingDeviceReply, ShardInfo}
-import io.moia.streamee.{IntoableProcessor, Process, ProcessSinkRef}
+import io.moia.streamee.{IntoableProcessor, Process, ProcessSinkRef, Respondee}
 
 import scala.concurrent.duration._
 
@@ -21,10 +22,10 @@ import scala.concurrent.duration._
 object ShardManager {
 
   sealed trait Protocol
-  case class GetShardInfo(replyTo: akka.actor.typed.ActorRef[demo.RingMaster.Command])  extends Protocol
-  case class GetSinkRef(replyTo: ActorRef[ProcessSinkRef[PingDevice, PingDeviceReply]]) extends Protocol
+  final case class GetShardInfo(replyTo: akka.actor.typed.ActorRef[demo.RingMaster.Command])  extends Protocol
+  final case class GetSinkRef(replyTo: ActorRef[ProcessSinkRef[PingDevice, PingDeviceReply]]) extends Protocol
 
-  case class Config(timeout: FiniteDuration, parallelism: Int)
+  final case class Config(timeout: FiniteDuration, parallelism: Int, bufferSize: Int)
 
   case object ProcessorCompleted extends Protocol
 
@@ -50,12 +51,42 @@ object ShardManager {
       )
 
       val shardRegion = SharedDomain(replicator, shardName, ctx.system)
+
+      /*
+      val f: Flow[(PingDevice, Respondee[PingDeviceReply]), (PingDeviceReply, Respondee[PingDeviceReply]), Any] =
+        Process[PingDevice, PingDeviceReply]
+          .mapAsync(config.parallelism)(req ⇒
+            shardRegion.ask[PingDeviceReply](DeviceShadowEntity.PingDevice(req.deviceId, req.replica, _))
+          )
+          .asFlow
+          .batch(
+            config.parallelism,
+            {
+              case (reply, resp) ⇒
+                val rb = new RingBuffer[(PingDeviceReply,Respondee[PingDeviceReply])](config.parallelism)
+                rb.offer(reply -> resp)
+                rb
+            }
+          ) { (rb, tuple) ⇒
+            rb.offer(tuple)
+            rb
+          }
+          .mapConcat { rb ⇒
+            new scala.collection.immutable.Iterable[PingDeviceReply]() {
+              override def iterator: Iterator[PingDeviceReply] =
+                rb.entries.iterator
+            }
+          }
+      FlowWithContext.fromTuples(f)
+       */
+
       val mergeHub = IntoableProcessor(
         Process[PingDevice, PingDeviceReply]
           .mapAsync(config.parallelism)(req ⇒
             shardRegion.ask[PingDeviceReply](DeviceShadowEntity.PingDevice(req.deviceId, req.replica, _))
           ),
-        "shard-input"
+        "shard-input",
+        config.bufferSize
       )
 
       mergeHub.whenDone.onComplete { _ ⇒
@@ -78,7 +109,7 @@ object ShardManager {
           Behaviors.same
 
         case ShardManager.GetSinkRef(replyTo) ⇒
-          ctx.log.info(s"GetSinkRef for $shardName")
+          ctx.log.info(s"${classOf[GetSinkRef].getName} for $shardName")
           implicit val s = ctx.system
           replyTo.tell(processor.sinkRef(StreamRefAttributes.subscriptionTimeout(config.timeout)))
           Behaviors.same
