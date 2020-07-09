@@ -10,7 +10,6 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 import akka.actor.typed.scaladsl.adapter._
-import demo.ShardInputProcess.CounterError
 
 object Bootstrap {
   case object BindFailure   extends Reason
@@ -18,7 +17,6 @@ object Bootstrap {
 }
 
 case class Bootstrap(
-  //frontProcessor: io.moia.streamee.FrontProcessor[Long, Either[CounterError, Unit]],
   shardName: String,
   ringMaster: ActorRef[RingMaster.Command],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],

@@ -7,24 +7,33 @@ https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
 
 Sharding + Replication
 
-RingMaster is managed by cluster singleton. It holds a hash ring and redirects all incoming requests to a particular shard region.
-Each cluster node starts knowing its shard name. In other words, it starts a sharding region on a node with corresponding role.
-For example, we have following shards: alpha, betta, gamma. Each shard writes to/reads from its own shard region. 
+
+akka-cluster-sharding enables running at most one instance of a give actor in the cluster at any point in time
+acting as a consistency boundary. That's exactly what we want our shards to be. 
+Each process starts knowing its shard name (`alpha`, `betta` or `gamma`)
+It uses the given shard name as a cluster role and starts sharding on that role. Moreover, it will allocate only one instance of
+`DeviceShadowEntity` per node as we have one to one mapping between shard in entity.
+
+On each node that belongs to lets;s say `alpha` role, we allocate only one sharded entity. 
+Combination of host ip and port is used for shard/entity name, therefore it guarantees 
+that each node runs only one instance of sharded entity.
+
+Each node starts http api, therefore next q to answer being how we decide where the incoming requests should be routed? For that
+porpuse we have `RingMaster` actor. As processes join the cluster, they take ownership for token ranges on a hash ring based on shard name (role).
+`RingMaster` is deployed as cluster singleton, holds the hash redirects all incoming requests to a particular shard region(role form above).
 
 
 Therefore, if we have the following set of shards: 
-alpha, betta, gamma then we also have 3 independently running shard regions, each of which knows nothing about each other. 
+`alpha`, `betta`, `gamma` then we also have 3 independently running shard regions, each of which knows nothing about each other. 
 Each shard region is being used only inside a particular shard and each sharded entity become a replica of the shard. 
+In other words, each shard becomes its own distributed system as each sharded entity inside the shard runs its own independent replicator
 
-Each shard becomes its own distributed system as each sharded entity of each shard runs its own replicator
-
-On each node that belongs to alpha we allocate only one sharded entity. Combination of host ip and port is used as shard and entity names, therefore it guarantees that each node runs only one instance of sharded entity. Each sharded entity has the replicator actor inside.  
 
 
 Next question to address:
  When we add a new shard, say betta, in an operational cluster of 2 alpha nodes ([alpha -> 127.0.0.1-2551,127.0.0.2-2551]), 
  we need to transfer data, that from now on is associated with betta [alpha -> 127.0.0.1-2551,127.0.0.2-2551, betta -> 127.0.0.10-2551]
- ???
+ 
  
 
 ## Docker compose setup  
@@ -189,6 +198,12 @@ In particular, if we shutdown Bob while actors on Bob haven't yet replied to act
 completed. The solution being is that leaving nodes should drain both incoming and outgoing channels. 
 Draining of incoming(local) requests channel (what CoordinatedShutdown give you) is not enough.
 
+
 Why akka-cluster-sharding is not enough? The good part is that it guarantees that if a commands riches a shard region and the target sharded entity 
 gets rebalanced or crushed, the command will be buffered and re-routed to the entity once it's available again somewhere else. The problem being that 
 by the time the entity is available again, the caller may already get ask timeout, so we lose the associated response.
+
+### info about akka-cluster-sharding 
+
+https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
+https://www.youtube.com/watch?v=SrPubnOKJcQ

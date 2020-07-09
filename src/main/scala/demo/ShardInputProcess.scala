@@ -12,7 +12,7 @@ import scala.concurrent.duration.{FiniteDuration, _}
 
 object ShardInputProcess {
 
-  final case class CounterError(errMsg: String)
+  final case class ProcessError(errMsg: String)
 
   case class Config(processorTimeout: FiniteDuration, parallelism: Int, bufferSize: Int)
 
@@ -22,7 +22,7 @@ object ShardInputProcess {
   def apply(
     shardManager: ActorRef[ShardManager.Protocol],
     config: Config
-  )(implicit sys: ActorSystem[_]): Process[PingDevice, Either[CounterError, PingDeviceReply]] = {
+  )(implicit sys: ActorSystem[_]): Process[PingDevice, Either[ProcessError, PingDeviceReply]] = {
     import config._
     sys.log.warn("★ ★ ★ Start ShardInputProcess ★ ★ ★")
 
@@ -42,15 +42,15 @@ object ShardInputProcess {
       RestartSink.withBackoff(100.millis, 500.millis, 0.1)(() ⇒ Sink.futureSink(getSinkRef().map(_.sink)))
 
     either.tapErrors { errorTap ⇒
-      Process[PingDevice, Either[CounterError, PingDeviceReply]]
+      Process[PingDevice, Either[ProcessError, PingDeviceReply]]
         .map { req ⇒
-          if (req.deviceId <= 10) Left(CounterError("DeviceId should be more than 10")) else Right(req)
+          if (req.deviceId <= 10) Left(ProcessError("DeviceId should be more than 10")) else Right(req)
         }
         .errorTo(errorTap)
         .into(shardingSink, processorTimeout, parallelism)
         //.via(shardingFlow(shardingSink, processorTimeout))
         .map {
-          case PingDeviceReply.Error(err) ⇒ Left(CounterError(err))
+          case PingDeviceReply.Error(err) ⇒ Left(ProcessError(err))
           case PingDeviceReply.Success    ⇒ Right(PingDeviceReply.Success)
         }
         /*.mapConcat { replies: Seq[PingDeviceReply] =>

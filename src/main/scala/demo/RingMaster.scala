@@ -10,6 +10,7 @@ import io.moia.streamee.FrontProcessor
 
 import scala.collection.immutable.SortedMultiDict
 import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 object RingMaster {
 
@@ -36,7 +37,7 @@ object RingMaster {
     replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica],
     processors: Map[
       ActorRef[ShardManager.Protocol],
-      FrontProcessor[PingDevice, Either[ShardInputProcess.CounterError, PingDeviceReply]]
+      FrontProcessor[PingDevice, Either[ShardInputProcess.ProcessError, PingDeviceReply]]
     ] = Map.empty
   ) //grouped replicas by shard name
 
@@ -62,7 +63,7 @@ object RingMaster {
   case class GetCropCircle(replyTo: ActorRef[HttpRoutes.CropCircleView]) extends Command
 
   //TODO: serialization/des
-  case class PingReq(deviceId: Long) extends Command
+  case class PingReq(deviceId: Long, replyTo: ActorRef[PingDeviceReply]) extends Command
 
   case object Shutdown extends Command
 
@@ -173,7 +174,7 @@ object RingMaster {
   def converged(state: HashRingState)(implicit ctx: ActorContext[Command]): Behavior[Command] =
     Behaviors.withStash(bSize) { buf ⇒
       Behaviors.receiveMessage {
-        case PingReq(deviceId) ⇒
+        case PingReq(deviceId, replyTo) ⇒
           state.hashRing.fold(Behaviors.same[Command]) { hashRing ⇒
             implicit val system = ctx.system
             implicit val ec     = system.executionContext
@@ -225,16 +226,20 @@ object RingMaster {
             val replicaName = replicas(ind).shardHost
             ctx.log.warn("{} -> {}:{}", deviceId, shardName, state.replicas.size)
             if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shardName")
-            else
-              //TODO
-              inputProcessor
-                .offer(PingDevice(deviceId, replicaName))
-                .onComplete(r ⇒ println(s"Ping result: $r"))(ctx.executionContext)
+            else {
+              inputProcessor.offer(PingDevice(deviceId, replicaName)) //.pipeToSelf
+                .onComplete {
+                  case Success(r) =>
+                    replyTo.tell(r.fold(err=>PingDeviceReply.Error(err.errMsg))(identity))
+                  case Failure(err)  =>
+                    replyTo.tell(PingDeviceReply.Error(err.getMessage))
+
+                }(ctx.executionContext) }
 
             converged(updated)
           }
 
-        case m @ MembershipChanged(rs) ⇒
+          case m @ MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {
             ctx.self.tell(m)
             state.processors.foreach { kv ⇒

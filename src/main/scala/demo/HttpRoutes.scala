@@ -17,7 +17,8 @@ import akka.cluster.sharding.ShardRegion.ClusterShardingStats
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import ExtraHttpDirectives._
-import demo.ShardInputProcess.CounterError
+
+import scala.util.{Failure, Success}
 
 object HttpRoutes {
 
@@ -26,7 +27,6 @@ object HttpRoutes {
 
 case class HttpRoutes(
   ringMaster: ActorRef[RingMaster.Command],
-  //frontProcessor: io.moia.streamee.FrontProcessor[Long, Either[CounterError, Unit]],
   jvmMetricsSrc: ActorRef[ClusterJvmMetrics.Confirm],
   shardName: String
 )(implicit sys: ActorSystem[Nothing])
@@ -113,13 +113,10 @@ case class HttpRoutes(
   val pingRoute = extractLog { implicit log ⇒
     aroundRequest(logLatency(log)) {
       path("device" / LongNumber) { deviceId ⇒
-        ringMaster.tell(RingMaster.PingReq(deviceId))
-        complete(OK)
-
-      /*onSuccess(frontProcessor.offer(deviceId)) {
-          case Left(err) ⇒ complete(BadRequest → err.errMsg)
-          case Right(_)  ⇒ complete(OK)
-        }*/
+        onComplete(ringMaster.ask[RingMaster.PingDeviceReply](RingMaster.PingReq(deviceId, _))) {
+          case Failure(err) ⇒ complete(BadRequest → err)
+          case Success(_)  ⇒ complete(OK)
+        }
       }
     }
   }
