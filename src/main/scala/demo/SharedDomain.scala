@@ -44,10 +44,8 @@ object SharedDomain {
     val settings =
       ClusterShardingSettings(system)
         /*
-          rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
-          a different `ShardRegion` due to rebalance, crash or graceful exit. That is exactly what we want.
-          But there is one downside - the associated shard entity will be allocated on first message arrives(lazy allocation).
-          If you need to load massive amount of date in memory, it could be problematic.
+          Remembering entities automatically restarts entities after a rebalance or entity crash. Without remembered entities
+          restarts happen on the arrival of a message.  That is exactly what we want.
          */
         .withRememberEntities(false)
         .withStateStoreMode(StateStoreModeDData)
