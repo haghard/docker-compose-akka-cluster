@@ -207,3 +207,4 @@ by the time the entity is available again, the caller may already get ask timeou
 
 https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
 https://www.youtube.com/watch?v=SrPubnOKJcQ
+https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
