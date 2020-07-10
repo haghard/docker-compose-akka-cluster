@@ -12,7 +12,7 @@ import demo.RingMaster.PingDeviceReply
   *
   * Should start a replicator instance for the given replica name
   */
-object DeviceShadowEntity {
+object DeviceDigitalTwin {
 
   sealed trait DeviceCommand {
     def replica: String
@@ -46,8 +46,8 @@ object DeviceShadowEntity {
     entityCtx: EntityContext[DeviceCommand]
   )(implicit log: org.slf4j.Logger): Behavior[DeviceCommand] =
     Behaviors
-      .receiveMessage[DeviceShadowEntity.DeviceCommand] {
-        case DeviceShadowEntity.PingDevice(deviceId, _, replyTo) ⇒
+      .receiveMessage[DeviceDigitalTwin.DeviceCommand] {
+        case DeviceDigitalTwin.PingDevice(deviceId, _, replyTo) ⇒
           //log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
           replicator.tell(ShardReplicator.PingDeviceReplicator(deviceId, replyTo))
           active(replicator, replicaName, entityCtx) //orElse idle(log)

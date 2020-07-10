@@ -10,7 +10,7 @@ import scala.concurrent.duration._
 object SharedDomain {
 
   object DeviceMsgExtractor {
-    def apply[T <: DeviceShadowEntity.DeviceCommand]: ShardingMessageExtractor[T, T] =
+    def apply[T <: DeviceDigitalTwin.DeviceCommand]: ShardingMessageExtractor[T, T] =
       new ShardingMessageExtractor[T, T] {
 
         override def entityId(cmd: T): String = cmd.replica
@@ -27,7 +27,7 @@ object SharedDomain {
     replicator: ActorRef[ShardReplicator.Protocol],
     role: String, //alpha|betta|gamma
     system: akka.actor.typed.ActorSystem[_]
-  ): akka.actor.typed.ActorRef[DeviceShadowEntity.DeviceCommand] = {
+  ): akka.actor.typed.ActorRef[DeviceDigitalTwin.DeviceCommand] = {
 
     //Allocation strategy which decides on which nodes to allocate new shards.
     //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
@@ -43,12 +43,12 @@ object SharedDomain {
 
     val settings =
       ClusterShardingSettings(system)
-      /*
+        /*
           rememberEntities == false ensures that a shard entity won't be recreates/restarted automatically on
           a different `ShardRegion` due to rebalance, crash or graceful exit. That is exactly what we want.
           But there is one downside - the associated shard entity will be allocated on first message arrives(lazy allocation).
           If you need to load massive amount of date in memory, it could be problematic.
-       */
+         */
         .withRememberEntities(false)
         .withStateStoreMode(StateStoreModeDData)
         .withPassivateIdleEntityAfter(passivationTO)
@@ -69,8 +69,8 @@ object SharedDomain {
     )
      */
 
-    val entity = Entity(DeviceShadowEntity.entityKey)(DeviceShadowEntity(_, replicator, role))
-      .withMessageExtractor(DeviceMsgExtractor[DeviceShadowEntity.DeviceCommand])
+    val entity = Entity(DeviceDigitalTwin.entityKey)(DeviceDigitalTwin(_, replicator, role))
+      .withMessageExtractor(DeviceMsgExtractor[DeviceDigitalTwin.DeviceCommand])
       /*new ShardingMessageExtractor[DeviceCommand, DeviceCommand] {
           override def entityId(cmd: DeviceCommand): String             = cmd.replica
           override def shardId(entityId: String): String                = entityId

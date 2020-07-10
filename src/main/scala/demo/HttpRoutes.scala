@@ -115,7 +115,7 @@ case class HttpRoutes(
       path("device" / LongNumber) { deviceId ⇒
         onComplete(ringMaster.ask[RingMaster.PingDeviceReply](RingMaster.PingReq(deviceId, _))) {
           case Failure(err) ⇒ complete(BadRequest → err)
-          case Success(_)  ⇒ complete(OK)
+          case Success(_)   ⇒ complete(OK)
         }
       }
     }
@@ -128,7 +128,7 @@ case class HttpRoutes(
         complete {
           ClusterSharding(sys).shardState
             .ask[ClusterShardingStats](
-              akka.cluster.sharding.typed.GetClusterShardingStats(DeviceShadowEntity.entityKey, timeout.duration, _)
+              akka.cluster.sharding.typed.GetClusterShardingStats(DeviceDigitalTwin.entityKey, timeout.duration, _)
             )
             .map(stats ⇒ shardName + "\n" + stats.regions.mkString("\n"))
         }

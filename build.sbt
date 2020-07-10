@@ -50,8 +50,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %% "akka-slf4j"               % Akka,
   "org.scala-lang.modules" %% "scala-collection-contrib" % "0.2.1",
 
-  //custom build for 2.13
-  //"io.moia" %% "streamee" % "5.0.0-M1+1-691a3938+20190726-1217",
 
   "com.typesafe.akka"      %% "akka-http"                % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"     % akkaHttpVersion,

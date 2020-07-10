@@ -1,5 +1,6 @@
 package demo
 
+import akka.stream.Attributes.InputBuffer
 import akka.stream.KillSwitches
 import akka.stream.scaladsl.{Flow, FlowWithContext, Keep, MergeHub, Sink, Source}
 
@@ -35,4 +36,30 @@ package object either {
       }
     FlowWithContext.fromTuples(flow)
   }
+
+  def tapFlowErrors[T](
+    f: Sink[(String, T), Any] ⇒ Flow[T, T, akka.NotUsed]
+  ): Flow[T, Either[String, T], Future[akka.NotUsed]] =
+    Flow.fromMaterializer {
+      case (mat, attributes) ⇒
+        val ((errorTap, switch), errors) =
+          MergeHub
+            .source[(String, T)](attributes.get[InputBuffer].map(_.max).getOrElse(1))
+            .viaMat(KillSwitches.single)(Keep.both)
+            .toMat(Sink.asPublisher(false))(Keep.both)
+            .run()(mat)
+
+        val flow: Flow[T, Either[String, T], akka.NotUsed] =
+          f(errorTap)
+            .map(Right.apply)
+            .alsoTo(
+              Flow[Any]
+                .to(Sink.onComplete {
+                  case Success(_)     ⇒ switch.shutdown()
+                  case Failure(cause) ⇒ switch.abort(cause)
+                })
+            )
+
+        flow.merge(Source.fromPublisher(errors).map { case (e, _) ⇒ Left(e) })
+    }
 }

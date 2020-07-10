@@ -201,7 +201,7 @@ Draining of incoming(local) requests channel (what CoordinatedShutdown give you)
 
 Why akka-cluster-sharding is not enough? The good part is that it guarantees that if a commands riches a shard region and the target sharded entity 
 gets rebalanced or crushed, the command will be buffered and re-routed to the entity once it's available again somewhere else. The problem being that 
-by the time the entity is available again, the caller may already get ask timeout, so we lose the associated response.
+by the time the entity is available again, the caller may already get ask timeout, so we lose the response.
 
 ### info about akka-cluster-sharding 
 

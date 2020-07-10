@@ -83,7 +83,7 @@ object ShardManager {
       val mergeHub = IntoableProcessor(
         Process[PingDevice, PingDeviceReply]
           .mapAsync(config.parallelism)(req ⇒
-            shardRegion.ask[PingDeviceReply](DeviceShadowEntity.PingDevice(req.deviceId, req.replica, _))
+            shardRegion.ask[PingDeviceReply](DeviceDigitalTwin.PingDevice(req.deviceId, req.replica, _))
           ),
         "shard-input",
         config.bufferSize

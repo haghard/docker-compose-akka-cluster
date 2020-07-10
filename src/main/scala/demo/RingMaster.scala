@@ -226,20 +226,21 @@ object RingMaster {
             val replicaName = replicas(ind).shardHost
             ctx.log.warn("{} -> {}:{}", deviceId, shardName, state.replicas.size)
             if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shardName")
-            else {
-              inputProcessor.offer(PingDevice(deviceId, replicaName)) //.pipeToSelf
+            else
+              inputProcessor
+                .offer(PingDevice(deviceId, replicaName)) //.pipeToSelf
                 .onComplete {
-                  case Success(r) =>
-                    replyTo.tell(r.fold(err=>PingDeviceReply.Error(err.errMsg))(identity))
-                  case Failure(err)  =>
+                  case Success(r) ⇒
+                    replyTo.tell(r.fold(err ⇒ PingDeviceReply.Error(err.errMsg), identity))
+                  case Failure(err) ⇒
                     replyTo.tell(PingDeviceReply.Error(err.getMessage))
 
-                }(ctx.executionContext) }
+                }(ctx.executionContext)
 
             converged(updated)
           }
 
-          case m @ MembershipChanged(rs) ⇒
+        case m @ MembershipChanged(rs) ⇒
           if (rs.nonEmpty) {
             ctx.self.tell(m)
             state.processors.foreach { kv ⇒
