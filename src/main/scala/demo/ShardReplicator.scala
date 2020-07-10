@@ -6,11 +6,10 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.Cluster
 import akka.cluster.ddata.{PNCounterMap, PNCounterMapKey}
-import akka.cluster.ddata.typed.scaladsl.Replicator.{Command, ModifyFailure, StoreFailure, UpdateDataDeleted, UpdateSuccess, UpdateTimeout}
+import akka.cluster.ddata.typed.scaladsl.Replicator.{Command, ModifyFailure, StoreFailure, UpdateDataDeleted, UpdateSuccess, UpdateTimeout, _}
 import akka.cluster.ddata.typed.scaladsl.{Replicator, ReplicatorSettings}
 import com.typesafe.config.{Config, ConfigFactory}
 import akka.actor.typed.scaladsl.adapter._
-import akka.cluster.ddata.typed.scaladsl.Replicator._
 import akka.cluster.ddata.typed.scaladsl.ReplicatorMessageAdapter
 import demo.RingMaster.PingDeviceReply
 
@@ -99,31 +98,26 @@ object ShardReplicator {
           )
           Behaviors.same
 
-        case InternalUpdateResponse(res: UpdateSuccess[PNCounterMap[Long]], replyTo) ⇒
-          ctx.log.warn(s"UpdateSuccess: [${res.key.id}: ${res.request}]")
-          //To simulate io.moia.streamee.package$ResponseTimeoutException: No response within 1 second!
-          //if (ThreadLocalRandom.current().nextDouble() > .5) Thread.sleep(1100)
-          replyTo.tell(RingMaster.PingDeviceReply.Success)
-          Behaviors.same
-
-        case InternalUpdateResponse(res: UpdateTimeout[PNCounterMap[Long]], replyTo) ⇒
-          ctx.log.warn(s"UpdateTimeout: [${res.key.id}: ${res.request}]")
-          replyTo.tell(RingMaster.PingDeviceReply.Error(s"UpdateTimeout: [${res.key.id}]"))
+        case InternalUpdateResponse(res, replyTo) ⇒
+          res match {
+            case _: UpdateSuccess[PNCounterMap[Long]] ⇒
+              ctx.log.warn(s"UpdateSuccess: [${res.key.id}: ${res.request}]")
+              //To simulate io.moia.streamee.package$ResponseTimeoutException: No response within 1 second!
+              //if (ThreadLocalRandom.current().nextDouble() > .5) Thread.sleep(1100)
+              replyTo.tell(RingMaster.PingDeviceReply.Success)
+            case _: UpdateTimeout[PNCounterMap[Long]] ⇒
+              ctx.log.warn(s"UpdateTimeout: [${res.key.id}: ${res.request}]")
+              replyTo.tell(RingMaster.PingDeviceReply.Error(s"UpdateTimeout: [${res.key.id}]"))
+            case _: ModifyFailure[PNCounterMap[Long]]     ⇒
+            case _: StoreFailure[PNCounterMap[Long]]      ⇒
+            case _: UpdateDataDeleted[PNCounterMap[Long]] ⇒
+          }
           Behaviors.same
 
         case InternalDataUpdated(change @ Replicator.Changed(Key)) ⇒
           ctx.log.warn(s"[$shardName] - keys:[${change.get(Key).entries.mkString(",")}]")
           Behaviors.same
 
-        /*
-        case InternalUpdateResponse(_: ModifyFailure[PNCounterMap[Long]] @unchecked, replyTo) ⇒
-          //replyTo ! WFailure(sessionId, "ModifyFailure")
-          Behaviors.same
-
-        case InternalUpdateResponse(_: StoreFailure[PNCounterMap[Long]] @unchecked, replyTo) ⇒
-          replyTo ! WFailure(sessionId, "StoreFailure")
-          Behaviors.same
-         */
         case other ⇒
           ctx.log.warn(s"Unexpected message in ${getClass.getSimpleName}: $other")
           Behaviors.same
