@@ -193,13 +193,13 @@ http://www.batey.info/docker-jvm-k8s.html
 
 Goals: lossless deployment, back-pressure throughout the whole req/res pipeline.
 
-We have 2 node Alice and Bob. Both host actors and accept incoming requests via rest api. When we shutdown either of node we could lose request.
+We have 2 node Alice and Bob. Both host actors and accept incoming requests via rest api. When we shutdown either of nodes we could lose request.
 In particular, if we shutdown Bob while actors on Bob haven't yet replied to actors on Alice, the requests that have started on Alice won't be 
 completed. The solution being is that leaving nodes should drain both incoming and outgoing channels. 
-Draining of incoming(local) requests channel (what CoordinatedShutdown give you) is not enough.
+Draining of incoming(local) requests channel (what CoordinatedShutdown gives you) is not enough.
 
 
-Why akka-cluster-sharding is not enough? The good part is that it guarantees that if a commands riches a shard region and the target sharded entity 
+Why akka-cluster-sharding is not enough? The good part is that it guarantees that if a command riches a shard region and the target sharded entity 
 gets rebalanced or crushed, the command will be buffered and re-routed to the entity once it's available again somewhere else. The problem being that 
 by the time the entity is available again, the caller may already get ask timeout, so we lose the response.
 
