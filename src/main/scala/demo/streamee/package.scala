@@ -1,7 +1,7 @@
 package demo
 
-import akka.stream.Attributes.InputBuffer
 import akka.stream.KillSwitches
+import akka.stream.Attributes.InputBuffer
 import akka.stream.scaladsl.{Flow, FlowWithContext, Keep, MergeHub, Sink, Source}
 
 import scala.concurrent.Future
