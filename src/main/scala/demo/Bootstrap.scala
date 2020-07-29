@@ -76,7 +76,7 @@ case class Bootstrap(
         CoordinatedShutdown(classicSystem).addTask(PhaseServiceRequestsDone, "http-api.terminate") { () ⇒
           /**
             * It doesn't accept new connection but it drains the existing connections
-            * Until the `terminationDeadline` all the req that have been accepted will be completed
+            * Until the `terminationDeadline` all the req that had been accepted will be completed
             * and only than the shutdown will continue
             */
           binding.terminate(terminationDeadline).map { _ ⇒
