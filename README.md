@@ -178,6 +178,10 @@ ExternalShardAllocation https://doc.akka.io/docs/akka/current/typed/cluster-shar
 
 https://www.lightbend.com/blog/how-to-distribute-application-state-with-akka-cluster-part-1-getting-started
 
+### Akka CoordinatedShutdown
+
+https://medium.com/bestmile/orchestrating-startup-and-shutdown-in-scala-f7ad2644835a
+
 ### Docker  
 
 https://docs.docker.com/compose/compose-file/#resources
@@ -188,7 +192,6 @@ https://dzone.com/articles/docker-container-resource-management-cpu-ram-and-i
 
 http://www.batey.info/docker-jvm-k8s.html
 
-
 ### Why Streamee
 
 Goals: lossless deployment, back-pressure throughout the whole req/res pipeline.
@@ -198,6 +201,8 @@ In particular, if we shutdown Bob while actors on Bob haven't yet replied to act
 completed. The solution being is that leaving nodes should drain both incoming and outgoing channels. 
 Draining of incoming(local) requests channel (what CoordinatedShutdown gives you) is not enough.
 
+Streamee model long running processes and those processes are suitably hooked into CS to no longer accept new reqs and delay the shutdown until all accepted 
+req have been processed(across whole pipeline).  
 
 Why akka-cluster-sharding is not enough? The good part is that it guarantees that if a command riches a shard region and the target sharded entity 
 gets rebalanced or crushed, the command will be buffered and re-routed to the entity once it's available again somewhere else. The problem being that 

@@ -15,24 +15,27 @@ package object either {
   ): FlowWithContext[In, CtxIn, Either[E, Out], CtxOut, Future[Mat]] = {
     val flow =
       Flow.fromMaterializer {
-        case (mat, _) ⇒
+        case (mat, attr) ⇒
           val ((errorTap, switch), errors) =
             MergeHub
-              .source[(E, CtxOut)](1)
+              .source[(E, CtxOut)](1) //attr.get[InputBuffer].map(_.max).getOrElse(1)
               .viaMat(KillSwitches.single)(Keep.both)
               .toMat(Sink.asPublisher(false))(Keep.both)
               .run()(mat)
-          f(errorTap)
-            .map(Right.apply)
-            .asFlow
-            .alsoTo(
-              Flow[Any]
-                .to(Sink.onComplete {
-                  case Success(_)     ⇒ switch.shutdown()
-                  case Failure(cause) ⇒ switch.abort(cause)
-                })
-            )
-            .merge(Source.fromPublisher(errors).map { case (e, ctxOut) ⇒ (Left(e), ctxOut) })
+
+          val flow: Flow[(In, CtxIn), (Either[E, Out], CtxOut), Mat] =
+            f(errorTap)
+              .map(Right.apply)
+              .asFlow
+              .alsoTo(
+                Flow[Any]
+                  .to(Sink.onComplete {
+                    case Success(_)     ⇒ switch.shutdown()
+                    case Failure(cause) ⇒ switch.abort(cause)
+                  })
+              )
+
+          flow.merge(Source.fromPublisher(errors).map { case (e, ctxOut) ⇒ (Left(e), ctxOut) })
       }
     FlowWithContext.fromTuples(flow)
   }
