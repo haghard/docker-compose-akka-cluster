@@ -50,7 +50,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %% "akka-slf4j"               % Akka,
   "org.scala-lang.modules" %% "scala-collection-contrib" % "0.2.1",
 
-
   "com.typesafe.akka"      %% "akka-http"                % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"     % akkaHttpVersion,
   "ch.qos.logback"         % "logback-classic"           % "1.2.3",
@@ -66,11 +65,17 @@ sourceGenerators in Test += Def.task {
 
 scalafmtOnCompile := true
 
-enablePlugins(sbtdocker.DockerPlugin)
+
 
 mainClass in assembly := Some("demo.Application")
 
 assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
+
+buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion)
+
+buildInfoPackage := "demo"
+
+enablePlugins(sbtdocker.DockerPlugin, BuildInfoPlugin)
 
 // Resolve duplicates for Sbt Assembly
 assemblyMergeStrategy in assembly := {

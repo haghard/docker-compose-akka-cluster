@@ -113,6 +113,7 @@ object Application extends Ops {
       .append('\n')
       .append("★ ★ ★ RAM:" + memorySize / 1000000 + "Mb")
       .append('\n')
+      .append(s"Version:${demo.BuildInfo.version}")
       .append("=================================================================================================")
       .toString()
 
