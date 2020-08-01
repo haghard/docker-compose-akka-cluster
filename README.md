@@ -178,6 +178,12 @@ ExternalShardAllocation https://doc.akka.io/docs/akka/current/typed/cluster-shar
 
 https://www.lightbend.com/blog/how-to-distribute-application-state-with-akka-cluster-part-1-getting-started
 
+
+### CPU considerations for Java applications running in Docker and Kubernetes
+
+https://www.lightbend.com/blog/cpu-considerations-for-java-applications-running-in-docker-and-kubernetes
+
+
 ### Akka CoordinatedShutdown
 
 https://medium.com/bestmile/orchestrating-startup-and-shutdown-in-scala-f7ad2644835a
@@ -191,6 +197,7 @@ https://github.com/chbatey/docker-jvm-akka/blob/master/docker-compose.yml
 https://dzone.com/articles/docker-container-resource-management-cpu-ram-and-i
 
 http://www.batey.info/docker-jvm-k8s.html
+
 
 ### Why Streamee
 
