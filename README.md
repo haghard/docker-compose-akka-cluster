@@ -215,7 +215,7 @@ Why akka-cluster-sharding is not enough? The good part is that it guarantees tha
 gets rebalanced or crushed, the command will be buffered and re-routed to the entity once it's available again somewhere else. The problem being that 
 by the time the entity is available again, the caller may already get ask timeout, so we lose the response.
 
-### info about akka-cluster-sharding 
+### Akka-cluster-sharding links 
 
 https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
 https://www.youtube.com/watch?v=SrPubnOKJcQ
