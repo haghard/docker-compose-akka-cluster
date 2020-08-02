@@ -20,7 +20,7 @@ object ShardInputProcess {
     * A long-running process that links
     */
   def apply(
-    shardManager: ActorRef[ShardManager.Protocol],
+    shardManager: ActorRef[ShardEntryPoint.Protocol],
     config: Config
   )(implicit sys: ActorSystem[_]): Process[PingDevice, Either[ProcessError, PingDeviceReply]] = {
     import config._
@@ -30,7 +30,7 @@ object ShardInputProcess {
 
     def getSinkRef(): Future[ProcessSinkRef[PingDevice, PingDeviceReply]] =
       shardManager
-        .ask(ShardManager.GetSinkRef)(processorTimeout, sys.scheduler)
+        .ask(ShardEntryPoint.GetSinkRef)(processorTimeout, sys.scheduler)
     /*.recoverWith {
           case err ⇒
             sys.log.warn(s"Failed to get ${classOf[ShardManager.GetSinkRef]}: ${err.getMessage}")

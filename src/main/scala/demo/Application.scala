@@ -200,9 +200,9 @@ object Application extends Ops {
               * average latency of single request == 100 millis
               * we can keep up with throughput = 100 rps
               */
-            val procCfg = ShardManager.Config(1.second, 10, 100)
+            val procCfg = ShardEntryPoint.Config(1.second, 10, 100)
             val shardManager =
-              ctx.spawn(ShardManager(shardName, hostName, procCfg), "shard-manager")
+              ctx.spawn(ShardEntryPoint(shardName, hostName, procCfg), "shard-manager")
             ctx.watch(shardManager)
 
             Bootstrap(shardName, ringMaster, jvmMetrics, hostName, httpPort)(ctx.system.toClassic)
