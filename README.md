@@ -198,6 +198,8 @@ https://dzone.com/articles/docker-container-resource-management-cpu-ram-and-i
 
 http://www.batey.info/docker-jvm-k8s.html
 
+https://www.lightbend.com/blog/cpu-considerations-for-java-applications-running-in-docker-and-kubernetes?utm_campaign=Oktopost-COLL-Build+Stateful+Cloud+Native+Applications&utm_content=Oktopost-twitter&utm_medium=social&utm_source=twitter
+
 
 ### Why Streamee
 
@@ -220,3 +222,10 @@ by the time the entity is available again, the caller may already get ask timeou
 https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
 https://www.youtube.com/watch?v=SrPubnOKJcQ
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
+
+
+### SBT
+
+sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
+
+sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
