@@ -34,10 +34,9 @@ object DeviceDigitalTwin {
 
   private def onSignal(
     log: org.slf4j.Logger
-  ): PartialFunction[(ActorContext[DeviceCommand], Signal), Behavior[DeviceCommand]] = {
-    case (_, signal) ⇒
-      log.warn(s"Passivate sharded entity for replicator ${signal.getClass.getName}")
-      Behaviors.stopped[DeviceCommand]
+  ): PartialFunction[(ActorContext[DeviceCommand], Signal), Behavior[DeviceCommand]] = { case (_, signal) ⇒
+    log.warn(s"Passivate sharded entity for replicator ${signal.getClass.getName}")
+    Behaviors.stopped[DeviceCommand]
   }
 
   private def active(
@@ -46,11 +45,10 @@ object DeviceDigitalTwin {
     entityCtx: EntityContext[DeviceCommand]
   )(implicit log: org.slf4j.Logger): Behavior[DeviceCommand] =
     Behaviors
-      .receiveMessage[DeviceDigitalTwin.DeviceCommand] {
-        case DeviceDigitalTwin.PingDevice(deviceId, _, replyTo) ⇒
-          //log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
-          replicator.tell(ShardReplicator.PingDeviceReplicator(deviceId, replyTo))
-          active(replicator, replicaName, entityCtx) //orElse idle(log)
+      .receiveMessage[DeviceDigitalTwin.DeviceCommand] { case DeviceDigitalTwin.PingDevice(deviceId, _, replyTo) ⇒
+        //log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
+        replicator.tell(ShardReplicator.PingDeviceReplicator(deviceId, replyTo))
+        active(replicator, replicaName, entityCtx) //orElse idle(log)
       }
       .receiveSignal(onSignal(log))
 

@@ -117,10 +117,9 @@ object ShardEntryPoint {
         case ShardEntryPoint.ProcessorCompleted ⇒
           Behaviors.stopped
       }
-      .receiveSignal {
-        case (ctx, PostStop) ⇒
-          processor.shutdown()
-          CoordinatedShutdown(ctx.system).run(ShardManagerOutage)
-          Behaviors.same
+      .receiveSignal { case (ctx, PostStop) ⇒
+        processor.shutdown()
+        CoordinatedShutdown(ctx.system).run(ShardManagerOutage)
+        Behaviors.same
       }
 }

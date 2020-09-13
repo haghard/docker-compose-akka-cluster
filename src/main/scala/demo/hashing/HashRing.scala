@@ -33,8 +33,8 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
         .map(pId ⇒ (pId, lookup(pId).head))
         .toSet
 
-      val updatedRing = takeOvers.foldLeft(ring) {
-        case (ring, (pId, _)) ⇒ ring.updated(pId, node)
+      val updatedRing = takeOvers.foldLeft(ring) { case (ring, (pId, _)) ⇒
+        ring.updated(pId, node)
       }
 
       Some(HashRing(updatedRing, start, end, step) → takeOvers)

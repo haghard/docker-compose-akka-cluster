@@ -73,8 +73,8 @@ object RingMaster {
         ctx.system.receptionist.tell(
           Receptionist.Subscribe(
             RingMaster.shardManagerKey,
-            ctx.messageAdapter[Receptionist.Listing] {
-              case RingMaster.shardManagerKey.Listing(replicas) ⇒ MembershipChanged(replicas)
+            ctx.messageAdapter[Receptionist.Listing] { case RingMaster.shardManagerKey.Listing(replicas) ⇒
+              MembershipChanged(replicas)
             }
           )
         )
