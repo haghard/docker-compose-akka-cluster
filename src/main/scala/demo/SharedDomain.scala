@@ -1,6 +1,7 @@
 package demo
 
 import akka.actor.typed.ActorRef
+import akka.cluster.sharding.external.ExternalShardAllocationStrategy
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
 import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtractor}
@@ -81,7 +82,7 @@ object SharedDomain {
         * https://doc.akka.io/docs/akka/current/cluster-sharding.html#shard-location.
         */
       .withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 5))
-      //.withAllocationStrategy(new ExternalShardAllocationStrategy(system, DeviceShadowEntity.entityKey.name))
+      //.withAllocationStrategy(new ExternalShardAllocationStrategy(system, DeviceDigitalTwin.entityKey.name))
       .withSettings(settings)
       .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("akka.shard-dispatcher"))
 

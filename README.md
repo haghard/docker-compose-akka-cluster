@@ -229,3 +229,8 @@ https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.19346974
 sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
 
 sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
+
+
+### DO TO 
+
+Explore the opportunity to use `akka.cluster.sharding.external.ExternalShardAllocationStrategy`  

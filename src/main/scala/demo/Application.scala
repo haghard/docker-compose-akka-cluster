@@ -141,8 +141,8 @@ object Application extends Ops {
     Behaviors
       .setup[SelfUp] { ctx ⇒
         implicit val sys = ctx.system
-        implicit val ex  = sys.executionContext
         implicit val sch = sys.scheduler
+        implicit val ex  = sys.executionContext
 
         val cluster = Cluster(ctx.system)
         cluster.manager tell Join(seedAddress)

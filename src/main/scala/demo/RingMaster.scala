@@ -62,7 +62,7 @@ object RingMaster {
 
   case class GetCropCircle(replyTo: ActorRef[HttpRoutes.CropCircleView]) extends Command
 
-  //TODO: serialization/des
+  //TODO: serialization/deserialization
   case class PingReq(deviceId: Long, replyTo: ActorRef[PingDeviceReply]) extends Command
 
   case object Shutdown extends Command

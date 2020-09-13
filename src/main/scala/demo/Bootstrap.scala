@@ -50,6 +50,7 @@ case class Bootstrap(
   Http()
     .newServerAt(hostName, port)
     .bindFlow(HttpRoutes(ringMaster, jvmMetricsSrc, shardName)(classicSystem.toTyped).route)
+    //.map(_.addToCoordinatedShutdown(terminationDeadline))
     .onComplete {
       case Failure(ex) ⇒
         classicSystem.log.error(s"Shutting down because can't bind on $hostName:$port", ex)
