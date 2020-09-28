@@ -210,7 +210,7 @@ In particular, if we shutdown Bob while actors on Bob haven't yet replied to act
 completed. The solution being is that leaving nodes should drain both incoming and outgoing channels. 
 Draining of incoming(local) requests channel (what CoordinatedShutdown gives you) is not enough.
 
-Streamee model long running processes and those processes are suitably hooked into CS to no longer accept new reqs and delay the shutdown until all accepted 
+Streamee models long-running processes and those processes are suitably hooked into CS to no longer accept new reqs and delay the shutdown until all accepted 
 req have been processed(across whole pipeline).  
 
 Why akka-cluster-sharding is not enough? The good part is that it guarantees that if a command riches a shard region and the target sharded entity 
@@ -233,4 +233,4 @@ sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
 
 ### DO TO 
 
-Explore the opportunity to use `akka.cluster.sharding.external.ExternalShardAllocationStrategy`  
+Explore the opportunity to use `akka.cluster.sharding.external.ExternalShardAllocationStrategy` to control shard  allocation. 
