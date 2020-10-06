@@ -31,19 +31,26 @@ case class Bootstrap(
     .getSeconds
     .second
 
-  /*Http().bind(hostName, port)
-    .to(akka.stream.scaladsl.Sink.foreach { con =>
-      //increment counter
-      con.handleWith(new HttpRoutes(membersRef, srcRef, sr).route)
-      //decrement counter
-    }).run()*/
+  /*
+    Creates a Source of IncomingConnection
+    val serverSource: Source[Http.IncomingConnection, Future[Http.ServerBinding]] =
+      Http()
+        .newServerAt(interface, port)
+        .connectionSource()
+
+    serverSource
+      .to(
+        Sink.foreach { con ⇒
+          classicSystem.log.info("Accepted new connection from {}", con.remoteAddress)
+          con.handleWith(routes)
+        }
+      )
+   */
 
   Http()
-    .bindAndHandle(
-      HttpRoutes(ringMaster, jvmMetricsSrc, shardName)(classicSystem.toTyped).route,
-      hostName,
-      port
-    )
+    .newServerAt(hostName, port)
+    .bindFlow(HttpRoutes(ringMaster, jvmMetricsSrc, shardName)(classicSystem.toTyped).route)
+    //.map(_.addToCoordinatedShutdown(terminationDeadline))
     .onComplete {
       case Failure(ex) ⇒
         classicSystem.log.error(s"Shutting down because can't bind on $hostName:$port", ex)

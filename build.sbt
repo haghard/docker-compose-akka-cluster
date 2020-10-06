@@ -2,10 +2,10 @@ import sbt._
 import sbtdocker.ImageName
 
 val scalaV = "2.13.3"
-val Akka   = "2.6.8"
+val Akka   = "2.6.9"
 val AkkaManagement = "1.0.8"
 
-val akkaHttpVersion = "10.1.12"
+val akkaHttpVersion = "10.2.0"
 
 val Version = "0.3"
 
@@ -110,6 +110,7 @@ dockerfile in docker := {
 
   new sbtdocker.mutable.Dockerfile {
     from("adoptopenjdk/openjdk11")
+    //from("adoptopenjdk/openjdk12:x86_64-ubuntu-jre-12.0.2_10")
 
     //from("openjdk:8-jre")
     //from("adoptopenjdk/openjdk11:jdk-11.0.1.13")
@@ -148,6 +149,7 @@ dockerfile in docker := {
       "-XX:MinRAMPercentage=50",
       "-XX:+PreferContainerQuotaForCPUCount", //Added in JDK11. Support for using the cpu_quota instead of cpu_shares for
       // picking the number of cores the JVM uses to makes decisions such as how many compiler threads, GC threads and sizing of the fork join pool
+      //These env vars are set in docker-compose2.yml
       s"-DseedHost=${sys.env.get("SEED_DNS").getOrElse(throw new Exception("env var SEED_DNS is expected"))}",
       s"-DseedPort=${sys.env.get("AKKA_PORT").getOrElse(throw new Exception("env var AKKA_PORT is expected"))}",
       s"-DhttpPort=${sys.env.get("HTTP_PORT").getOrElse(throw new Exception("env var HTTP_PORT is expected"))}",

@@ -62,7 +62,7 @@ object RingMaster {
 
   case class GetCropCircle(replyTo: ActorRef[HttpRoutes.CropCircleView]) extends Command
 
-  //TODO: serialization/des
+  //TODO: serialization/deserialization
   case class PingReq(deviceId: Long, replyTo: ActorRef[PingDeviceReply]) extends Command
 
   case object Shutdown extends Command
@@ -176,7 +176,7 @@ object RingMaster {
     *
     * Optimizations:
     *
-    *   Instead of storing all actorRef in HashRingState I can store only one per shardName (Lease holder|leader per shard)
+    *   Instead of storing all actorRef in HashRingState I could store only one Lease holder|Leader per shard
     *   and interact with it.
     */
   def converged(state: HashRingState)(implicit ctx: ActorContext[Command]): Behavior[Command] =

@@ -224,10 +224,10 @@ In particular, if we shutdown Bob while actors on Bob haven't yet replied to act
 completed. The solution being is that leaving nodes should drain both incoming and outgoing channels. 
 Draining of incoming(local) requests channel (what CoordinatedShutdown gives you) is not enough.
 
-Streamee model long running processes and those processes are suitably hooked into CS to no longer accept new reqs and delay the shutdown until all accepted 
+Streamee models long-running processes and those processes are suitably hooked into CS to no longer accept new reqs and delay the shutdown until all accepted 
 req have been processed(across whole pipeline).  
 
-Why akka-cluster-sharding is not enough? The good part is that it guarantees that if a command reaches a shard region and the target sharded entity 
+Why akka-cluster-sharding is not enough? The good part is that it guarantees that if a command riches a shard region and the target sharded entity 
 gets rebalanced or crushed, the command will be buffered and re-routed to the entity once it's available again somewhere else. The problem being that 
 by the time the entity is available again, the caller may already get ask timeout, so we lose the response.
 
@@ -245,10 +245,3 @@ https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.19346974
 sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
 
 sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
-
-
-### TO DO
-
-Try to use akka.kafka.cluster.sharding.KafkaClusterSharding
-from /Users/vadim_bondarev/Projects/akka-samples/akka-sample-kafka-to-sharding-scala
-for cluster membership changes
