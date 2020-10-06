@@ -11,8 +11,9 @@ import spray.json.{JsArray, JsNumber, JsObject, JsString}
 
   Similar to https://github.com/justin-db/JustinDB/blob/844a3f6f03192ff3e8248a15712fecd754e06fbc/justin-ring/src/main/scala/justin/db/consistenthashing/Ring.scala
   and https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/dht/Murmur3Partitioner.java
+  https://medium.com/better-programming/load-balancers-and-consistent-hashing-in-6-minutes-b5fc460aea4e
  */
-case class HashRing(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
+final case class HashRing(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
 
   /**
     * Alias for [[add]] method
@@ -33,8 +34,8 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
         .map(pId ⇒ (pId, lookup(pId).head))
         .toSet
 
-      val updatedRing = takeOvers.foldLeft(ring) {
-        case (ring, (pId, _)) ⇒ ring.updated(pId, node)
+      val updatedRing = takeOvers.foldLeft(ring) { case (ring, (pId, _)) ⇒
+        ring.updated(pId, node)
       }
 
       Some(HashRing(updatedRing, start, end, step) → takeOvers)
@@ -54,9 +55,9 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
         case Nil ⇒ ring
         case h :: t ⇒
           if (t.size == 0) ring - h
-          else if (t.size == 1) ring - (h, t.head)
-          else if (t.size == 2) ring - (h, t.head, t(1))
-          else ring - (h, t.head, t.tail: _*)
+          else if (t.size == 1) ring -- List(h, t.head)
+          else if (t.size == 2) ring -- List(h, t.head, t.head)
+          else ring -- (h :: t)
       }
 
       Some(HashRing(m, start, end, step) → ranges(node))

@@ -1,10 +1,13 @@
 package demo
 
+import akka.actor
 import akka.actor.typed.ActorRef
+import akka.cluster.sharding.ShardRegion.ShardId
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.cluster.sharding.typed.ClusterShardingSettings.StateStoreModeDData
 import akka.cluster.sharding.typed.{ClusterShardingSettings, ShardingMessageExtractor}
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 object SharedDomain {
@@ -34,7 +37,7 @@ object SharedDomain {
     //Distributed processing with Akka Cluster & Kafka https://youtu.be/Ad2DyOn4dlY?t=197
     //https://github.com/akka/akka-samples/tree/2.6/akka-sample-kafka-to-sharding-scala
 
-    //TODO: To make explicit allocations. Try it out
+    //TODO: To make explicit allocations. Try it out in RingMaster
     //val shardAllocation = ExternalShardAllocation(system).clientFor(DeviceShadowEntity.entityKey.name)
     //shardAllocation.shardLocations()
     //val _: Future[Done] = shardAllocation.updateShardLocation(shardName, system.address)
@@ -45,7 +48,7 @@ object SharedDomain {
       ClusterShardingSettings(system)
         /*
           Remembering entities automatically restarts entities after a rebalance or entity crash. Without remembered entities
-          restarts happen on the arrival of a message.  That is exactly what we want.
+          restarts happen on the arrival of a message. That is exactly what we want in this case.
          */
         .withRememberEntities(false)
         .withStateStoreMode(StateStoreModeDData)
@@ -81,7 +84,7 @@ object SharedDomain {
         * https://doc.akka.io/docs/akka/current/cluster-sharding.html#shard-location.
         */
       .withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 5))
-      //.withAllocationStrategy(new ExternalShardAllocationStrategy(system, DeviceShadowEntity.entityKey.name))
+      //.withAllocationStrategy(new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, DeviceDigitalTwin.entityKey.name))
       .withSettings(settings)
       .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("akka.shard-dispatcher"))
 

@@ -90,10 +90,9 @@ object ClusterJvmMetrics {
           ctx.log.warn("Unexpected message: {} active", other.getClass.getName)
           Behaviors.same
       }
-      .receiveSignal {
-        case (ctx, PostStop) ⇒
-          ctx.log.debug("ClusterJvmMetrics.PostStop")
-          source.tell(StreamFailure(new Exception("JvmMetrics should never stop")))
-          Behaviors.stopped
+      .receiveSignal { case (ctx, PostStop) ⇒
+        ctx.log.debug("ClusterJvmMetrics.PostStop")
+        source.tell(StreamFailure(new Exception("JvmMetrics should never stop")))
+        Behaviors.stopped
       }
 }

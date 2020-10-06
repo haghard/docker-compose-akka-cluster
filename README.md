@@ -5,6 +5,20 @@
 https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
 
 
+Cluster-sharding keywords: scale, consistency and failover.
+
+* Balance resources (memory, disk space, network traffic) across multiple nodes for scalability.
+* Distribute entities and data across many nodes in the cluster
+* Location transparency: Interact by logical identifier versus physical location which can change over time.
+* Automatic relocation on failure (rebalancing)
+
+
+Shards are distributed in shard regions. 
+
+Persistent actor entity - stateful, long-lived, addressable entity.
+
+
+
 Sharding + Replication
 
 
@@ -213,9 +227,11 @@ Draining of incoming(local) requests channel (what CoordinatedShutdown gives you
 Streamee model long running processes and those processes are suitably hooked into CS to no longer accept new reqs and delay the shutdown until all accepted 
 req have been processed(across whole pipeline).  
 
-Why akka-cluster-sharding is not enough? The good part is that it guarantees that if a command riches a shard region and the target sharded entity 
+Why akka-cluster-sharding is not enough? The good part is that it guarantees that if a command reaches a shard region and the target sharded entity 
 gets rebalanced or crushed, the command will be buffered and re-routed to the entity once it's available again somewhere else. The problem being that 
 by the time the entity is available again, the caller may already get ask timeout, so we lose the response.
+
+It buffers during rebalancing which takes place when a node fails or  
 
 ### Akka-cluster-sharding links 
 
@@ -229,3 +245,10 @@ https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.19346974
 sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
 
 sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
+
+
+### TO DO
+
+Try to use akka.kafka.cluster.sharding.KafkaClusterSharding
+from /Users/vadim_bondarev/Projects/akka-samples/akka-sample-kafka-to-sharding-scala
+for cluster membership changes

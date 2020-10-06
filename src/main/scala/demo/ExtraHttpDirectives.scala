@@ -41,10 +41,9 @@ object ExtraHttpDirectives {
                         // On an empty entity, `transformDataBytes` unsets `isKnownEmpty`.
                         // Call onDone right away, since there's no significant amount of
                         // data to send, anyway.
-                        entity.transformDataBytes(Flow[ByteString].watchTermination() {
-                          case (m, f) ⇒
-                            f.map(_ ⇒ c)(tuple._2).onComplete(onDone)(tuple._2)
-                            m
+                        entity.transformDataBytes(Flow[ByteString].watchTermination() { case (m, f) ⇒
+                          f.map(_ ⇒ c)(tuple._2).onComplete(onDone)(tuple._2)
+                          m
                         })
                     }
                   )
