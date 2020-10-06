@@ -51,7 +51,7 @@ final case class HashRing(private val ring: SortedMap[Long, String], start: Long
     if (!nodes.contains(node))
       None
     else {
-      val m = ranges(node) match {
+      val updatedRing = ranges(node) match {
         case Nil ⇒ ring
         case h :: t ⇒
           if (t.size == 0) ring - h
@@ -60,7 +60,7 @@ final case class HashRing(private val ring: SortedMap[Long, String], start: Long
           else ring -- (h :: t)
       }
 
-      Some(HashRing(m, start, end, step) → ranges(node))
+      Some(HashRing(updatedRing, start, end, step) → ranges(node))
     }
 
   def last: Long = ring.lastKey
