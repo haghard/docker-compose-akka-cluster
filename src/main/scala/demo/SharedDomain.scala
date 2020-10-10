@@ -79,14 +79,21 @@ object SharedDomain {
         * https://github.com/akka/akka/blob/master/akka-cluster-sharding/src/main/scala/akka/cluster/sharding/ShardCoordinator.scala#L71 and
         * https://doc.akka.io/docs/akka/current/cluster-sharding.html#shard-location.
         */
-      .withAllocationStrategy(new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(1, 5))
-      //.withAllocationStrategy(new ExternalShardAllocationStrategy(system, DeviceShadowEntity.entityKey.name))
+      .withAllocationStrategy(
+        new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(
+          rebalanceThreshold = 1,
+          maxSimultaneousRebalance = 3
+        )
+      )
+      //.withAllocationStrategy(new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, DeviceDigitalTwin.entityKey.name))
       .withSettings(settings)
       .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("akka.shard-dispatcher"))
 
     //val shardAllocationClient = e.allocationStrategy.get.asInstanceOf[ExternalShardAllocationStrategy]
     // .clientFor(DeviceShadowEntity.entityKey.name)
     //.updateShardLocation("chat0", system.path.address)
+
+    //akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy.leastShardAllocationStrategy(1, 0.5)
 
     sharding.init(entity)
   }
