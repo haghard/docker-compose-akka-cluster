@@ -5,6 +5,20 @@
 https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
 
 
+Cluster-sharding keywords: scale, consistency and failover.
+
+* Balance resources (memory, disk space, network traffic) across multiple nodes for scalability.
+* Distribute entities and data across many nodes in the cluster
+* Location transparency: Interact by logical identifier versus physical location which can change over time.
+* Automatic relocation on failure (rebalancing)
+
+
+Shards are distributed in shard regions. 
+
+Persistent actor entity - stateful, long-lived, addressable entity.
+
+
+
 Sharding + Replication
 
 
@@ -217,6 +231,8 @@ Why akka-cluster-sharding is not enough? The good part is that it guarantees tha
 gets rebalanced or crushed, the command will be buffered and re-routed to the entity once it's available again somewhere else. The problem being that 
 by the time the entity is available again, the caller may already get ask timeout, so we lose the response.
 
+It buffers during rebalancing which takes place when a node fails or  
+
 ### Akka-cluster-sharding links 
 
 https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
@@ -229,8 +245,3 @@ https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.19346974
 sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
 
 sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
-
-
-### DO TO 
-
-Explore the opportunity to use `akka.cluster.sharding.external.ExternalShardAllocationStrategy` to control shard  allocation. 
