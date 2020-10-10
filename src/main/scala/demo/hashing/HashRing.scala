@@ -14,14 +14,12 @@ import spray.json.{JsArray, JsNumber, JsObject, JsString}
  */
 case class HashRing(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
 
-  /**
-    * Alias for [[add]] method
+  /** Alias for [[add]] method
     */
   def :+(node: String): Option[(HashRing, Set[(Long, String)])] =
     add(node)
 
-  /**
-    * Adds a node on ring.
+  /** Adds a node on ring.
     * When we add new node, it changes the ownership of some ranges by splitting it up.
     */
   def add(node: String): Option[(HashRing, Set[(Long, String)])] =
@@ -40,8 +38,7 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
       Some(HashRing(updatedRing, start, end, step) → takeOvers)
     }
 
-  /**
-    * Alias for [[remove]] method
+  /** Alias for [[remove]] method
     */
   def :-(node: String): Option[(HashRing, List[Long])] =
     remove(node)

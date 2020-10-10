@@ -5,8 +5,7 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 import demo.RingMaster.PingDeviceReply
 
-/**
-  * akka://dc/system/sharding/devices/127.0.0.1-2551/127.0.0.1-2551
+/** akka://dc/system/sharding/devices/127.0.0.1-2551/127.0.0.1-2551
   * akka://dc/system/sharding/devices/127.0.0.2-2551/127.0.0.2-2551
   * akka://dc/system/sharding/devices/127.0.0.2-2551/127.0.0.2-2551
   *

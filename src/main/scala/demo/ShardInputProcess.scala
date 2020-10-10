@@ -16,8 +16,7 @@ object ShardInputProcess {
 
   case class Config(processorTimeout: FiniteDuration, parallelism: Int, bufferSize: Int)
 
-  /**
-    * A long-running process that links
+  /** A long-running process that links
     */
   def apply(
     shardManager: ActorRef[ShardEntryPoint.Protocol],

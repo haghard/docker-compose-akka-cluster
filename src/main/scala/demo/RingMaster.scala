@@ -171,8 +171,7 @@ object RingMaster {
         Behaviors.stopped
     }
 
-  /**
-    * TODO:
+  /** TODO:
     *
     * Optimizations:
     *
@@ -197,8 +196,7 @@ object RingMaster {
             val updated =
               if (state.processors.get(shardManager).isEmpty) {
 
-                /**
-                  * https://en.wikipedia.org/wiki/Little%27s_law
+                /** https://en.wikipedia.org/wiki/Little%27s_law
                   *
                   * L = λ * W
                   * L – the average number of items in a queuing system (queue size)

@@ -12,8 +12,7 @@ import io.moia.streamee.{IntoableProcessor, Process, ProcessSinkRef, Respondee}
 
 import scala.concurrent.duration._
 
-/**
-  * Starts a shard region with specified shard name and
+/** Starts a shard region with specified shard name and
   * forwards all incoming messages to the shard region
   */
 object ShardEntryPoint {

@@ -76,8 +76,7 @@ object SharedDomain {
           override def unwrapMessage(cmd: DeviceCommand): DeviceCommand = cmd
         }*/
       //default AllocationStrategy
-      /**
-        * The default ShardAllocationStrategy will allocate shards on the least-loaded nodes. See
+      /** The default ShardAllocationStrategy will allocate shards on the least-loaded nodes. See
         * https://github.com/akka/akka/blob/master/akka-cluster-sharding/src/main/scala/akka/cluster/sharding/ShardCoordinator.scala#L71 and
         * https://doc.akka.io/docs/akka/current/cluster-sharding.html#shard-location.
         */

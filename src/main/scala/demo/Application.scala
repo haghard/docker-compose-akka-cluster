@@ -180,8 +180,7 @@ object Application extends Ops {
 
           val hostName = cluster.selfMember.address.host.get
 
-          /**
-            * https://en.wikipedia.org/wiki/Little%27s_law
+          /** https://en.wikipedia.org/wiki/Little%27s_law
             *
             * L = λ * W
             * L – the average number of items in a queuing system (queue size)
