@@ -80,10 +80,12 @@ object SharedDomain {
         * https://doc.akka.io/docs/akka/current/cluster-sharding.html#shard-location.
         */
       .withAllocationStrategy(
-        new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(
+        /*new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(
           rebalanceThreshold = 1,
           maxSimultaneousRebalance = 3
-        )
+        )*/
+        //https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=2.114148035.592677992.1602252039-408157630.1602252039#shard-allocation
+        akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy.leastShardAllocationStrategy(20, 0.5)
       )
       //.withAllocationStrategy(new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, DeviceDigitalTwin.entityKey.name))
       .withSettings(settings)
@@ -93,7 +95,7 @@ object SharedDomain {
     // .clientFor(DeviceShadowEntity.entityKey.name)
     //.updateShardLocation("chat0", system.path.address)
 
-    //akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy.leastShardAllocationStrategy(1, 0.5)
+
 
     sharding.init(entity)
   }
