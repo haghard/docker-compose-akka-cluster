@@ -171,13 +171,6 @@ object RingMaster {
         Behaviors.stopped
     }
 
-  /** TODO:
-    *
-    * Optimizations:
-    *
-    *   Instead of storing all actorRef in HashRingState I could store only one Lease holder|Leader per shard
-    *   and interact with it.
-    */
   def converged(state: HashRingState)(implicit ctx: ActorContext[Command]): Behavior[Command] =
     Behaviors.withStash(bSize) { buf ⇒
       Behaviors.receiveMessage {

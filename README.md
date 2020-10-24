@@ -240,6 +240,12 @@ https://www.youtube.com/watch?v=SrPubnOKJcQ
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
 
 
+### To DO
+
+Instead of storing all actorRef in HashRingState I could store only one Leaseholder per shard and interact with it.
+
+
+
 ### SBT
 
 sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
