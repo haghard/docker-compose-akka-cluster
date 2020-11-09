@@ -95,8 +95,6 @@ object SharedDomain {
     // .clientFor(DeviceShadowEntity.entityKey.name)
     //.updateShardLocation("chat0", system.path.address)
 
-
-
     sharding.init(entity)
   }
 }

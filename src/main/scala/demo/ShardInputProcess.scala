@@ -38,7 +38,9 @@ object ShardInputProcess {
      */
 
     val shardingSink =
-      RestartSink.withBackoff(akka.stream.RestartSettings(100.millis, 500.millis, 0.1))(() ⇒ Sink.futureSink(getSinkRef().map(_.sink)))
+      RestartSink.withBackoff(akka.stream.RestartSettings(100.millis, 500.millis, 0.1))(() ⇒
+        Sink.futureSink(getSinkRef().map(_.sink))
+      )
 
     either.tapErrors { errorTap ⇒
       Process[PingDevice, Either[ProcessError, PingDeviceReply]]

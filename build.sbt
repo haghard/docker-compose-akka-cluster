@@ -48,7 +48,7 @@ libraryDependencies ++= Seq(
   //"com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.1",
   //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
   "com.typesafe.akka"      %% "akka-slf4j"               % Akka,
-  "org.scala-lang.modules" %% "scala-collection-contrib" % "0.2.1",
+  "org.scala-lang.modules" %% "scala-collection-contrib" % "0.2.2",
 
   "com.typesafe.akka"      %% "akka-http"                % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"     % akkaHttpVersion,
@@ -162,7 +162,7 @@ dockerfile in docker := {
 
 ThisBuild / turbo := true
 
-fork in run := true
+//fork in run := true
 
 //sbt -DSHARD=a runA0
 //sbt -DSHARD=a runA1
