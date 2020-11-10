@@ -12,10 +12,9 @@ import io.moia.streamee.{IntoableProcessor, Process, ProcessSinkRef, Respondee}
 
 import scala.concurrent.duration._
 
-/** Starts a shard region with specified shard name and
-  * forwards all incoming messages to the shard region
+/** Starts a shard region with specified shard name and forwards all incoming messages to the shard region
   */
-object ShardEntryPoint {
+object ShardEntrance {
 
   sealed trait Protocol
   final case class GetShardInfo(replyTo: akka.actor.typed.ActorRef[demo.RingMaster.Command])  extends Protocol
@@ -31,8 +30,8 @@ object ShardEntryPoint {
     shardName: String,    //"alpha"
     shardAddress: String, //"172.20.0.3-2551"
     config: Config
-  ): Behavior[ShardEntryPoint.Protocol] =
-    Behaviors.setup[ShardEntryPoint.Protocol] { ctx ⇒
+  ): Behavior[ShardEntrance.Protocol] =
+    Behaviors.setup[ShardEntrance.Protocol] { ctx ⇒
       implicit val sys         = ctx.system
       implicit val to: Timeout = Timeout(config.timeout)
 
@@ -98,20 +97,20 @@ object ShardEntryPoint {
     shardName: String,
     shardAddress: String,
     config: Config
-  )(implicit ctx: ActorContext[ShardEntryPoint.Protocol]): Behavior[ShardEntryPoint.Protocol] =
+  )(implicit ctx: ActorContext[ShardEntrance.Protocol]): Behavior[ShardEntrance.Protocol] =
     Behaviors
-      .receiveMessage[ShardEntryPoint.Protocol] {
-        case ShardEntryPoint.GetShardInfo(ringMaster) ⇒
+      .receiveMessage[ShardEntrance.Protocol] {
+        case ShardEntrance.GetShardInfo(ringMaster) ⇒
           ringMaster.tell(ShardInfo(shardName, ctx.self, shardAddress))
           Behaviors.same
 
-        case ShardEntryPoint.GetSinkRef(replyTo) ⇒
+        case ShardEntrance.GetSinkRef(replyTo) ⇒
           ctx.log.info(s"${classOf[GetSinkRef].getName} for $shardName")
           implicit val s = ctx.system
           replyTo.tell(processor.sinkRef(StreamRefAttributes.subscriptionTimeout(config.timeout)))
           Behaviors.same
 
-        case ShardEntryPoint.ProcessorCompleted ⇒
+        case ShardEntrance.ProcessorCompleted ⇒
           Behaviors.stopped
       }
       .receiveSignal { case (ctx, PostStop) ⇒

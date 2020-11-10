@@ -20,7 +20,7 @@ object RingMaster {
   private val replyTimeout = 1000.millis
 
   private val timeoutKey = "to"
-  val shardManagerKey    = ServiceKey[ShardEntryPoint.Protocol]("shard-manager")
+  val shardManagerKey    = ServiceKey[ShardEntrance.Protocol]("shard-manager")
 
   private val bSize = 1 << 6
 
@@ -28,7 +28,7 @@ object RingMaster {
 
   //case class Replica(ref: ActorRef[ShardManager.Protocol], shardHost: String) // 127.0.0.1-2551
   case class Replica(
-    shardManager: ActorRef[ShardEntryPoint.Protocol],
+    shardManager: ActorRef[ShardEntrance.Protocol],
     shardHost: String
   ) // 127.0.0.1-2551
 
@@ -36,7 +36,7 @@ object RingMaster {
     hashRing: Option[HashRing] = None, //hash ring for shards
     replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica],
     processors: Map[
-      ActorRef[ShardEntryPoint.Protocol],
+      ActorRef[ShardEntrance.Protocol],
       FrontProcessor[PingDevice, Either[ShardInputProcess.ProcessError, PingDeviceReply]]
     ] = Map.empty
   ) //grouped replicas by shard name
@@ -52,9 +52,9 @@ object RingMaster {
 
   case class ClusterStateRequest(replyTo: ActorRef[ClusterStateResponse]) extends Command
 
-  case class MembershipChanged(replicas: Set[ActorRef[ShardEntryPoint.Protocol]]) extends Command
+  case class MembershipChanged(replicas: Set[ActorRef[ShardEntrance.Protocol]]) extends Command
 
-  case class ShardInfo(shardName: String, shardManager: ActorRef[ShardEntryPoint.Protocol], shardAddress: String)
+  case class ShardInfo(shardName: String, shardManager: ActorRef[ShardEntrance.Protocol], shardAddress: String)
       extends Command
 
   //case class RolesInfo(m: Map[String, Set[ActorRef[ShardManager.Protocol]]]) extends Command
@@ -100,22 +100,22 @@ object RingMaster {
 
   def reqInfo(
     self: ActorRef[Command],
-    head: ActorRef[ShardEntryPoint.Protocol],
-    tail: Set[ActorRef[ShardEntryPoint.Protocol]],
+    head: ActorRef[ShardEntrance.Protocol],
+    tail: Set[ActorRef[ShardEntrance.Protocol]],
     state: HashRingState,
     stash: StashBuffer[Command],
     numOfTry: Int = 0
   )(implicit ctx: ActorContext[Command]): Behavior[Command] =
     Behaviors.withTimers { timer ⇒
       timer.startSingleTimer(timeoutKey, ReplyTimeout, replyTimeout)
-      head.tell(ShardEntryPoint.GetShardInfo(self))
+      head.tell(ShardEntrance.GetShardInfo(self))
       awaitInfo(self, head, tail, state, stash, timer, numOfTry)(ctx)
     }
 
   def awaitInfo(
     self: ActorRef[Command],
-    head: ActorRef[ShardEntryPoint.Protocol],
-    tail: Set[ActorRef[ShardEntryPoint.Protocol]],
+    head: ActorRef[ShardEntrance.Protocol],
+    tail: Set[ActorRef[ShardEntrance.Protocol]],
     state: HashRingState,
     buf: StashBuffer[Command],
     timer: TimerScheduler[Command],
