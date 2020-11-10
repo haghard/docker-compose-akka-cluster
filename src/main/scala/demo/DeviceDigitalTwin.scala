@@ -1,7 +1,7 @@
 package demo
 
-import akka.actor.typed.{ActorRef, Behavior, Signal}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import akka.actor.typed.{ActorRef, Behavior, Signal}
 import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 import demo.RingMaster.PingDeviceReply
 

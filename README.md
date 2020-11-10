@@ -241,8 +241,7 @@ https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.19346974
 
 ### To DO
 
-1. 
-Instead of storing all actorRef in HashRingState I could store only one Leaseholder per shard and interact with it.
+1. Instead of storing all actorRef in HashRingState I could store only one Leaseholder per shard and interact with it.
 
 2. Chord, a protocol and algorithm for a peer-to-peer distributed hash table.
 
