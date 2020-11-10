@@ -1,22 +1,18 @@
 package demo
 
-import java.util.concurrent.ThreadLocalRandom
-
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import akka.cluster.Cluster
-import akka.cluster.ddata.{PNCounterMap, PNCounterMapKey}
-import akka.cluster.ddata.typed.scaladsl.Replicator.{Command, ModifyFailure, StoreFailure, UpdateDataDeleted, UpdateSuccess, UpdateTimeout, _}
-import akka.cluster.ddata.typed.scaladsl.{Replicator, ReplicatorSettings}
-import com.typesafe.config.{Config, ConfigFactory}
 import akka.actor.typed.scaladsl.adapter._
-import akka.cluster.ddata.typed.scaladsl.ReplicatorMessageAdapter
+import akka.actor.typed.{ActorRef, Behavior}
+import akka.cluster.Cluster
+import akka.cluster.ddata.typed.scaladsl.Replicator.{Command, ModifyFailure, StoreFailure, UpdateDataDeleted, UpdateSuccess, UpdateTimeout, _}
+import akka.cluster.ddata.typed.scaladsl.{Replicator, ReplicatorMessageAdapter, ReplicatorSettings}
+import akka.cluster.ddata.{PNCounterMap, PNCounterMapKey}
+import com.typesafe.config.{Config, ConfigFactory}
 import demo.RingMaster.PingDeviceReply
 
-import scala.concurrent.duration._
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{FiniteDuration, _}
 
-object ShardReplicator {
+object ShardReplica {
 
   sealed trait Protocol
 

@@ -24,7 +24,7 @@ object SharedDomain {
   private val passivationTO = 120.seconds //TODO: make it configurable
 
   def apply(
-    replicator: ActorRef[ShardReplicator.Protocol],
+    replicator: ActorRef[ShardReplica.Protocol],
     role: String, //alpha|betta|gamma
     system: akka.actor.typed.ActorSystem[_]
   ): akka.actor.typed.ActorRef[DeviceDigitalTwin.DeviceCommand] = {

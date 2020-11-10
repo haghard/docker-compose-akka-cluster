@@ -23,7 +23,7 @@ object DeviceDigitalTwin {
 
   def apply(
     entityCtx: EntityContext[DeviceCommand],
-    replicator: ActorRef[ShardReplicator.Protocol],
+    replicator: ActorRef[ShardReplica.Protocol],
     replicaName: String
   ): Behavior[DeviceCommand] =
     Behaviors.setup { ctx ⇒
@@ -39,14 +39,14 @@ object DeviceDigitalTwin {
   }
 
   private def active(
-    replicator: ActorRef[ShardReplicator.Protocol],
+    replicator: ActorRef[ShardReplica.Protocol],
     replicaName: String,
     entityCtx: EntityContext[DeviceCommand]
   )(implicit log: org.slf4j.Logger): Behavior[DeviceCommand] =
     Behaviors
       .receiveMessage[DeviceDigitalTwin.DeviceCommand] { case DeviceDigitalTwin.PingDevice(deviceId, _, replyTo) ⇒
         //log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
-        replicator.tell(ShardReplicator.PingDeviceReplicator(deviceId, replyTo))
+        replicator.tell(ShardReplica.PingDeviceReplicator(deviceId, replyTo))
         active(replicator, replicaName, entityCtx) //orElse idle(log)
       }
       .receiveSignal(onSignal(log))

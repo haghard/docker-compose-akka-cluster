@@ -40,7 +40,7 @@ object ShardEntrance {
 
       val replicator = ctx.spawn(
         Behaviors
-          .supervise(ShardReplicator(shardName))
+          .supervise(ShardReplica(shardName))
           .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true)),
         "replicator"
       )
