@@ -191,6 +191,7 @@ ExternalShardAllocation https://doc.akka.io/docs/akka/current/typed/cluster-shar
 
 https://www.lightbend.com/blog/how-to-distribute-application-state-with-akka-cluster-part-1-getting-started
 
+https://blog.knoldus.com/introduction-to-akka-cluster-sharding/
 
 ### CPU considerations for Java applications running in Docker and Kubernetes
 

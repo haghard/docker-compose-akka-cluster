@@ -24,7 +24,7 @@ object ShardEntrance {
 
   case object ProcessorCompleted extends Protocol
 
-  case object ShardManagerOutage extends Reason
+  case object ShardEntranceOutage extends Reason
 
   def apply(
     shardName: String,    //"alpha"
@@ -101,6 +101,7 @@ object ShardEntrance {
     Behaviors
       .receiveMessage[ShardEntrance.Protocol] {
         case ShardEntrance.GetShardInfo(ringMaster) ⇒
+          //Example:  ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
           ringMaster.tell(ShardInfo(shardName, ctx.self, shardAddress))
           Behaviors.same
 
@@ -115,7 +116,7 @@ object ShardEntrance {
       }
       .receiveSignal { case (ctx, PostStop) ⇒
         processor.shutdown()
-        CoordinatedShutdown(ctx.system).run(ShardManagerOutage)
+        CoordinatedShutdown(ctx.system).run(ShardEntranceOutage)
         Behaviors.same
       }
 }

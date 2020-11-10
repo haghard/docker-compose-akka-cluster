@@ -20,7 +20,7 @@ object RingMaster {
   private val replyTimeout = 1000.millis
 
   private val timeoutKey = "to"
-  val shardManagerKey    = ServiceKey[ShardEntrance.Protocol]("shard-manager")
+  val shardManagerKey    = ServiceKey[ShardEntrance.Protocol]("shard-entrance")
 
   private val bSize = 1 << 6
 
@@ -28,7 +28,7 @@ object RingMaster {
 
   //case class Replica(ref: ActorRef[ShardManager.Protocol], shardHost: String) // 127.0.0.1-2551
   case class Replica(
-    shardManager: ActorRef[ShardEntrance.Protocol],
+    shardEntrance: ActorRef[ShardEntrance.Protocol],
     shardHost: String
   ) // 127.0.0.1-2551
 
@@ -54,10 +54,9 @@ object RingMaster {
 
   case class MembershipChanged(replicas: Set[ActorRef[ShardEntrance.Protocol]]) extends Command
 
-  case class ShardInfo(shardName: String, shardManager: ActorRef[ShardEntrance.Protocol], shardAddress: String)
+  case class ShardInfo(shardName: String, shardEntrance: ActorRef[ShardEntrance.Protocol], shardAddress: String)
       extends Command
 
-  //case class RolesInfo(m: Map[String, Set[ActorRef[ShardManager.Protocol]]]) extends Command
   case object ReplyTimeout extends Command
 
   case class GetCropCircle(replyTo: ActorRef[HttpRoutes.CropCircleView]) extends Command
@@ -123,7 +122,7 @@ object RingMaster {
   )(implicit ctx: ActorContext[Command]): Behavior[Command] =
     Behaviors.receiveMessage {
       //ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
-      case ShardInfo(shardName, shardManager, shardAddress) ⇒
+      case ShardInfo(shardName, shardEntrance, shardAddress) ⇒
         timer.cancel(timeoutKey)
         implicit val s  = ctx.system
         implicit val ec = ctx.executionContext
@@ -133,7 +132,7 @@ object RingMaster {
           case Some(r) ⇒ (r :+ shardName).map(_._1).getOrElse(r)
         }
 
-        val updatedReplicas = state.replicas.add(shardName, Replica(shardManager, shardAddress))
+        val updatedReplicas = state.replicas.add(shardName, Replica(shardEntrance, shardAddress))
         val updatedState    = state.copy(Some(uHash), updatedReplicas)
 
         if (tail.nonEmpty)
@@ -184,7 +183,7 @@ object RingMaster {
             //randomly pick a shard replica
             val replicas     = state.replicas.get(shardName).toVector
             val ind          = ThreadLocalRandom.current.nextInt(0, replicas.size)
-            val shardManager = replicas(ind).shardManager
+            val shardManager = replicas(ind).shardEntrance
 
             val updated =
               if (state.processors.get(shardManager).isEmpty) {
@@ -267,7 +266,7 @@ object RingMaster {
           //state.shardHash.foreach(r ⇒ replyTo.tell(CropCircleView(r.toCropCircle)))
 
           val circle = state.replicas.keySet.foldLeft(CropCircle("circle")) { (circle, c) ⇒
-            state.replicas.get(c).map(_.shardManager.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
+            state.replicas.get(c).map(_.shardEntrance.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
               circle :+ (c, actorPath)
             }
           }
