@@ -18,7 +18,6 @@ Shards are distributed in shard regions.
 Persistent actor entity - stateful, long-lived, addressable entity.
 
 
-
 Sharding + Replication
 
 
@@ -26,7 +25,7 @@ akka-cluster-sharding enables running at most one instance of a give actor in th
 acting as a consistency boundary. That's exactly what we want our shards to be. 
 Each process starts knowing its shard name (`alpha`, `betta` or `gamma`)
 It uses the given shard name as a cluster role and starts sharding on that role. Moreover, it will allocate only one instance of
-`DeviceShadowEntity` per node as we have one to one mapping between shard in entity.
+`DeviceDigitalTwin` per node as we have one-to-one mapping between shard in entity.
 
 On each node that belongs to lets;s say `alpha` role, we allocate only one sharded entity. 
 Combination of host ip and port is used for shard/entity name, therefore it guarantees 
@@ -242,8 +241,17 @@ https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.19346974
 
 ### To DO
 
+1. 
 Instead of storing all actorRef in HashRingState I could store only one Leaseholder per shard and interact with it.
 
+2. Chord, a protocol and algorithm for a peer-to-peer distributed hash table.
+
+Examples:
+
+    https://www.youtube.com/watch?v=imNYRPO74R8
+
+    https://github.com/tristanpenman/chordial.git
+    https://github.com/denis631/chord-dht.git
 
 
 ### SBT
