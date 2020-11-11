@@ -77,17 +77,17 @@ object RingMaster {
             }
           )
         )
-        converge(HashRingState(), buf)(ctx)
+        converged(HashRingState(), buf)(ctx)
       }
     }
 
-  def converge(state: HashRingState, buf: StashBuffer[Command])(implicit
-    ctx: ActorContext[Command]
+  def converged(state: HashRingState, buf: StashBuffer[Command])(
+    implicit ctx: ActorContext[Command]
   ): Behavior[Command] =
     Behaviors.receiveMessage {
       case MembershipChanged(rs) ⇒
         ctx.log.warn("MembershipChanged: [{}]", rs.mkString(", "))
-        if (rs.nonEmpty) reqInfo(ctx.self, rs.head, rs.tail, state, buf) else Behaviors.same
+        if (rs.nonEmpty) pollCluster(ctx.self, rs.head, rs.tail, state, buf) else Behaviors.same
       case cmd: PingDevice ⇒
         //TODO: respond fast, because we're not ready yet
         ctx.log.warn("{} respond fast, because we're not ready yet", cmd)
@@ -97,7 +97,7 @@ object RingMaster {
         Behaviors.same
     }
 
-  def reqInfo(
+  def pollCluster(
     self: ActorRef[Command],
     head: ActorRef[ShardEntrance.Protocol],
     tail: Set[ActorRef[ShardEntrance.Protocol]],
@@ -136,22 +136,22 @@ object RingMaster {
         val updatedState    = state.copy(Some(uHash), updatedReplicas)
 
         if (tail.nonEmpty)
-          reqInfo(self, tail.head, tail.tail, updatedState, buf)
+          pollCluster(self, tail.head, tail.tail, updatedState, buf)
         else if (buf.isEmpty) {
           val info = updatedReplicas.keySet
             .map(k ⇒ s"[$k -> ${updatedReplicas.get(k).map(_.shardHost).mkString(",")}]")
             .mkString(";")
           ctx.log.warn("★ ★ ★  Ring {}  [{}] ★ ★ ★", info, updatedState.processors.keySet.mkString(","))
           converged(updatedState)
-        } else buf.unstashAll(converge(state, buf))
+        } else buf.unstashAll(converged(state, buf))
       case ReplyTimeout ⇒
         ctx.log.warn(s"No response within $replyTimeout. Retry {}", head)
-        if (numOfTry < retryLimit) reqInfo(self, head, tail, state, buf, numOfTry + 1)
+        if (numOfTry < retryLimit) pollCluster(self, head, tail, state, buf, numOfTry + 1)
         else if (tail.nonEmpty) {
           ctx.log.warn(s"Declare {} death. Move on to the {}", head, tail.head)
-          reqInfo(self, tail.head, tail.tail, state, buf)
+          pollCluster(self, tail.head, tail.tail, state, buf)
         } else if (buf.isEmpty) converged(state)
-        else buf.unstashAll(converge(state, buf))
+        else buf.unstashAll(converged(state, buf))
       case m @ MembershipChanged(rs) if rs.nonEmpty ⇒
         buf.stash(m)
         Behaviors.same
@@ -178,15 +178,15 @@ object RingMaster {
             implicit val system = ctx.system
             implicit val ec     = system.executionContext
 
-            //pick up shard
+            //pick up the target shard
             val shardName = hashRing.lookup(deviceId).head
-            //randomly pick a shard replica
+            //randomly pick up the shard replica
             val replicas     = state.replicas.get(shardName).toVector
             val ind          = ThreadLocalRandom.current.nextInt(0, replicas.size)
-            val shardManager = replicas(ind).shardEntrance
+            val shardEntrance = replicas(ind).shardEntrance
 
             val updated =
-              if (state.processors.get(shardManager).isEmpty) {
+              if (state.processors.get(shardEntrance).isEmpty) {
 
                 /** https://en.wikipedia.org/wiki/Little%27s_law
                   *
@@ -209,21 +209,21 @@ object RingMaster {
                 val cfg = ShardInputProcess.Config(1.second, 10, 100)
                 val shardingInput =
                   FrontProcessor(
-                    ShardInputProcess(shardManager, cfg)(ctx.system),
+                    ShardInputProcess(shardEntrance, cfg)(ctx.system),
                     cfg.processorTimeout,
-                    name = "input",
+                    name = s"$shardName-entrance",
                     bufferSize = cfg.bufferSize
                   )
 
-                state.copy(processors = state.processors + (shardManager → shardingInput))
+                state.copy(processors = state.processors + (shardEntrance → shardingInput))
               } else state
 
-            val inputProcessor = updated.processors(shardManager)
+            val inputProcessor = updated.processors(shardEntrance)
 
             //127.0.0.1-2551 or 127.0.0.1-2552 or ...
             val replicaName = replicas(ind).shardHost
             ctx.log.warn("{} -> {}:{}", deviceId, shardName, state.replicas.size)
-            if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find actorRefs for $shardName")
+            if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find shardEntrance for $shardName")
             else
               inputProcessor
                 .offer(PingDevice(deviceId, replicaName)) //.pipeToSelf
@@ -232,7 +232,6 @@ object RingMaster {
                     replyTo.tell(r.fold(err ⇒ PingDeviceReply.Error(err.errMsg), identity))
                   case Failure(err) ⇒
                     replyTo.tell(PingDeviceReply.Error(err.getMessage))
-
                 }(ctx.executionContext)
 
             converged(updated)
@@ -246,7 +245,7 @@ object RingMaster {
               kv._2.whenDone
                 .foreach(_ ⇒ println(s"Stopped ShardInputProcess for: ${kv._1.path.toString}"))(ctx.executionContext)
             }
-            converge(HashRingState(), buf)
+            converged(HashRingState(), buf)
           } else Behaviors.same
 
         case ClusterStateRequest(r) ⇒

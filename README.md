@@ -240,11 +240,11 @@ https://www.youtube.com/watch?v=SrPubnOKJcQ
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
 
 
-### To DO
+### Future plans
 
 1. Instead of storing all actorRef in HashRingState I could store only one Leaseholder per shard and interact with it.
-
-2. Chord, a protocol and algorithm for a peer-to-peer distributed hash table.
+2. ExternalShardAllocation to control shard allocation
+3. Chord, a protocol and algorithm for a peer-to-peer distributed hash table.
 
 Examples:
 
