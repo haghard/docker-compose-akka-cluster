@@ -5,10 +5,10 @@ import akka.actor.CoordinatedShutdown.Reason
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, SupervisorStrategy}
-import akka.stream.StreamRefAttributes
+import akka.stream.{Materializer, StreamRefAttributes}
 import akka.util.Timeout
 import demo.RingMaster.{PingDeviceReply, ShardInfo}
-import io.moia.streamee.{IntoableProcessor, Process, ProcessSinkRef, Respondee}
+import io.moia.streamee.{IntoableProcessor, Process, ProcessSinkRef}
 
 import scala.concurrent.duration._
 
@@ -81,7 +81,7 @@ object ShardEntrance {
           .mapAsync(config.parallelism)(req ⇒
             shardRegion.ask[PingDeviceReply](DeviceDigitalTwin.PingDevice(req.deviceId, req.replica, _))
           ),
-        "shard-input",
+        s"$shardName-into-entrance",
         config.bufferSize
       )
 
@@ -106,8 +106,9 @@ object ShardEntrance {
           Behaviors.same
 
         case ShardEntrance.GetSinkRef(replyTo) ⇒
-          ctx.log.info(s"${classOf[GetSinkRef].getName} for $shardName")
+          //ctx.log.info(s"${classOf[GetSinkRef].getName} for $shardName")
           implicit val s = ctx.system
+          //implicit val m = Materializer.matFromSystem(akka.actor.typed.scaladsl.adapter.TypedActorSystemOps(ctx.system).toClassic)
           replyTo.tell(processor.sinkRef(StreamRefAttributes.subscriptionTimeout(config.timeout)))
           Behaviors.same
 

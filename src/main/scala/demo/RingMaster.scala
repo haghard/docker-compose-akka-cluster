@@ -211,7 +211,7 @@ object RingMaster {
                   FrontProcessor(
                     ShardInputProcess(shardEntrance, cfg)(ctx.system),
                     cfg.processorTimeout,
-                    name = s"$shardName-entrance",
+                    name = s"$shardName-front-entrance",
                     bufferSize = cfg.bufferSize
                   )
 
