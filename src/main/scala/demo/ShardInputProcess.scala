@@ -16,11 +16,11 @@ object ShardInputProcess {
 
   case class Config(processorTimeout: FiniteDuration, parallelism: Int, bufferSize: Int)
 
-  /** A long-running process that links
+  /** A long-running process that links this  with EntryPoint
     */
   def apply(
-    shardManager: ActorRef[ShardEntrance.Protocol],
-    config: Config
+             entryPoint: ActorRef[EntryPoint.Protocol],
+             config: Config
   )(implicit sys: ActorSystem[_]): Process[PingDevice, Either[ProcessError, PingDeviceReply]] = {
     import config._
     sys.log.warn("★ ★ ★ Start ShardInputProcess ★ ★ ★")
@@ -28,8 +28,8 @@ object ShardInputProcess {
     implicit val ec = sys.executionContext
 
     def getSinkRef(): Future[ProcessSinkRef[PingDevice, PingDeviceReply]] =
-      shardManager
-        .ask(ShardEntrance.GetSinkRef)(processorTimeout, sys.scheduler)
+      entryPoint
+        .ask(EntryPoint.GetSinkRef)(processorTimeout, sys.scheduler)
     /*.recoverWith {
           case err ⇒
             sys.log.warn(s"Failed to get ${classOf[ShardManager.GetSinkRef]}: ${err.getMessage}")

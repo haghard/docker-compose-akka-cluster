@@ -2,7 +2,6 @@ package demo
 
 import java.lang.management.ManagementFactory
 import java.net.NetworkInterface
-
 import akka.actor.typed._
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.adapter._
@@ -26,6 +25,7 @@ LocalDateTime.now()
  */
 
 object Application extends Ops {
+  case object EntryPointInternalError extends CoordinatedShutdown.Reason
 
   val SystemName            = "dc"
   val metricsDispatcherName = "akka.metrics-dispatcher"
@@ -148,67 +148,63 @@ object Application extends Ops {
         cluster.manager tell Join(seedAddress)
         cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
 
-        Behaviors.receive[SelfUp] { case (ctx, _ @SelfUp(state)) ⇒
-          val clusterMembers = state.members.filter(_.status == MemberStatus.Up).map(_.address)
-          ctx.log.warn(
-            "★ ★ ★ {} {}:{} joined cluster with existing members:[{}] ★ ★ ★",
-            shardName,
-            cfg.getString(AKKA_HOST),
-            cfg.getInt(AKKA_PORT),
-            clusterMembers
-          )
-          ctx.log.info(runtimeInfo)
-          cluster.subscriptions ! Unsubscribe(ctx.self)
-
-          val ringMaster = ClusterSingleton(ctx.system)
-            .init(
-              SingletonActor(
-                Behaviors
-                  .supervise(RingMaster())
-                  .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true)),
-                "ring-master"
-              ).withStopMessage(RingMaster.Shutdown)
+        Behaviors.receive[SelfUp] {
+          case (ctx, _ @SelfUp(state)) ⇒
+            val clusterMembers = state.members.filter(_.status == MemberStatus.Up).map(_.address)
+            ctx.log.warn(
+              "★ ★ ★ {} {}:{} joined cluster with existing members:[{}] ★ ★ ★",
+              shardName,
+              cfg.getString(AKKA_HOST),
+              cfg.getInt(AKKA_PORT),
+              clusterMembers
             )
+            ctx.log.info(runtimeInfo)
+            cluster.subscriptions ! Unsubscribe(ctx.self)
 
-          val jvmMetrics = ctx
-            .spawn(
-              ClusterJvmMetrics(),
-              "jvm-metrics",
+            val ringMaster = ClusterSingleton(ctx.system)
+              .init(
+                SingletonActor(
+                  Behaviors
+                    .supervise(RingMaster())
+                    .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true)),
+                  "ring-master"
+                ).withStopMessage(RingMaster.Shutdown)
+              )
+
+            val jvmMetrics = ctx.spawn(ClusterJvmMetrics(), "jvm-metrics",
               DispatcherSelector.fromConfig("akka.metrics-dispatcher")
-            )
-            .narrow[ClusterJvmMetrics.Confirm]
+            ).narrow[ClusterJvmMetrics.Confirm]
 
-          val hostName = cluster.selfMember.address.host.get
+            val hostName = cluster.selfMember.address.host.get
+            BootstrapHttp(shardName, ringMaster, jvmMetrics, hostName, httpPort)(ctx.system.toClassic)
 
-          /** https://en.wikipedia.org/wiki/Little%27s_law
-            *
-            * L = λ * W
-            * L – the average number of items in a queuing system (queue size)
-            * λ – the average number of items arriving at the system per unit of time
-            * W – the average waiting time an item spends in a queuing system
-            *
-            * Question: How many processes running in parallel we need given
-            * throughput = 100 rps and average latency = 100 millis  ?
-            *
-            * 100 * 0.1 = 10
-            *
-            * Give the numbers above, the Little’s Law shows that on average, having
-            * queue size == 100,
-            * parallelism factor == 10
-            * average latency of single request == 100 millis
-            * we can keep up with throughput = 100 rps
-            */
-          val procCfg = ShardEntrance.Config(1.second, 10, 100)
-          val shardManager =
-            ctx.spawn(ShardEntrance(shardName, hostName, procCfg), "shard-manager")
-          ctx.watch(shardManager)
+            /** https://en.wikipedia.org/wiki/Little%27s_law
+              *
+              * L = λ * W
+              * L – the average number of items in a queuing system (queue size)
+              * λ – the average number of items arriving at the system per unit of time
+              * W – the average waiting time an item spends in a queuing system
+              *
+              * Question: How many processes running in parallel we need given
+              * throughput = 100 rps and average latency = 100 millis  ?
+              *
+              * 100 * 0.1 = 10
+              *
+              * Give the numbers above, the Little’s Law shows that on average, having
+              * queue size == 100,
+              * parallelism factor == 10
+              * average latency of single request == 100 millis
+              * we can keep up with throughput = 100 rps
+              */
+            val procCfg = EntryPoint.Config(timeout = 1.second, parallelism = 10, bufferSize = 100)
+            val entryPoint = ctx.spawn(EntryPoint(shardName, hostName, procCfg), "entry-point")
+            ctx.watch(entryPoint)
 
-          Bootstrap(shardName, ringMaster, jvmMetrics, hostName, httpPort)(ctx.system.toClassic)
-
-          Behaviors.receiveSignal { case (_, Terminated(shardManager)) ⇒
-            ctx.log.warn(s"$shardManager has been stopped. Shutting down...")
-            CoordinatedShutdown(ctx.system.toClassic).run(Bootstrap.CriticalError)
-            Behaviors.same
+          Behaviors.receiveSignal {
+            case (_, Terminated(`entryPoint`)) ⇒
+              ctx.log.warn(s"$entryPoint has been stopped. Shutting down...")
+              CoordinatedShutdown(ctx.system.toClassic).run(EntryPointInternalError)
+              Behaviors.same
           }
         }
       }

@@ -5,16 +5,19 @@ import akka.actor.CoordinatedShutdown.Reason
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, SupervisorStrategy}
-import akka.stream.{Materializer, StreamRefAttributes}
+import akka.stream.StreamRefAttributes
 import akka.util.Timeout
 import demo.RingMaster.{PingDeviceReply, ShardInfo}
 import io.moia.streamee.{IntoableProcessor, Process, ProcessSinkRef}
 
 import scala.concurrent.duration._
 
-/** Starts a shard region with specified shard name and forwards all incoming messages to the shard region
+/**
+  * Starts:
+  *   1) replicator actor with specified shard name
+  *   2) A shard region with specified shard name and forwards all incoming messages to the shard region
   */
-object ShardEntrance {
+object EntryPoint {
 
   sealed trait Protocol
   final case class GetShardInfo(replyTo: akka.actor.typed.ActorRef[demo.RingMaster.Command])  extends Protocol
@@ -30,13 +33,12 @@ object ShardEntrance {
     shardName: String,    //"alpha"
     shardAddress: String, //"172.20.0.3-2551"
     config: Config
-  ): Behavior[ShardEntrance.Protocol] =
-    Behaviors.setup[ShardEntrance.Protocol] { ctx ⇒
+  ): Behavior[EntryPoint.Protocol] =
+    Behaviors.setup[EntryPoint.Protocol] { ctx ⇒
       implicit val sys         = ctx.system
       implicit val to: Timeout = Timeout(config.timeout)
 
-      ctx.system.receptionist ! akka.actor.typed.receptionist.Receptionist
-        .Register(RingMaster.shardManagerKey, ctx.self)
+      ctx.system.receptionist ! akka.actor.typed.receptionist.Receptionist.Register(RingMaster.shardManagerKey, ctx.self)
 
       val replicator = ctx.spawn(
         Behaviors
@@ -97,23 +99,24 @@ object ShardEntrance {
     shardName: String,
     shardAddress: String,
     config: Config
-  )(implicit ctx: ActorContext[ShardEntrance.Protocol]): Behavior[ShardEntrance.Protocol] =
+  )(implicit ctx: ActorContext[EntryPoint.Protocol]): Behavior[EntryPoint.Protocol] =
     Behaviors
-      .receiveMessage[ShardEntrance.Protocol] {
-        case ShardEntrance.GetShardInfo(ringMaster) ⇒
+      .receiveMessage[EntryPoint.Protocol] {
+        case EntryPoint.GetShardInfo(ringMaster) ⇒
           //Example:  ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
           ringMaster.tell(ShardInfo(shardName, ctx.self, shardAddress))
           Behaviors.same
 
-        case ShardEntrance.GetSinkRef(replyTo) ⇒
+        case EntryPoint.GetSinkRef(replyTo) ⇒
           //ctx.log.info(s"${classOf[GetSinkRef].getName} for $shardName")
+          //implicit val m = akka.stream.Materializer.matFromSystem(akka.actor.typed.scaladsl.adapter.TypedActorSystemOps(ctx.system).toClassic)
           implicit val s = ctx.system
-          //implicit val m = Materializer.matFromSystem(akka.actor.typed.scaladsl.adapter.TypedActorSystemOps(ctx.system).toClassic)
           replyTo.tell(processor.sinkRef(StreamRefAttributes.subscriptionTimeout(config.timeout)))
           Behaviors.same
 
-        case ShardEntrance.ProcessorCompleted ⇒
+        case EntryPoint.ProcessorCompleted ⇒
           Behaviors.stopped
+
       }
       .receiveSignal { case (ctx, PostStop) ⇒
         processor.shutdown()

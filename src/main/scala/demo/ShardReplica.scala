@@ -16,16 +16,16 @@ object ShardReplica {
 
   sealed trait Protocol
 
-  //TODO: serialization/des
+  //TODO: serialization/deserialization
   final case class PingDeviceReplicator(deviceId: Long, replyTo: ActorRef[PingDeviceReply]) extends Protocol
 
-  //TODO: serialization/des
+  //TODO: serialization/deserialization
   private final case class InternalUpdateResponse(
     rsp: UpdateResponse[PNCounterMap[Long]],
     replyTo: ActorRef[PingDeviceReply]
   ) extends Protocol
 
-  //TODO: serialization/des
+  //TODO: serialization/deserialization
   private case class InternalDataUpdated(chg: Replicator.SubscribeResponse[PNCounterMap[Long]]) extends Protocol
 
   private val Key = PNCounterMapKey[Long]("device-counters")

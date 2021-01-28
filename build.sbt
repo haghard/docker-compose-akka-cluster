@@ -5,13 +5,15 @@ val scalaV = "2.13.3"
 val Akka   = "2.6.10"
 val AkkaManagement = "1.0.9"
 
-val akkaHttpVersion = "10.2.1"
+val akkaHttpVersion = "10.2.3"
 
 val Version = "0.3"
 
 name := "docker-cluster"
 version := Version
+
 //scalacOptions in (Compile, console) := Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked")
+
 scalacOptions in (Compile, console) := Seq(
   "-deprecation", // Emit warning and location for usages of deprecated APIs.
   "-unchecked",   // Enable additional warnings where generated code depends on assumptions.
@@ -45,15 +47,18 @@ libraryDependencies ++= Seq(
   "com.lightbend.akka.management" %% "akka-management-cluster-http"      % AkkaManagement,
 
 
-  //"com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.1",
+  //"com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.3",
   //"com.typesafe.akka" %% "akka-stream-contrib" % "0.10",
+
   "com.typesafe.akka"      %% "akka-slf4j"               % Akka,
   "org.scala-lang.modules" %% "scala-collection-contrib" % "0.2.2",
 
   "com.typesafe.akka"      %% "akka-http"                % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"     % akkaHttpVersion,
+
   "ch.qos.logback"         % "logback-classic"           % "1.2.3",
-  ("com.lihaoyi" % "ammonite" % "2.2.0" % "test").cross(CrossVersion.full)
+
+  ("com.lihaoyi" % "ammonite" % "2.3.8" % "test").cross(CrossVersion.full)
 )
 
 //test:run
@@ -64,7 +69,6 @@ sourceGenerators in Test += Def.task {
 }.taskValue
 
 scalafmtOnCompile := true
-
 
 
 mainClass in assembly := Some("demo.Application")
@@ -109,7 +113,11 @@ dockerfile in docker := {
   val d3TargetDirPath    = s"${imageAppBaseDir}/d3"
 
   new sbtdocker.mutable.Dockerfile {
-    from("adoptopenjdk/openjdk11")
+    //from("adoptopenjdk/openjdk11")
+    from("adoptopenjdk/openjdk14")
+
+    //from("adoptopenjdk:14-jre")
+
     //from("adoptopenjdk/openjdk12:x86_64-ubuntu-jre-12.0.2_10")
 
     //from("openjdk:8-jre")

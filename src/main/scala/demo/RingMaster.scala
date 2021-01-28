@@ -20,23 +20,20 @@ object RingMaster {
   private val replyTimeout = 1000.millis
 
   private val timeoutKey = "to"
-  val shardManagerKey    = ServiceKey[ShardEntrance.Protocol]("shard-entrance")
+  val shardManagerKey    = ServiceKey[EntryPoint.Protocol]("shard-entrance")
 
   private val bSize = 1 << 6
 
   case class ClusterStateResponse(state: String)
 
   //case class Replica(ref: ActorRef[ShardManager.Protocol], shardHost: String) // 127.0.0.1-2551
-  case class Replica(
-    shardEntrance: ActorRef[ShardEntrance.Protocol],
-    shardHost: String
-  ) // 127.0.0.1-2551
+  case class Replica(entry: ActorRef[EntryPoint.Protocol], shardHost: String) // 127.0.0.1-2551
 
   case class HashRingState(
     hashRing: Option[HashRing] = None, //hash ring for shards
     replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica],
     processors: Map[
-      ActorRef[ShardEntrance.Protocol],
+      ActorRef[EntryPoint.Protocol],
       FrontProcessor[PingDevice, Either[ShardInputProcess.ProcessError, PingDeviceReply]]
     ] = Map.empty
   ) //grouped replicas by shard name
@@ -52,9 +49,9 @@ object RingMaster {
 
   case class ClusterStateRequest(replyTo: ActorRef[ClusterStateResponse]) extends Command
 
-  case class MembershipChanged(replicas: Set[ActorRef[ShardEntrance.Protocol]]) extends Command
+  case class MembershipChanged(replicas: Set[ActorRef[EntryPoint.Protocol]]) extends Command
 
-  case class ShardInfo(shardName: String, shardEntrance: ActorRef[ShardEntrance.Protocol], shardAddress: String)
+  case class ShardInfo(shardName: String, shardEntrance: ActorRef[EntryPoint.Protocol], shardAddress: String)
       extends Command
 
   case object ReplyTimeout extends Command
@@ -72,8 +69,8 @@ object RingMaster {
         ctx.system.receptionist.tell(
           Receptionist.Subscribe(
             RingMaster.shardManagerKey,
-            ctx.messageAdapter[Receptionist.Listing] { case RingMaster.shardManagerKey.Listing(replicas) ⇒
-              MembershipChanged(replicas)
+            ctx.messageAdapter[Receptionist.Listing] {
+              case RingMaster.shardManagerKey.Listing(replicas) ⇒ MembershipChanged(replicas)
             }
           )
         )
@@ -98,27 +95,27 @@ object RingMaster {
     }
 
   def pollCluster(
-    self: ActorRef[Command],
-    head: ActorRef[ShardEntrance.Protocol],
-    tail: Set[ActorRef[ShardEntrance.Protocol]],
-    state: HashRingState,
-    stash: StashBuffer[Command],
-    numOfTry: Int = 0
+                   self: ActorRef[Command],
+                   head: ActorRef[EntryPoint.Protocol],
+                   tail: Set[ActorRef[EntryPoint.Protocol]],
+                   state: HashRingState,
+                   stash: StashBuffer[Command],
+                   numOfTry: Int = 0
   )(implicit ctx: ActorContext[Command]): Behavior[Command] =
     Behaviors.withTimers { timer ⇒
       timer.startSingleTimer(timeoutKey, ReplyTimeout, replyTimeout)
-      head.tell(ShardEntrance.GetShardInfo(self))
+      head.tell(EntryPoint.GetShardInfo(self))
       awaitInfo(self, head, tail, state, stash, timer, numOfTry)(ctx)
     }
 
   def awaitInfo(
-    self: ActorRef[Command],
-    head: ActorRef[ShardEntrance.Protocol],
-    tail: Set[ActorRef[ShardEntrance.Protocol]],
-    state: HashRingState,
-    buf: StashBuffer[Command],
-    timer: TimerScheduler[Command],
-    numOfTry: Int
+                 self: ActorRef[Command],
+                 head: ActorRef[EntryPoint.Protocol],
+                 tail: Set[ActorRef[EntryPoint.Protocol]],
+                 state: HashRingState,
+                 buf: StashBuffer[Command],
+                 timer: TimerScheduler[Command],
+                 numOfTry: Int
   )(implicit ctx: ActorContext[Command]): Behavior[Command] =
     Behaviors.receiveMessage {
       //ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
@@ -181,12 +178,12 @@ object RingMaster {
             //pick up the target shard
             val shardName = hashRing.lookup(deviceId).head
             //randomly pick up the shard replica
-            val replicas     = state.replicas.get(shardName).toVector
-            val ind          = ThreadLocalRandom.current.nextInt(0, replicas.size)
-            val shardEntrance = replicas(ind).shardEntrance
+            val replicas      = state.replicas.get(shardName).toVector
+            val ind           = ThreadLocalRandom.current.nextInt(0, replicas.size)
+            val shardEntryPoint = replicas(ind).entry
 
             val updated =
-              if (state.processors.get(shardEntrance).isEmpty) {
+              if (state.processors.get(shardEntryPoint).isEmpty) {
 
                 /** https://en.wikipedia.org/wiki/Little%27s_law
                   *
@@ -209,16 +206,16 @@ object RingMaster {
                 val cfg = ShardInputProcess.Config(1.second, 10, 100)
                 val shardingInput =
                   FrontProcessor(
-                    ShardInputProcess(shardEntrance, cfg)(ctx.system),
+                    ShardInputProcess(shardEntryPoint, cfg)(ctx.system),
                     cfg.processorTimeout,
                     name = s"$shardName-front-entrance",
                     bufferSize = cfg.bufferSize
                   )
 
-                state.copy(processors = state.processors + (shardEntrance → shardingInput))
+                state.copy(processors = state.processors + (shardEntryPoint → shardingInput))
               } else state
 
-            val inputProcessor = updated.processors(shardEntrance)
+            val inputProcessor = updated.processors(shardEntryPoint)
 
             //127.0.0.1-2551 or 127.0.0.1-2552 or ...
             val replicaName = replicas(ind).shardHost
@@ -265,7 +262,7 @@ object RingMaster {
           //state.shardHash.foreach(r ⇒ replyTo.tell(CropCircleView(r.toCropCircle)))
 
           val circle = state.replicas.keySet.foldLeft(CropCircle("circle")) { (circle, c) ⇒
-            state.replicas.get(c).map(_.shardEntrance.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
+            state.replicas.get(c).map(_.entry.path.toString).foldLeft(circle) { (circle, actorPath) ⇒
               circle :+ (c, actorPath)
             }
           }
