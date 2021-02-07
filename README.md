@@ -17,12 +17,12 @@ How to tell which node contains an entity identified by some key ?
    
 2) More common way is to keep a registry in one single place having an information about current localization of every single entity in a system. Since this approach 
    doesn't scale well in theory, in practice we group and co-locate entities together within partitions and therefore compress the registry to store information about 
-   entire partition rather than individual entity. In this case shard ID is composite key of (shardID, entityID). This is how eg. `akka-cluster-sharding` or `riak-core` works. 
+   entire partition rather than individual entity. In this case shard ID is composite key of (shardID, entityID). This is how e.g. `akka-cluster-sharding` or `riak-core` works. 
    Frequently some subset of hot (frequently used) partitions may be cached on each node to reduce asking central registry or even the registry itself may be a replicated store.
    
 3) We could also use distributed hash tables - where our entity key is hashed and then mapped into specific node that is responsible for holding resources 
    belonging to that specific subset of key space (a range of all possible hash values). Sometimes this may mean, that we miss a node at first try because cluster 
-   state is changing, and more hops need to apply. Although `Apache Cassandra` is known for using this approach, it is a source of many errors.   
+   state is changing, and more hops need to apply. Although `Apache Cassandra` and `ScyllaDB` is known for using this approach, it is a source of many errors.   
 
 In this project, although the `RingMaster` holds a distributed hash table of hashed keys, it's also deployed as cluster singleton.      
 
