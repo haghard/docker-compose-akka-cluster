@@ -157,7 +157,7 @@ object RingMaster {
         ctx.log.warn("{} respond fast, because we're not ready yet", cmd)
         Behaviors.same
       case cmd: ClusterStateRequest ⇒
-        cmd.replyTo.tell(ClusterStateResponse("Not ready. Try later"))
+        cmd.replyTo.tell(ClusterStateResponse("Converging ... Try later"))
         Behaviors.same
       case RingMaster.Shutdown ⇒
         ctx.log.warn("Shutdown RingMaster")

@@ -168,17 +168,6 @@ sbt -DSHARD=g runG2
 `http 127.0.0.1:9000/shards`
 
 
-### Query processes  
- 
-lsof -i :2551 | grep LISTEN | awk '{print $2}'
-
-kill -stop <pid>
-
-kill -suspend <pid>
-
-lsof -i :8558 | grep LISTEN | awk '{print $2}'
-
-
 #### Docker commands ####
   
   For docker to show all ips `docker inspect -f '{{.Name}} - {{.NetworkSettings.IPAddress }}' $(docker ps -aq)`
@@ -229,6 +218,40 @@ https://www.lightbend.com/blog/cpu-considerations-for-java-applications-running-
 ### Akka CoordinatedShutdown
 
 https://medium.com/bestmile/orchestrating-startup-and-shutdown-in-scala-f7ad2644835a
+
+
+
+### How to simulate a split brain
+
+a) Down but not terminate nodes on both sides of your partition.
+
+0. Find target <pid> `lsof -i :2551 | grep LISTEN | awk '{print $2}'`
+1. Suspend the process `kill -STOP <pid>`
+2. Send <pid> to Down via akka-http-managment interface `curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=down http://localhost:2651/cluster/members/us@127.0.0.1:2552`
+3. Resume the process `kill -CONT <pid>`
+ 
+
+b) docker pause
+c) Bring down all seed nodes leaving only non-seed nodes and then start seed nodes again. They will form a new cluster.
+d) Incomplete coordinated shutdown.
+e) Unresponsive applications due to long GC pause.
+
+or
+
+https://github.com/hseeberger/akkluster
+
+To create network partitions we need to connect to a running container and block traffic:
+
+```bash
+
+docker run -d --cap-add NET_ADMIN ...
+
+docker exec -i -t ... bash
+
+iptables -A INPUT -p tcp -j DROP
+iptables -D INPUT -p tcp -j DROP
+
+```
 
 ### JVM inside a container  
 
