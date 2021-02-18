@@ -15,14 +15,14 @@ How to tell which node contains an entity identified by some key ?
 1) The most naive approach would be to ask some subset of nodes in hope that at least one of them will have a data we hope for. Given cluster of N nodes and entity 
    replicated R times, we should be able to reach our resource after calling (N/R)+1 nodes.
    
-2) More common way is to keep a registry in one single place having an information about current localization of every single entity in a system. Since this approach 
+2) Another way is to keep a registry in one single place having an information about current localization of every single entity in a system. Since this approach 
    doesn't scale well in theory, in practice we group and co-locate entities together within partitions and therefore compress the registry to store information about 
    entire partition rather than individual entity. In this case shard ID is composite key of (shardID, entityID). This is how e.g. `akka-cluster-sharding` or `riak-core` works. 
    Frequently some subset of hot (frequently used) partitions may be cached on each node to reduce asking central registry or even the registry itself may be a replicated store.
    
 3) We could also use distributed hash tables - where our entity key is hashed and then mapped into specific node that is responsible for holding resources 
    belonging to that specific subset of key space (a range of all possible hash values). Sometimes this may mean, that we miss a node at first try because cluster 
-   state is changing, and more hops need to apply. Although `Apache Cassandra` and `ScyllaDB` is known for using this approach, it is a source of many errors.   
+   state is changing, and more hops need to apply. Although `Apache Cassandra` and `ScyllaDB` is known for using this approach(at least at the moment of writing), it is a source of many errors.   
 
 In this project, although the `RingMaster` holds a distributed hash table of hashed keys, it's also deployed as cluster singleton, so it's a combination of 2 and 3.      
 
@@ -65,9 +65,6 @@ Limits the scope of contention. Contention is isolated to a single entity via a 
 Cluster Sharding – Akka Cluster Sharding sits on top of Akka Cluster and distributes data in shards, and load across members of a cluster without developers needing 
 to keep track of where data actually resides in the cluster. Data is stored in Actors that represent individual entities, identified by a unique key, which closely corresponds 
 to an Aggregate Root in Domain-Driven Design terminology.
-
-
-
 
 
 
@@ -294,7 +291,7 @@ https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.19346974
 
 ### Future plans
 
-1. Instead of storing all actorRef in HashRingState I could store only one Leaseholder per shard and interact with it.
+1. Instead of storing all actorRef in HashRingState I could store only one Leaseholder per a shard and interact with it.
 2. ExternalShardAllocation to control shard allocation
 3. Chord, a protocol and algorithm for a peer-to-peer distributed hash table.
 

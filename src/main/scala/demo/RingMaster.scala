@@ -12,6 +12,8 @@ import scala.collection.immutable.SortedMultiDict
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
+
+//TODO: Can you ExternalShardAllocationStrategy here ???
 object RingMaster {
 
   private val retryLimit = 1 << 3
@@ -58,7 +60,6 @@ object RingMaster {
 
   case class GetCropCircle(replyTo: ActorRef[HttpRoutes.CropCircleView]) extends Command
 
-  //TODO: serialization/deserialization
   case class PingReq(deviceId: Long, replyTo: ActorRef[PingDeviceReply]) extends Command
 
   case object Shutdown extends Command
