@@ -5,7 +5,7 @@ import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.stream.scaladsl.{RestartSink, Sink}
 import demo.RingMaster.PingDeviceReply
 import io.moia.streamee.either.EitherFlowWithContextOps
-import io.moia.streamee.{Process, ProcessSinkRef}
+import io.moia.streamee.{Process, ProcessSink, ProcessSinkRef}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.{FiniteDuration, _}
@@ -19,8 +19,8 @@ object ShardInputProcess {
   /** A long-running process that links this  with EntryPoint
     */
   def apply(
-             entryPoint: ActorRef[EntryPoint.Protocol],
-             config: Config
+    entryPoint: ActorRef[EntryPoint.Protocol],
+    config: Config
   )(implicit sys: ActorSystem[_]): Process[PingDevice, Either[ProcessError, PingDeviceReply]] = {
     import config._
     sys.log.warn("★ ★ ★ Start ShardInputProcess ★ ★ ★")
@@ -37,7 +37,7 @@ object ShardInputProcess {
         }
      */
 
-    val shardingSink =
+    val shardingSink: ProcessSink[PingDevice, PingDeviceReply] =
       RestartSink.withBackoff(akka.stream.RestartSettings(100.millis, 500.millis, 0.1))(() ⇒
         Sink.futureSink(getSinkRef().map(_.sink))
       )

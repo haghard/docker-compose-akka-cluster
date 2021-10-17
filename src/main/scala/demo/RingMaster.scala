@@ -12,7 +12,6 @@ import scala.collection.immutable.SortedMultiDict
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
-
 //TODO: Can you ExternalShardAllocationStrategy here ???
 object RingMaster {
 
@@ -70,8 +69,8 @@ object RingMaster {
         ctx.system.receptionist.tell(
           Receptionist.Subscribe(
             RingMaster.shardManagerKey,
-            ctx.messageAdapter[Receptionist.Listing] {
-              case RingMaster.shardManagerKey.Listing(replicas) ⇒ MembershipChanged(replicas)
+            ctx.messageAdapter[Receptionist.Listing] { case RingMaster.shardManagerKey.Listing(replicas) ⇒
+              MembershipChanged(replicas)
             }
           )
         )
@@ -79,8 +78,8 @@ object RingMaster {
       }
     }
 
-  def converged(state: HashRingState, buf: StashBuffer[Command])(
-    implicit ctx: ActorContext[Command]
+  def converged(state: HashRingState, buf: StashBuffer[Command])(implicit
+    ctx: ActorContext[Command]
   ): Behavior[Command] =
     Behaviors.receiveMessage {
       case MembershipChanged(rs) ⇒
@@ -96,12 +95,12 @@ object RingMaster {
     }
 
   def pollCluster(
-                   self: ActorRef[Command],
-                   head: ActorRef[EntryPoint.Protocol],
-                   tail: Set[ActorRef[EntryPoint.Protocol]],
-                   state: HashRingState,
-                   stash: StashBuffer[Command],
-                   numOfTry: Int = 0
+    self: ActorRef[Command],
+    head: ActorRef[EntryPoint.Protocol],
+    tail: Set[ActorRef[EntryPoint.Protocol]],
+    state: HashRingState,
+    stash: StashBuffer[Command],
+    numOfTry: Int = 0
   )(implicit ctx: ActorContext[Command]): Behavior[Command] =
     Behaviors.withTimers { timer ⇒
       timer.startSingleTimer(timeoutKey, ReplyTimeout, replyTimeout)
@@ -110,13 +109,13 @@ object RingMaster {
     }
 
   def awaitInfo(
-                 self: ActorRef[Command],
-                 head: ActorRef[EntryPoint.Protocol],
-                 tail: Set[ActorRef[EntryPoint.Protocol]],
-                 state: HashRingState,
-                 buf: StashBuffer[Command],
-                 timer: TimerScheduler[Command],
-                 numOfTry: Int
+    self: ActorRef[Command],
+    head: ActorRef[EntryPoint.Protocol],
+    tail: Set[ActorRef[EntryPoint.Protocol]],
+    state: HashRingState,
+    buf: StashBuffer[Command],
+    timer: TimerScheduler[Command],
+    numOfTry: Int
   )(implicit ctx: ActorContext[Command]): Behavior[Command] =
     Behaviors.receiveMessage {
       //ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
@@ -179,8 +178,8 @@ object RingMaster {
             //pick up the target shard
             val shardName = hashRing.lookup(deviceId).head
             //randomly pick up the shard replica
-            val replicas      = state.replicas.get(shardName).toVector
-            val ind           = ThreadLocalRandom.current.nextInt(0, replicas.size)
+            val replicas        = state.replicas.get(shardName).toVector
+            val ind             = ThreadLocalRandom.current.nextInt(0, replicas.size)
             val shardEntryPoint = replicas(ind).entry
 
             val updated =

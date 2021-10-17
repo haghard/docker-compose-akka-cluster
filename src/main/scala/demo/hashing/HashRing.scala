@@ -6,12 +6,13 @@ import spray.json.{JsArray, JsNumber, JsObject, JsString}
 
 /*
   Nodes take ownership over sub ranges within [-2 to 63  ...  2 to 63 - 1]
-  This is an immutable data structure and therefore all modification operations return new instance of HashRing.
+  This is an immutable data structure and therefore all modification operations return a new instance of HashRing.
   Each node owns a range of those values
 
   Similar to https://github.com/justin-db/JustinDB/blob/844a3f6f03192ff3e8248a15712fecd754e06fbc/justin-ring/src/main/scala/justin/db/consistenthashing/Ring.scala
   and https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/dht/Murmur3Partitioner.java
   https://medium.com/better-programming/load-balancers-and-consistent-hashing-in-6-minutes-b5fc460aea4e
+  https://bartoszsypytkowski.com/hash-partitions/
  */
 final case class HashRing(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
 

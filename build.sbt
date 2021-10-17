@@ -1,11 +1,11 @@
 import sbt._
 import sbtdocker.ImageName
 
-val scalaV = "2.13.3"
-val Akka   = "2.6.10"
-val AkkaManagement = "1.0.9"
+val scalaV = "2.13.6"
+val Akka   = "2.6.17"
+val AkkaManagement = "1.1.0"
 
-val akkaHttpVersion = "10.2.3"
+val akkaHttpVersion = "10.2.6"
 
 val Version = "0.3"
 
@@ -58,7 +58,7 @@ libraryDependencies ++= Seq(
 
   "ch.qos.logback"         % "logback-classic"           % "1.2.3",
 
-  ("com.lihaoyi" % "ammonite" % "2.3.8" % "test").cross(CrossVersion.full)
+  ("com.lihaoyi" % "ammonite" % "2.4.0" % "test").cross(CrossVersion.full)
 )
 
 //test:run

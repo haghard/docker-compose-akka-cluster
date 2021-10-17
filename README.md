@@ -62,17 +62,14 @@ Shards are distributed in shard regions.
 Persistent actor entity - stateful, long-lived, addressable entity.
 Limits the scope of contention. Contention is isolated to a single entity via a unique identifier. 
 
-Cluster Sharding – Akka Cluster Sharding sits on top of Akka Cluster and distributes data in shards, and load across members of a cluster without developers needing 
+Akka Cluster Sharding sits on top of Akka Cluster and distributes data in shards, and load across members of a cluster without developers needing 
 to keep track of where data actually resides in the cluster. Data is stored in Actors that represent individual entities, identified by a unique key, which closely corresponds 
 to an Aggregate Root in Domain-Driven Design terminology.
-
 
 
 ### Next question to address:
  When we add a new shard, say betta, in an operational cluster of 2 alpha nodes ([alpha -> 127.0.0.1-2551,127.0.0.2-2551]), 
  we need to transfer data, that from now on is associated with betta [alpha -> 127.0.0.1-2551,127.0.0.2-2551, betta -> 127.0.0.10-2551]
- 
- 
 
 ## Docker compose setup  
 
@@ -86,7 +83,7 @@ All replicas that have the same shard name should be responsible to the same ran
 
 #### A sequence of docker commands ####
   
-  * First of all we need to export these env vars
+  * First of all, we need to export these env vars
     
     `export SEED_DNS=master`
 

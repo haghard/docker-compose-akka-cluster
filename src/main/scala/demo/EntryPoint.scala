@@ -12,8 +12,7 @@ import io.moia.streamee.{IntoableProcessor, Process, ProcessSinkRef}
 
 import scala.concurrent.duration._
 
-/**
-  * Starts:
+/** Starts:
   *   1) replicator actor with specified shard name
   *   2) A shard region with specified shard name and forwards all incoming messages to the shard region
   */
@@ -38,7 +37,8 @@ object EntryPoint {
       implicit val sys         = ctx.system
       implicit val to: Timeout = Timeout(config.timeout)
 
-      ctx.system.receptionist ! akka.actor.typed.receptionist.Receptionist.Register(RingMaster.shardManagerKey, ctx.self)
+      ctx.system.receptionist ! akka.actor.typed.receptionist.Receptionist
+        .Register(RingMaster.shardManagerKey, ctx.self)
 
       val replicator = ctx.spawn(
         Behaviors

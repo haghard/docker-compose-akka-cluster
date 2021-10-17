@@ -10,10 +10,10 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 import akka.actor.typed.scaladsl.adapter._
-import akka.actor.{ ActorSystem => ClassicSystem }
+import akka.actor.{ActorSystem ⇒ ClassicSystem}
 
 object BootstrapHttp {
-  case object BindFailure   extends Reason
+  case object BindFailure extends Reason
 }
 
 case class BootstrapHttp(
