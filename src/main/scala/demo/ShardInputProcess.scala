@@ -5,7 +5,7 @@ import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.stream.scaladsl.{RestartSink, Sink}
 import demo.RingMaster.PingDeviceReply
 import io.moia.streamee.either.EitherFlowWithContextOps
-import io.moia.streamee.{Process, ProcessSinkRef}
+import io.moia.streamee.{Process, ProcessSink, ProcessSinkRef}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.{FiniteDuration, _}
@@ -37,7 +37,7 @@ object ShardInputProcess {
         }
      */
 
-    val shardingSink =
+    val shardingSink: ProcessSink[PingDevice, PingDeviceReply] =
       RestartSink.withBackoff(akka.stream.RestartSettings(100.millis, 500.millis, 0.1))(() ⇒
         Sink.futureSink(getSinkRef().map(_.sink))
       )
@@ -48,8 +48,8 @@ object ShardInputProcess {
           if (req.deviceId <= 10) Left(ProcessError("DeviceId should be more than 10")) else Right(req)
         }
         .errorTo(errorTap)
-        .into(shardingSink, processorTimeout, parallelism)
-        //.via(shardingFlow(shardingSink, processorTimeout))
+          .into(shardingSink, processorTimeout, parallelism)
+          //.via(shardingFlow(shardingSink, processorTimeout))
         .map {
           case PingDeviceReply.Error(err) ⇒ Left(ProcessError(err))
           case PingDeviceReply.Success    ⇒ Right(PingDeviceReply.Success)
