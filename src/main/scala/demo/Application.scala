@@ -99,7 +99,8 @@ object Application extends Ops {
 
     val memorySize = ManagementFactory.getOperatingSystemMXBean
       .asInstanceOf[com.sun.management.OperatingSystemMXBean]
-      .getTotalPhysicalMemorySize
+      .getFreePhysicalMemorySize
+
     val runtimeInfo = new StringBuilder()
       .append("=================================================================================================")
       .append('\n')
@@ -118,7 +119,7 @@ object Application extends Ops {
       .toString()
 
     val classicSystem = akka.actor.ActorSystem(SystemName, cfg)
-    /*val classicSystem = ActorSystem[Nothing](
+    /*val classicSystem = ActorSystem(
       guardian(cfg, Address("akka", SystemName, seedHostAddress, port.toInt), shardName, runtimeInfo, httpPort.toInt),
       SystemName,
       cfg
@@ -127,8 +128,8 @@ object Application extends Ops {
     val address = Address("akka", SystemName, seedHostAddress, port.toInt)
     //to avoid the error with top-level actor creation in streamee
     classicSystem.spawn(guardian(cfg, address, shardName, runtimeInfo, httpPort.toInt), "guardian")
-    //akka.management.scaladsl.AkkaManagement(classicSystem).start()
     akka.management.cluster.bootstrap.ClusterBootstrap(classicSystem).start()
+
   }
 
   def guardian(
@@ -148,63 +149,61 @@ object Application extends Ops {
         cluster.manager tell Join(seedAddress)
         cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
 
-        Behaviors.receive[SelfUp] {
-          case (ctx, _ @SelfUp(state)) ⇒
-            val clusterMembers = state.members.filter(_.status == MemberStatus.Up).map(_.address)
-            ctx.log.warn(
-              "★ ★ ★ {} {}:{} joined cluster with existing members:[{}] ★ ★ ★",
-              shardName,
-              cfg.getString(AKKA_HOST),
-              cfg.getInt(AKKA_PORT),
-              clusterMembers
+        Behaviors.receive[SelfUp] { case (ctx, _ @SelfUp(state)) ⇒
+          val clusterMembers = state.members.filter(_.status == MemberStatus.Up).map(_.address)
+          ctx.log.warn(
+            "★ ★ ★ {} {}:{} joined cluster with existing members:[{}] ★ ★ ★",
+            shardName,
+            cfg.getString(AKKA_HOST),
+            cfg.getInt(AKKA_PORT),
+            clusterMembers
+          )
+          ctx.log.info(runtimeInfo)
+          cluster.subscriptions ! Unsubscribe(ctx.self)
+
+          val ringMaster = ClusterSingleton(ctx.system)
+            .init(
+              SingletonActor(
+                Behaviors
+                  .supervise(RingMaster())
+                  .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true)),
+                "ring-master"
+              ).withStopMessage(RingMaster.Shutdown)
             )
-            ctx.log.info(runtimeInfo)
-            cluster.subscriptions ! Unsubscribe(ctx.self)
 
-            val ringMaster = ClusterSingleton(ctx.system)
-              .init(
-                SingletonActor(
-                  Behaviors
-                    .supervise(RingMaster())
-                    .onFailure[Exception](SupervisorStrategy.resume.withLoggingEnabled(true)),
-                  "ring-master"
-                ).withStopMessage(RingMaster.Shutdown)
-              )
+          val jvmMetrics = ctx
+            .spawn(ClusterJvmMetrics(), "jvm-metrics", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
+            .narrow[ClusterJvmMetrics.Confirm]
 
-            val jvmMetrics = ctx.spawn(ClusterJvmMetrics(), "jvm-metrics",
-              DispatcherSelector.fromConfig("akka.metrics-dispatcher")
-            ).narrow[ClusterJvmMetrics.Confirm]
+          val hostName = cluster.selfMember.address.host.get
+          BootstrapHttp(shardName, ringMaster, jvmMetrics, hostName, httpPort)(ctx.system.toClassic)
 
-            val hostName = cluster.selfMember.address.host.get
-            BootstrapHttp(shardName, ringMaster, jvmMetrics, hostName, httpPort)(ctx.system.toClassic)
+          /** https://en.wikipedia.org/wiki/Little%27s_law
+            *
+            * L = λ * W
+            * L – the average number of items in a queuing system (queue size)
+            * λ – the average number of items arriving at the system per unit of time
+            * W – the average waiting time an item spends in a queuing system
+            *
+            * Question: How many processes running in parallel we need given
+            * throughput = 100 rps and average latency = 100 millis  ?
+            *
+            * 100 * 0.1 = 10
+            *
+            * Give the numbers above, the Little’s Law shows that on average, having
+            * queue size == 100,
+            * parallelism factor == 10
+            * average latency of single request == 100 millis
+            * we can keep up with throughput = 100 rps
+            */
+          val procCfg    = EntryPoint.Config(timeout = 1.second, parallelism = 10, bufferSize = 100)
+          val entryPoint = ctx.spawn(EntryPoint(shardName, hostName, procCfg), "entry-point")
+          ctx.watch(entryPoint)
 
-            /** https://en.wikipedia.org/wiki/Little%27s_law
-              *
-              * L = λ * W
-              * L – the average number of items in a queuing system (queue size)
-              * λ – the average number of items arriving at the system per unit of time
-              * W – the average waiting time an item spends in a queuing system
-              *
-              * Question: How many processes running in parallel we need given
-              * throughput = 100 rps and average latency = 100 millis  ?
-              *
-              * 100 * 0.1 = 10
-              *
-              * Give the numbers above, the Little’s Law shows that on average, having
-              * queue size == 100,
-              * parallelism factor == 10
-              * average latency of single request == 100 millis
-              * we can keep up with throughput = 100 rps
-              */
-            val procCfg = EntryPoint.Config(timeout = 1.second, parallelism = 10, bufferSize = 100)
-            val entryPoint = ctx.spawn(EntryPoint(shardName, hostName, procCfg), "entry-point")
-            ctx.watch(entryPoint)
-
-          Behaviors.receiveSignal {
-            case (_, Terminated(`entryPoint`)) ⇒
-              ctx.log.warn(s"$entryPoint has been stopped. Shutting down...")
-              CoordinatedShutdown(ctx.system.toClassic).run(EntryPointInternalError)
-              Behaviors.same
+          Behaviors.receiveSignal { case (_, Terminated(`entryPoint`)) ⇒
+            ctx.log.warn(s"$entryPoint has been stopped. Shutting down...")
+            CoordinatedShutdown(ctx.system.toClassic).run(EntryPointInternalError)
+            Behaviors.same
           }
         }
       }

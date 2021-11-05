@@ -19,8 +19,8 @@ object ShardInputProcess {
   /** A long-running process that links this  with EntryPoint
     */
   def apply(
-             entryPoint: ActorRef[EntryPoint.Protocol],
-             config: Config
+    entryPoint: ActorRef[EntryPoint.Protocol],
+    config: Config
   )(implicit sys: ActorSystem[_]): Process[PingDevice, Either[ProcessError, PingDeviceReply]] = {
     import config._
     sys.log.warn("★ ★ ★ Start ShardInputProcess ★ ★ ★")
