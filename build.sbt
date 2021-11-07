@@ -59,9 +59,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %% "akka-http"                % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"     % akkaHttpVersion,
 
-  "ch.qos.logback"         % "logback-classic"           % "1.2.6"
+  "ch.qos.logback"         % "logback-classic"           % "1.2.6",
 
-  //("com.lihaoyi" % "ammonite" % "2.4.0" % "test").cross(CrossVersion.full)
+  "com.lihaoyi" % "ammonite" % "2.4.0-31-ba6214b1" % "test" cross CrossVersion.full
 )
 
 //test:run
@@ -155,9 +155,8 @@ docker / dockerfile := {
       "-XshowSettings",
       //"-XX:MaxRAMFraction=1",
       //"-XX:+UnlockExperimentalVMOptions",
-      "-XX:InitialRAMPercentage=60",
+      "-XX:InitialRAMPercentage=75",
       "-XX:MaxRAMPercentage=75",
-      "-XX:MinRAMPercentage=50",
       "-XX:+PreferContainerQuotaForCPUCount", //Added in JDK11. Support for using the cpu_quota instead of cpu_shares for
       // picking the number of cores the JVM uses to makes decisions such as how many compiler threads, GC threads and sizing of the fork join pool
       //These env vars are set in docker-compose2.yml
@@ -175,6 +174,7 @@ ThisBuild / turbo := true
 
 
 //I need this to be able to set envVars below
+//Comment out for ammonite
 run / fork := true
 javaOptions := Seq("-XshowSettings:vm", "-XX:+PrintCommandLineFlags", "-Xms256M", "-Xmx350M")
 
