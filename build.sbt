@@ -7,15 +7,15 @@ val AkkaManagement = "1.1.1"
 
 val akkaHttpVersion = "10.2.7"
 
-val Version = "0.3"
+val Version = "0.4"
 
 name := "docker-cluster"
 version := Version
 
 //scalacOptions in (Compile, console) := Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked")
 
-scalacOptions in (Compile, console) := Seq(
-  "-deprecation", // Emit warning and location for usages of deprecated APIs.
+val scalacOps = Seq(
+  //"-deprecation", // Emit warning and location for usages of deprecated APIs.
   "-unchecked",   // Enable additional warnings where generated code depends on assumptions.
   "-encoding", "UTF-8", // Specify character encoding used by source files.
   "-Ywarn-dead-code",                  // Warn when dead code is identified.
@@ -30,6 +30,9 @@ scalacOptions in (Compile, console) := Seq(
   "-Ywarn-value-discard"              // Warn when non-Unit expression results are unused.
 )
 
+Compile / scalacOptions := scalacOps
+console / scalacOptions := scalacOps
+
 scalaVersion := scalaV
 
 libraryDependencies ++= Seq(
@@ -39,7 +42,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"       %% "akka-cluster-sharding-typed" % Akka,
   "com.typesafe.akka"       %% "akka-distributed-data"       % Akka,
   "io.moia"                 %% "streamee"                    % "5.0.0",
-  "com.github.pureconfig"   %% "pureconfig"                  % "0.12.3",
+  "com.github.pureconfig"   %% "pureconfig"                  % "0.17.0",
 
   "com.typesafe.akka"             %% "akka-discovery"                    % Akka,
   //"com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % AkkaManagement,
@@ -62,8 +65,8 @@ libraryDependencies ++= Seq(
 )
 
 //test:run
-sourceGenerators in Test += Def.task {
-  val file = (sourceManaged in Test).value / "amm.scala"
+Test / sourceGenerators  += Def.task {
+  val file = (Test / sourceManaged).value / "amm.scala"
   IO.write(file, """object amm extends App { ammonite.Main().run() }""")
   Seq(file)
 }.taskValue
@@ -71,9 +74,9 @@ sourceGenerators in Test += Def.task {
 scalafmtOnCompile := true
 
 
-mainClass in assembly := Some("demo.Application")
+assembly / mainClass := Some("demo.Application")
 
-assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
+assembly / assemblyJarName := s"${name.value}-${version.value}.jar"
 
 buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion)
 
@@ -87,15 +90,15 @@ assemblyMergeStrategy in assembly := {
   case other                                                          ⇒ (assemblyMergeStrategy in assembly).value(other)
 }
 
-imageNames in docker := Seq(ImageName(namespace = Some("haghard"), repository = name.value, tag = Some(version.value)))
+docker / imageNames := Seq(ImageName(namespace = Some("haghard"), repository = name.value, tag = Some(version.value)))
 
-buildOptions in docker := BuildOptions(
+docker / buildOptions := BuildOptions(
   cache = false,
   removeIntermediateContainers = BuildOptions.Remove.Always,
   pullBaseImage = BuildOptions.Pull.Always
 )
 
-dockerfile in docker := {
+docker / dockerfile := {
   val baseDir        = baseDirectory.value
   val artifact: File = assembly.value
 
@@ -151,7 +154,7 @@ dockerfile in docker := {
       //"-XX:+PrintFlagsFinal",
       "-XshowSettings",
       //"-XX:MaxRAMFraction=1",
-      "-XX:+UnlockExperimentalVMOptions",
+      //"-XX:+UnlockExperimentalVMOptions",
       "-XX:InitialRAMPercentage=60",
       "-XX:MaxRAMPercentage=75",
       "-XX:MinRAMPercentage=50",
@@ -196,56 +199,57 @@ val shard = sys.props.getOrElse("SHARD", "docker")
 val runA0 = taskKey[Unit]("Run alpha0")
 
 runA0 := {
-  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.1").value
+  (Compile / runMain).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.1").value
 }
 
 val runA1 = taskKey[Unit]("Run alpha1")
 runA1 := {
-  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.2").value
+  (Compile / runMain).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.2").value
 }
 
 val runA2 = taskKey[Unit]("Run alpha2")
 runA2 := {
-  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.3").value
+  (Compile / runMain).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.3").value
 }
 
 
 val runB0 = taskKey[Unit]("Run betta0")
 runB0 := {
-  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.10").value
+  (Compile / runMain).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.10").value
 }
 
 val runB1 = taskKey[Unit]("Run betta1")
 runB1 := {
-  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.11").value
+  (Compile / runMain).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.11").value
 }
 
 val runB2 = taskKey[Unit]("Run betta2")
 runB2 := {
-  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.12").value
+  (Compile / runMain).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.12").value
 }
 
 val runG0 = taskKey[Unit]("Run gamma0")
 runG0 := {
-  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.20").value
+  (Compile / runMain).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.20").value
 }
 
 val runG1 = taskKey[Unit]("Run gamma1")
 runG1 := {
-  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.21").value
+  (Compile / runMain).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.21").value
 }
 
 val runG2 = taskKey[Unit]("Run gamma2")
 runG2 := {
-  (runMain in Compile).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.22").value
+  (Compile / runMain).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.22").value
 }
 
 shard match {
   case "a" => {
     println("---- SET SHARD alpha ----")
     //envVars in runMain := Map("NODE_TYPE" -> "master", "SHARD" -> "alpha")
-    envVars := Map("NODE_TYPE" -> "seed", "SHARD" -> "alpha", "DM" -> "config")
 
+    //sys.env += Map("NODE_TYPE" -> "seed", "SHARD" -> "alpha", "DM" -> "config")
+    envVars := Map("NODE_TYPE" -> "seed", "SHARD" -> "alpha", "DM" -> "config")
   }
   case "b" => {
     println("---- SET SHARD betta ----")

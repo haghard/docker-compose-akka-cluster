@@ -17,7 +17,7 @@ object RingMaster {
 
   private val retryLimit = 1 << 3
 
-  //get info timeout
+  // get info timeout
   private val replyTimeout = 1000.millis
 
   private val timeoutKey = "to"
@@ -27,19 +27,19 @@ object RingMaster {
 
   case class ClusterStateResponse(state: String)
 
-  //case class Replica(ref: ActorRef[ShardManager.Protocol], shardHost: String) // 127.0.0.1-2551
+  // case class Replica(ref: ActorRef[ShardManager.Protocol], shardHost: String) // 127.0.0.1-2551
   case class Replica(entry: ActorRef[EntryPoint.Protocol], shardHost: String) // 127.0.0.1-2551
 
   case class HashRingState(
-    hashRing: Option[HashRing] = None, //hash ring for shards
+    hashRing: Option[HashRing] = None, // hash ring for shards
     replicas: SortedMultiDict[String, Replica] = SortedMultiDict.empty[String, Replica],
     processors: Map[
       ActorRef[EntryPoint.Protocol],
       FrontProcessor[PingDevice, Either[ShardInputProcess.ProcessError, PingDeviceReply]]
     ] = Map.empty
-  ) //grouped replicas by shard name
+  ) // grouped replicas by shard name
 
-  //TODO: serialization/des
+  // TODO: serialization/des
   sealed trait PingDeviceReply
   object PingDeviceReply {
     case object Success           extends PingDeviceReply
@@ -86,7 +86,7 @@ object RingMaster {
         ctx.log.warn("MembershipChanged: [{}]", rs.mkString(", "))
         if (rs.nonEmpty) pollCluster(ctx.self, rs.head, rs.tail, state, buf) else Behaviors.same
       case cmd: PingDevice ⇒
-        //TODO: respond fast, because we're not ready yet
+        // TODO: respond fast, because we're not ready yet
         ctx.log.warn("{} respond fast, because we're not ready yet", cmd)
         Behaviors.same
       case other ⇒
@@ -118,11 +118,11 @@ object RingMaster {
     numOfTry: Int
   )(implicit ctx: ActorContext[Command]): Behavior[Command] =
     Behaviors.receiveMessage {
-      //ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
+      // ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
       case ShardInfo(shardName, shardEntrance, shardAddress) ⇒
         timer.cancel(timeoutKey)
-        implicit val s  = ctx.system
-        implicit val ec = ctx.executionContext
+        // implicit val s  = ctx.system
+        // implicit val ec = ctx.executionContext
 
         val uHash = state.hashRing match {
           case None    ⇒ HashRing(shardName)
@@ -153,7 +153,7 @@ object RingMaster {
         buf.stash(m)
         Behaviors.same
       case cmd: PingDevice ⇒
-        //TODO: respond false, because we're not ready yet
+        // TODO: respond false, because we're not ready yet
         ctx.log.warn("{} respond fast, because we're not ready yet", cmd)
         Behaviors.same
       case cmd: ClusterStateRequest ⇒
@@ -175,9 +175,9 @@ object RingMaster {
             implicit val system = ctx.system
             implicit val ec     = system.executionContext
 
-            //pick up the target shard
+            // pick up the target shard
             val shardName = hashRing.lookup(deviceId).head
-            //randomly pick up the shard replica
+            // randomly pick up the shard replica
             val replicas        = state.replicas.get(shardName).toVector
             val ind             = ThreadLocalRandom.current.nextInt(0, replicas.size)
             val shardEntryPoint = replicas(ind).entry
@@ -187,21 +187,18 @@ object RingMaster {
 
                 /** https://en.wikipedia.org/wiki/Little%27s_law
                   *
-                  * L = λ * W
-                  * L – the average number of items in a queuing system (queue size)
-                  * λ – the average number of items arriving at the system per unit of time
-                  * W – the average waiting time an item spends in a queuing system
+                  * L = λ * W L – the average number of items in a queuing system (queue size) λ – the average number of
+                  * items arriving at the system per unit of time W – the average waiting time an item spends in a
+                  * queuing system
                   *
-                  * Question: How many processes running in parallel we need given
-                  * throughput = 100 rps and average latency = 100 millis  ?
+                  * Question: How many processes running in parallel we need given throughput = 100 rps and average
+                  * latency = 100 millis ?
                   *
                   * 100 * 0.1 = 10
                   *
-                  * Give the numbers above, the Little’s Law shows that on average, having
-                  * queue size == 100,
-                  * parallelism factor == 10
-                  * average latency of single request == 100 millis
-                  * we can keep up with throughput = 100 rps
+                  * Give the numbers above, the Little’s Law shows that on average, having queue size == 100,
+                  * parallelism factor == 10 average latency of single request == 100 millis we can keep up with
+                  * throughput = 100 rps
                   */
                 val cfg = ShardInputProcess.Config(1.second, 10, 100)
                 val shardingInput =
@@ -217,13 +214,13 @@ object RingMaster {
 
             val inputProcessor = updated.processors(shardEntryPoint)
 
-            //127.0.0.1-2551 or 127.0.0.1-2552 or ...
+            // 127.0.0.1-2551 or 127.0.0.1-2552 or ...
             val replicaName = replicas(ind).shardHost
             ctx.log.warn("{} -> {}:{}", deviceId, shardName, state.replicas.size)
             if (replicas.isEmpty) ctx.log.error(s"Critical error: Couldn't find shardEntrance for $shardName")
             else
               inputProcessor
-                .offer(PingDevice(deviceId, replicaName)) //.pipeToSelf
+                .offer(PingDevice(deviceId, replicaName)) // .pipeToSelf
                 .onComplete {
                   case Success(r) ⇒
                     replyTo.tell(r.fold(err ⇒ PingDeviceReply.Error(err.errMsg), identity))
@@ -258,8 +255,8 @@ object RingMaster {
           Behaviors.same
 
         case GetCropCircle(replyTo) ⇒
-          //to show all token
-          //state.shardHash.foreach(r ⇒ replyTo.tell(CropCircleView(r.toCropCircle)))
+          // to show all token
+          // state.shardHash.foreach(r ⇒ replyTo.tell(CropCircleView(r.toCropCircle)))
 
           val circle = state.replicas.keySet.foldLeft(CropCircle("circle")) { (circle, c) ⇒
             state.replicas.get(c).map(_.entry.path.toString).foldLeft(circle) { (circle, actorPath) ⇒

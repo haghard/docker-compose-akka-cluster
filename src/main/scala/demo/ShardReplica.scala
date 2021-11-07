@@ -16,16 +16,16 @@ object ShardReplica {
 
   sealed trait Protocol
 
-  //TODO: serialization/deserialization
+  // TODO: serialization/deserialization
   final case class PingDeviceReplicator(deviceId: Long, replyTo: ActorRef[PingDeviceReply]) extends Protocol
 
-  //TODO: serialization/deserialization
+  // TODO: serialization/deserialization
   private final case class InternalUpdateResponse(
     rsp: UpdateResponse[PNCounterMap[Long]],
     replyTo: ActorRef[PingDeviceReply]
   ) extends Protocol
 
-  //TODO: serialization/deserialization
+  // TODO: serialization/deserialization
   private case class InternalDataUpdated(chg: Replicator.SubscribeResponse[PNCounterMap[Long]]) extends Protocol
 
   private val Key = PNCounterMapKey[Long]("device-counters")
@@ -75,7 +75,7 @@ object ShardReplica {
 
   def apply(shardName: String, to: FiniteDuration = 1.second): Behavior[Protocol] =
     Behaviors.setup[Protocol] { ctx ⇒
-      //WriteMajority(to) WriteTo(2, to)
+      // WriteMajority(to) WriteTo(2, to)
       implicit val clusterCluster = Cluster(ctx.system.toClassic)
 
       val ddConf = replicatorConfig(shardName)
@@ -98,8 +98,8 @@ object ShardReplica {
           res match {
             case _: UpdateSuccess[PNCounterMap[Long]] ⇒
               ctx.log.warn(s"UpdateSuccess: [${res.key.id}: ${res.request}]")
-              //To simulate io.moia.streamee.package$ResponseTimeoutException: No response within 1 second!
-              //if (ThreadLocalRandom.current().nextDouble() > .5) Thread.sleep(1100)
+              // To simulate io.moia.streamee.package$ResponseTimeoutException: No response within 1 second!
+              // if (ThreadLocalRandom.current().nextDouble() > .5) Thread.sleep(1100)
               replyTo.tell(RingMaster.PingDeviceReply.Success)
             case _: UpdateTimeout[PNCounterMap[Long]] ⇒
               ctx.log.warn(s"UpdateTimeout: [${res.key.id}: ${res.request}]")
@@ -119,11 +119,11 @@ object ShardReplica {
           Behaviors.same
       }
 
-      //Behaviors.receive(onMessage: (ActorContext[T], T) => Behavior[T]) - to get an AC and a message
-      //Behaviors.receiveMessage(update[LWWMap[String, BackendSession]]) - same as Behaviors.receive but accepts only a pf
+      // Behaviors.receive(onMessage: (ActorContext[T], T) => Behavior[T]) - to get an AC and a message
+      // Behaviors.receiveMessage(update[LWWMap[String, BackendSession]]) - same as Behaviors.receive but accepts only a pf
 
-      //Behaviors.receivePartial(onMessage: PartialFunction[(ActorContext[T], T), Behavior[T]]) - to get an AC and a message and ignore unmatched messages
-      //Behaviors.receiveMessagePartial(onMessage: PartialFunction[T, Behavior[T]]) //if onMessage doesn't match it returns Behaviors.inhandled
+      // Behaviors.receivePartial(onMessage: PartialFunction[(ActorContext[T], T), Behavior[T]]) - to get an AC and a message and ignore unmatched messages
+      // Behaviors.receiveMessagePartial(onMessage: PartialFunction[T, Behavior[T]]) //if onMessage doesn't match it returns Behaviors.inhandled
 
       Behaviors.receiveMessage(behavior)
       /*.receiveSignal {

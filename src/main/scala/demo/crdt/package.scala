@@ -49,7 +49,7 @@ package object crdt {
   val FailedVsRejectedConflict  = Set(Failed, Rejected)
   val FailedVsAbortedConflict   = Set(Failed, Aborted)
 
-  //instances for tests
+  // instances for tests
   /*
   val idle     = ReplicatedJob(Idle)
   val started  = ReplicatedJob(Started)

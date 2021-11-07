@@ -27,7 +27,7 @@ object ClusterJvmMetrics {
       case (ctx, _ @Connect(src)) ⇒
         val ex = ClusterMetricsExtension(ctx.system.toClassic)
         ex.subscribe(ctx.self.toClassic)
-        //if you have more than 32 node in the cluster you need to increase the buffer size
+        // if you have more than 32 node in the cluster you need to increase the buffer size
         active(src, new RingBuffer[ClusterMetrics](bs))
       case (ctx, other) ⇒
         ctx.log.warn("Unexpected message: {} in init", other.getClass.getName)
@@ -74,8 +74,8 @@ object ClusterJvmMetrics {
                   "max"  → JsString((max.getOrElse(0L) / divider).toString + " mb")
                 )
               ).prettyPrint
-              //the size of metrics emitted at once is equal to the number of nodes in the cluster,
-              //therefore the max size of the queue is bound to that number
+              // the size of metrics emitted at once is equal to the number of nodes in the cluster,
+              // therefore the max size of the queue is bound to that number
               rb.offer(ClusterMetrics(ByteString(js)))
             case _ ⇒
           }

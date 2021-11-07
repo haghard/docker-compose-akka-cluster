@@ -2,7 +2,7 @@ package demo.hashing
 
 import spray.json.{JsArray, JsObject, JsString}
 
-case class CropCircle(
+final case class CropCircle(
   name: String,
   map: Map[String, Set[String]] = Map[String, Set[String]]().withDefaultValue(Set.empty)
 ) {

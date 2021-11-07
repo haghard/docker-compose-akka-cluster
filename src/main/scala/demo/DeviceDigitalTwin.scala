@@ -28,7 +28,7 @@ object DeviceDigitalTwin {
   ): Behavior[DeviceCommand] =
     Behaviors.setup { ctx ⇒
       ctx.log.warn("* * *  Wake up sharded entity for replicator {}: {} * * *", replicaName, entityCtx.entityId)
-      active(replicator, replicaName, entityCtx)(ctx.log) //orElse idle(ctx.log)
+      active(replicator, replicaName, entityCtx)(ctx.log) // orElse idle(ctx.log)
     }
 
   private def onSignal(
@@ -45,9 +45,9 @@ object DeviceDigitalTwin {
   )(implicit log: org.slf4j.Logger): Behavior[DeviceCommand] =
     Behaviors
       .receiveMessage[DeviceDigitalTwin.DeviceCommand] { case DeviceDigitalTwin.PingDevice(deviceId, _, replyTo) ⇒
-        //log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
+        // log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
         replicator.tell(ShardReplica.PingDeviceReplicator(deviceId, replyTo))
-        active(replicator, replicaName, entityCtx) //orElse idle(log)
+        active(replicator, replicaName, entityCtx) // orElse idle(log)
       }
       .receiveSignal(onSignal(log))
 
@@ -69,7 +69,7 @@ object DeviceDigitalTwin {
       .receiveSignal(onSignal(log))
    */
 
-  //expect only akka.actor.typed.internal.PoisonPill
+  // expect only akka.actor.typed.internal.PoisonPill
   /*def idle(log: org.slf4j.Logger): Behavior[DeviceCommand] =
     Behaviors.receiveSignal {
       case (_, signal) ⇒

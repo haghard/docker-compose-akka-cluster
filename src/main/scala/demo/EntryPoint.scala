@@ -12,9 +12,8 @@ import io.moia.streamee.{IntoableProcessor, Process, ProcessSinkRef}
 
 import scala.concurrent.duration._
 
-/** Starts:
-  *   1) replicator actor with specified shard name
-  *   2) A shard region with specified shard name and forwards all incoming messages to the shard region
+/** Starts: 1) replicator actor with specified shard name 2) A shard region with specified shard name and forwards all
+  * incoming messages to the shard region
   */
 object EntryPoint {
 
@@ -29,8 +28,8 @@ object EntryPoint {
   case object ShardEntranceOutage extends Reason
 
   def apply(
-    shardName: String,    //"alpha"
-    shardAddress: String, //"172.20.0.3-2551"
+    shardName: String,    // "alpha"
+    shardAddress: String, // "172.20.0.3-2551"
     config: Config
   ): Behavior[EntryPoint.Protocol] =
     Behaviors.setup[EntryPoint.Protocol] { ctx ⇒
@@ -103,13 +102,13 @@ object EntryPoint {
     Behaviors
       .receiveMessage[EntryPoint.Protocol] {
         case EntryPoint.GetShardInfo(ringMaster) ⇒
-          //Example:  ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
+          // Example:  ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
           ringMaster.tell(ShardInfo(shardName, ctx.self, shardAddress))
           Behaviors.same
 
         case EntryPoint.GetSinkRef(replyTo) ⇒
-          //ctx.log.info(s"${classOf[GetSinkRef].getName} for $shardName")
-          //implicit val m = akka.stream.Materializer.matFromSystem(akka.actor.typed.scaladsl.adapter.TypedActorSystemOps(ctx.system).toClassic)
+          // ctx.log.info(s"${classOf[GetSinkRef].getName} for $shardName")
+          // implicit val m = akka.stream.Materializer.matFromSystem(akka.actor.typed.scaladsl.adapter.TypedActorSystemOps(ctx.system).toClassic)
           implicit val s = ctx.system
           replyTo.tell(processor.sinkRef(StreamRefAttributes.subscriptionTimeout(config.timeout)))
           Behaviors.same

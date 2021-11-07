@@ -48,12 +48,12 @@ case class HttpRoutes(
         { case ClusterJvmMetrics.StreamFailure(ex) ⇒ ex }
       )
       .collect { case ClusterJvmMetrics.ClusterMetrics(bt) ⇒ bt }
-      .toMat(BroadcastHub.sink[ByteString](1 << 3))(Keep.both) //one to many
+      .toMat(BroadcastHub.sink[ByteString](1 << 3))(Keep.both) // one to many
       .run()
 
   jvmMetricsSrc.tell(ClusterJvmMetrics.Connect(ref))
 
-  //Ensure that the Broadcast output is dropped if there are no listening parties.
+  // Ensure that the Broadcast output is dropped if there are no listening parties.
   metricsSource.runWith(Sink.ignore)
 
   def flowWithHeartbeat(
@@ -83,32 +83,32 @@ case class HttpRoutes(
       Source
         .fromIterator(() ⇒
           Iterator.range(1, 64).map(created(_, 1)) ++ Iterator.range(1, 32).filter(_ % 2 == 0).map(delete(_))
-          ++ Iterator.range(1, 32).filter(_ % 2 == 0).map(created(_, 1))
+            ++ Iterator.range(1, 32).filter(_ % 2 == 0).map(created(_, 1))
         )
         .zipWith(Source.tick(0.second, 100.millis, ()))((a, _) ⇒ a)
     )
   }
 
   val ringRoute = path("rng")(get(encodeResponse(getFromFile(folderName + "/" + "ring.html")))) ~
-    path("ring-events")(handleWebSocketMessages(ringFlow())) //http://192.168.77.10:9000/rng
+    path("ring-events")(handleWebSocketMessages(ringFlow())) // http://192.168.77.10:9000/rng
 
   def cropCircleRoute =
     path("view")(get(encodeResponse(getFromFile(folderName + "/" + circlePage)))) ~
-    path("view1")(get(encodeResponse(getFromFile(folderName + "/" + circlePage1)))) ~
-    pathPrefix("d3" / Remaining)(file ⇒ encodeResponse(getFromFile(folderName + "/" + file))) ~
-    path("events") {
-      handleWebSocketMessages(
-        flowWithHeartbeat()
-          .flatMapConcat(
-            _.asTextMessage.getStreamedText.fold("")(_ + _)
-          ) //the web socket spec says that a single msg over web socket can be streamed (multiple chunks)
-          .mapAsync(1) { _ ⇒
-            ringMaster
-              .ask[HttpRoutes.CropCircleView](RingMaster.GetCropCircle(_))
-              .map(r ⇒ TextMessage.Strict(r.json))
-          }
-      )
-    }
+      path("view1")(get(encodeResponse(getFromFile(folderName + "/" + circlePage1)))) ~
+      pathPrefix("d3" / Remaining)(file ⇒ encodeResponse(getFromFile(folderName + "/" + file))) ~
+      path("events") {
+        handleWebSocketMessages(
+          flowWithHeartbeat()
+            .flatMapConcat(
+              _.asTextMessage.getStreamedText.fold("")(_ + _)
+            ) // the web socket spec says that a single msg over web socket can be streamed (multiple chunks)
+            .mapAsync(1) { _ ⇒
+              ringMaster
+                .ask[HttpRoutes.CropCircleView](RingMaster.GetCropCircle(_))
+                .map(r ⇒ TextMessage.Strict(r.json))
+            }
+        )
+      }
 
   val pingRoute = extractLog { implicit log ⇒
     aroundRequest(logLatency(log)) {
@@ -123,20 +123,22 @@ case class HttpRoutes(
 
   def route: Route =
     path("ring")(get(complete(queryRing))) ~
-    path("shards") {
-      get {
-        complete {
-          ClusterSharding(sys).shardState
-            .ask[ClusterShardingStats](
-              akka.cluster.sharding.typed.GetClusterShardingStats(DeviceDigitalTwin.entityKey, timeout.duration, _)
-            )
-            .map(stats ⇒ shardName + "\n" + stats.regions.mkString("\n"))
+      path("shards") {
+        get {
+          complete {
+            ClusterSharding(sys).shardState
+              .ask[ClusterShardingStats](
+                akka.cluster.sharding.typed.GetClusterShardingStats(DeviceDigitalTwin.entityKey, timeout.duration, _)
+              )
+              .map(stats ⇒ shardName + "\n" + stats.regions.mkString("\n"))
+          }
         }
-      }
-    } ~
-    pingRoute ~ ringRoute ~ path("metrics")(
-      get(complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource))))
-    ) ~ cropCircleRoute ~ akka.management.cluster.scaladsl.ClusterHttpManagementRoutes(akka.cluster.Cluster(sys))
+      } ~
+      pingRoute ~ ringRoute ~ path("metrics")(
+        get(
+          complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource)))
+        )
+      ) ~ cropCircleRoute ~ akka.management.cluster.scaladsl.ClusterHttpManagementRoutes(akka.cluster.Cluster(sys))
 
   def queryRing: Future[HttpResponse] =
     ringMaster

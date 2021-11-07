@@ -21,8 +21,7 @@ final case class HashRing(private val ring: SortedMap[Long, String], start: Long
   def :+(node: String): Option[(HashRing, Set[(Long, String)])] =
     add(node)
 
-  /** Adds a node on ring.
-    * When we add new node, it changes the ownership of some ranges by splitting it up.
+  /** Adds a node on ring. When we add new node, it changes the ownership of some ranges by splitting it up.
     */
   def add(node: String): Option[(HashRing, Set[(Long, String)])] =
     if (nodes.contains(node))
@@ -135,7 +134,7 @@ object HashRing {
     name: String,
     start: Long = Long.MinValue,
     end: Long = Long.MaxValue,
-    step: Long = 9223372036854773L //2500 partitions, change if you need more
+    step: Long = 9223372036854773L // 2500 partitions, change if you need more
   ): HashRing =
     HashRing(
       (start until end by step)

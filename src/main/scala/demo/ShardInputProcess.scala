@@ -16,7 +16,7 @@ object ShardInputProcess {
 
   case class Config(processorTimeout: FiniteDuration, parallelism: Int, bufferSize: Int)
 
-  /** A long-running process that links this  with EntryPoint
+  /** A long-running process that links this with EntryPoint
     */
   def apply(
     entryPoint: ActorRef[EntryPoint.Protocol],
@@ -48,8 +48,8 @@ object ShardInputProcess {
           if (req.deviceId <= 10) Left(ProcessError("DeviceId should be more than 10")) else Right(req)
         }
         .errorTo(errorTap)
-          .into(shardingSink, processorTimeout, parallelism)
-          //.via(shardingFlow(shardingSink, processorTimeout))
+        .into(shardingSink, processorTimeout, parallelism)
+        // .via(shardingFlow(shardingSink, processorTimeout))
         .map {
           case PingDeviceReply.Error(err) ⇒ Left(ProcessError(err))
           case PingDeviceReply.Success    ⇒ Right(PingDeviceReply.Success)

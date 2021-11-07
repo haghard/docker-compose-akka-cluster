@@ -21,23 +21,23 @@ object SharedDomain {
       }
   }
 
-  private val passivationTO = 120.seconds //TODO: make it configurable
+  private val passivationTO = 120.seconds // TODO: make it configurable
 
   def apply(
     replicator: ActorRef[ShardReplica.Protocol],
-    role: String, //alpha|betta|gamma
+    role: String, // alpha|betta|gamma
     system: akka.actor.typed.ActorSystem[_]
   ): akka.actor.typed.ActorRef[DeviceDigitalTwin.DeviceCommand] = {
 
-    //Allocation strategy which decides on which nodes to allocate new shards.
-    //https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
-    //Distributed processing with Akka Cluster & Kafka https://youtu.be/Ad2DyOn4dlY?t=197
-    //https://github.com/akka/akka-samples/tree/2.6/akka-sample-kafka-to-sharding-scala
+    // Allocation strategy which decides on which nodes to allocate new shards.
+    // https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
+    // Distributed processing with Akka Cluster & Kafka https://youtu.be/Ad2DyOn4dlY?t=197
+    // https://github.com/akka/akka-samples/tree/2.6/akka-sample-kafka-to-sharding-scala
 
-    //TODO: To make explicit allocations. Try it out in RingMaster
-    //val shardAllocation = ExternalShardAllocation(system).clientFor(DeviceShadowEntity.entityKey.name)
-    //shardAllocation.shardLocations()
-    //val _: Future[Done] = shardAllocation.updateShardLocation(shardName, system.address)
+    // TODO: To make explicit allocations. Try it out in RingMaster
+    // val shardAllocation = ExternalShardAllocation(system).clientFor(DeviceShadowEntity.entityKey.name)
+    // shardAllocation.shardLocations()
+    // val _: Future[Done] = shardAllocation.updateShardLocation(shardName, system.address)
 
     val sharding = ClusterSharding(system)
 
@@ -52,7 +52,7 @@ object SharedDomain {
         .withPassivateIdleEntityAfter(passivationTO)
         .withRole(role)
 
-    //val allocStrategy = sharding.defaultShardAllocationStrategy(settings)
+    // val allocStrategy = sharding.defaultShardAllocationStrategy(settings)
     /*
     sharding.init(
       Entity(DeviceShadowEntity.entityKey)(createBehavior = _ ⇒ DeviceShadowEntity(shardName))
@@ -74,26 +74,26 @@ object SharedDomain {
           override def shardId(entityId: String): String                = entityId
           override def unwrapMessage(cmd: DeviceCommand): DeviceCommand = cmd
         }*/
-      //default AllocationStrategy
+      // default AllocationStrategy
       /** The default ShardAllocationStrategy will allocate shards on the least-loaded nodes. See
-        * https://github.com/akka/akka/blob/master/akka-cluster-sharding/src/main/scala/akka/cluster/sharding/ShardCoordinator.scala#L71 and
-        * https://doc.akka.io/docs/akka/current/cluster-sharding.html#shard-location.
+        * https://github.com/akka/akka/blob/master/akka-cluster-sharding/src/main/scala/akka/cluster/sharding/ShardCoordinator.scala#L71
+        * and https://doc.akka.io/docs/akka/current/cluster-sharding.html#shard-location.
         */
       .withAllocationStrategy(
         /*new akka.cluster.sharding.ShardCoordinator.LeastShardAllocationStrategy(
           rebalanceThreshold = 1,
           maxSimultaneousRebalance = 3
         )*/
-        //https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=2.114148035.592677992.1602252039-408157630.1602252039#shard-allocation
+        // https://doc.akka.io/docs/akka/2.6/typed/cluster-sharding.html?_ga=2.114148035.592677992.1602252039-408157630.1602252039#shard-allocation
         akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy.leastShardAllocationStrategy(20, 0.5)
       )
-      //.withAllocationStrategy(new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, DeviceDigitalTwin.entityKey.name))
+      // .withAllocationStrategy(new akka.cluster.sharding.external.ExternalShardAllocationStrategy(system, DeviceDigitalTwin.entityKey.name))
       .withSettings(settings)
       .withEntityProps(akka.actor.typed.Props.empty.withDispatcherFromConfig("akka.shard-dispatcher"))
 
-    //val shardAllocationClient = e.allocationStrategy.get.asInstanceOf[ExternalShardAllocationStrategy]
+    // val shardAllocationClient = e.allocationStrategy.get.asInstanceOf[ExternalShardAllocationStrategy]
     // .clientFor(DeviceShadowEntity.entityKey.name)
-    //.updateShardLocation("chat0", system.path.address)
+    // .updateShardLocation("chat0", system.path.address)
 
     sharding.init(entity)
   }

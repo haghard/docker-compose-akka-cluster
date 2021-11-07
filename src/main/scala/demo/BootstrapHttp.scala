@@ -50,7 +50,7 @@ case class BootstrapHttp(
   Http()
     .newServerAt(hostName, port)
     .bindFlow(HttpRoutes(ringMaster, jvmMetricsSrc, shardName)(classicSystem.toTyped).route)
-    //.map(_.addToCoordinatedShutdown(terminationDeadline))
+    // .map(_.addToCoordinatedShutdown(terminationDeadline))
     .onComplete {
       case Failure(ex) ⇒
         classicSystem.log.error(s"Shutting down because can't bind on $hostName:$port", ex)
@@ -65,7 +65,7 @@ case class BootstrapHttp(
         }
 
         CoordinatedShutdown(classicSystem).addTask(PhaseServiceUnbind, "http-api.unbind") { () ⇒
-          //No new connections are accepted. Existing connections are still allowed to perform request/response cycles
+          // No new connections are accepted. Existing connections are still allowed to perform request/response cycles
           binding.unbind().map { done ⇒
             classicSystem.log.info(s"★ ★ ★ CoordinatedShutdown $PhaseServiceUnbind ★ ★ ★")
             done
@@ -79,11 +79,10 @@ case class BootstrapHttp(
             }
           }*/
 
-        //graceful termination request being handled on this connection
+        // graceful termination request being handled on this connection
         CoordinatedShutdown(classicSystem).addTask(PhaseServiceRequestsDone, "http-api.terminate") { () ⇒
-          /** It doesn't accept new connection but it drains the existing connections
-            * Until the `terminationDeadline` all the req that had been accepted will be completed
-            * and only than the shutdown will continue
+          /** It doesn't accept new connection but it drains the existing connections Until the `terminationDeadline`
+            * all the req that had been accepted will be completed and only than the shutdown will continue
             */
           binding.terminate(terminationDeadline).map { _ ⇒
             classicSystem.log.info(s"★ ★ ★ CoordinatedShutdown $PhaseServiceRequestsDone  ★ ★ ★")
@@ -91,7 +90,7 @@ case class BootstrapHttp(
           }
         }
 
-        //forcefully kills connections that are still open
+        // forcefully kills connections that are still open
         CoordinatedShutdown(classicSystem).addTask(PhaseServiceStop, "close.connections") { () ⇒
           Http().shutdownAllConnectionPools().map { _ ⇒
             classicSystem.log.info(s"★ ★ ★ CoordinatedShutdown $PhaseServiceStop ★ ★ ★")

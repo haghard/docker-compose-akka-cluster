@@ -55,7 +55,7 @@ object Application extends Ops {
       .withFallback(
         ConfigFactory.parseString(s"akka.management.cluster.bootstrap.contact-point-discovery.discovery-method=$dm")
       )
-      .withFallback(ConfigSource.default.loadOrThrow[Config]) //.at(SystemName)
+      .withFallback(ConfigSource.default.loadOrThrow[Config]) // .at(SystemName)
   }
 
   def main(args: Array[String]): Unit = {
@@ -81,7 +81,7 @@ object Application extends Ops {
     val hostAddress = sys.props.get(sysPropsHost)
 
     val cfg = hostAddress.fold(
-      //docker
+      // docker
       if (nodeType == "seed")
         createConfig(seedHostAddress, seedHostAddress, port, shardName, dm)
       else {
@@ -126,13 +126,13 @@ object Application extends Ops {
     ).toClassic*/
 
     val address = Address("akka", SystemName, seedHostAddress, port.toInt)
-    //to avoid the error with top-level actor creation in streamee
-    classicSystem.spawn(guardian(cfg, address, shardName, runtimeInfo, httpPort.toInt), "guardian")
+    // to avoid the error with top-level actor creation in streamee
+    classicSystem.spawn(Guardian(cfg, address, shardName, runtimeInfo, httpPort.toInt), "guardian")
     akka.management.cluster.bootstrap.ClusterBootstrap(classicSystem).start()
 
   }
 
-  def guardian(
+  def Guardian(
     cfg: Config,
     seedAddress: Address,
     shardName: String,
@@ -142,8 +142,8 @@ object Application extends Ops {
     Behaviors
       .setup[SelfUp] { ctx ⇒
         implicit val sys = ctx.system
-        implicit val ex  = sys.executionContext
-        implicit val sch = sys.scheduler
+        // implicit val ex  = sys.executionContext
+        // implicit val sch = sys.scheduler
 
         val cluster = Cluster(ctx.system)
         cluster.manager tell Join(seedAddress)
@@ -180,21 +180,16 @@ object Application extends Ops {
 
           /** https://en.wikipedia.org/wiki/Little%27s_law
             *
-            * L = λ * W
-            * L – the average number of items in a queuing system (queue size)
-            * λ – the average number of items arriving at the system per unit of time
-            * W – the average waiting time an item spends in a queuing system
+            * L = λ * W L – the average number of items in a queuing system (queue size) λ – the average number of items
+            * arriving at the system per unit of time W – the average waiting time an item spends in a queuing system
             *
-            * Question: How many processes running in parallel we need given
-            * throughput = 100 rps and average latency = 100 millis  ?
+            * Question: How many processes running in parallel we need given throughput = 100 rps and average latency =
+            * 100 millis ?
             *
             * 100 * 0.1 = 10
             *
-            * Give the numbers above, the Little’s Law shows that on average, having
-            * queue size == 100,
-            * parallelism factor == 10
-            * average latency of single request == 100 millis
-            * we can keep up with throughput = 100 rps
+            * Give the numbers above, the Little’s Law shows that on average, having queue size == 100, parallelism
+            * factor == 10 average latency of single request == 100 millis we can keep up with throughput = 100 rps
             */
           val procCfg    = EntryPoint.Config(timeout = 1.second, parallelism = 10, bufferSize = 100)
           val entryPoint = ctx.spawn(EntryPoint(shardName, hostName, procCfg), "entry-point")

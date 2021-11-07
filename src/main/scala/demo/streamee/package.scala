@@ -9,7 +9,7 @@ import scala.util.{Failure, Success}
 
 package object either {
 
-  //Similar to `io.moia.streamee.either.tapErrors` but doesn't require a `BroadcastHub` instance
+  // Similar to `io.moia.streamee.either.tapErrors` but doesn't require a `BroadcastHub` instance
   def tapErrors[In, CtxIn, Out, CtxOut, Mat, E](
     f: Sink[(E, CtxOut), Any] ⇒ FlowWithContext[In, CtxIn, Out, CtxOut, Mat]
   ): FlowWithContext[In, CtxIn, Either[E, Out], CtxOut, Future[Mat]] = {
@@ -17,7 +17,7 @@ package object either {
       Flow.fromMaterializer { case (mat, attr) ⇒
         val ((errorTap, switch), errors) =
           MergeHub
-            .source[(E, CtxOut)](1) //attr.get[InputBuffer].map(_.max).getOrElse(1)
+            .source[(E, CtxOut)](1) // attr.get[InputBuffer].map(_.max).getOrElse(1)
             .viaMat(KillSwitches.single)(Keep.both)
             .toMat(Sink.asPublisher(false))(Keep.both)
             .run()(mat)
