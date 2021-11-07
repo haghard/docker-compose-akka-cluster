@@ -200,7 +200,7 @@ object RingMaster {
                   * parallelism factor == 10 average latency of single request == 100 millis we can keep up with
                   * throughput = 100 rps
                   */
-                val cfg = ShardInputProcess.Config(1.second, 10, 100)
+                val cfg = ShardInputProcess.Config(2.second, 5, 50)
                 val shardingInput =
                   FrontProcessor(
                     ShardInputProcess(shardEntryPoint, cfg)(ctx.system),

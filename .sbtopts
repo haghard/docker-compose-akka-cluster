@@ -1,5 +1,5 @@
--J-Xms450M
--J-Xmx650M
+-J-Xms128M
+-J-Xmx256M
 -J-XX:MaxMetaspaceSize=550M
 -J-Xss4M
 -J-XX:+UseG1GC

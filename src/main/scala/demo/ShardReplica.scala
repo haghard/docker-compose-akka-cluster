@@ -30,6 +30,7 @@ object ShardReplica {
 
   private val Key = PNCounterMapKey[Long]("device-counters")
 
+  // log-data-size-exceeding
   def replicatorConfig(role: String): Config =
     ConfigFactory.parseString(
       s"""
@@ -37,7 +38,9 @@ object ShardReplica {
          |
          | gossip-interval = 1 s
          |
-         | use-dispatcher = "akka.actor.default-dispatcher"
+         | use-dispatcher = akka.actor.internal-dispatcher
+         |
+         | log-data-size-exceeding = 10 KiB
          |
          | notify-subscribers-interval = 2000 ms
          |

@@ -135,15 +135,13 @@ sbt -DSHARD=g runG2
 ```
 
 
-### Crop circle
+### Http routes
 
-  `http GET 192.168.178.10:9000/view`
+  `http GET 127.168.178.10:9000/view`
 
-  `http GET 192.168.178.10:9000/view1`
+  `http GET 192.168.77.106:9000/view1`
 
-  `http GET 192.168.178.10:9000/members`
-
-  `http://192.168.178.10:9000/rng`
+  `http://192.168.77.106:9000/chord`
 
 ### Cluster members
 
@@ -305,3 +303,5 @@ Examples:
 sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
 
 sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
+
+curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=leave http://127.0.0.1:9000/cluster/members/akka://dc@127.0.0.2:2551 

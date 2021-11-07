@@ -89,8 +89,17 @@ case class HttpRoutes(
     )
   }
 
-  val ringRoute = path("rng")(get(encodeResponse(getFromFile(folderName + "/" + "ring.html")))) ~
-    path("ring-events")(handleWebSocketMessages(ringFlow())) // http://192.168.77.10:9000/rng
+  val chord = {
+    extractLog { log ⇒
+      path("chord") {
+        get {
+          log.info("GET chord")
+          encodeResponse(getFromFile(folderName + "/" + "ring.html"))
+        }
+      }
+    } ~
+      path("ring-events")(handleWebSocketMessages(ringFlow()))
+  } // http://192.168.77.10:9000/rng
 
   def cropCircleRoute =
     path("view")(get(encodeResponse(getFromFile(folderName + "/" + circlePage)))) ~
@@ -134,7 +143,7 @@ case class HttpRoutes(
           }
         }
       } ~
-      pingRoute ~ ringRoute ~ path("metrics")(
+      pingRoute ~ chord ~ path("metrics")(
         get(
           complete(HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`text/plain(UTF-8)`, metricsSource)))
         )

@@ -61,7 +61,7 @@ libraryDependencies ++= Seq(
 
   "ch.qos.logback"         % "logback-classic"           % "1.2.6"
 
-  //("com.lihaoyi" % "ammonite" % "2.3.8" % "test").cross(CrossVersion.full)
+  //("com.lihaoyi" % "ammonite" % "2.4.0" % "test").cross(CrossVersion.full)
 )
 
 //test:run
@@ -85,7 +85,7 @@ buildInfoPackage := "demo"
 enablePlugins(sbtdocker.DockerPlugin, BuildInfoPlugin)
 
 // Resolve duplicates for Sbt Assembly
-assemblyMergeStrategy in assembly := {
+assembly / assemblyMergeStrategy := {
   case PathList(xs @ _*) if xs.last == "io.netty.versions.properties" ⇒ MergeStrategy.rename
   case other                                                          ⇒ (assemblyMergeStrategy in assembly).value(other)
 }
@@ -173,7 +173,11 @@ docker / dockerfile := {
 
 ThisBuild / turbo := true
 
-//fork in run := true
+
+//I need this to be able to set envVars below
+run / fork := true
+javaOptions := Seq("-XshowSettings:vm", "-XX:+PrintCommandLineFlags", "-Xms256M", "-Xmx350M")
+
 
 //sbt -DSHARD=a runA0
 //sbt -DSHARD=a runA1
@@ -190,14 +194,11 @@ ThisBuild / turbo := true
 
 //sbt -DSHARD=docker docker
 
-
 val shard = sys.props.getOrElse("SHARD", "docker")
-
 
 // https://stackoverflow.com/questions/26244115/how-to-execute-runmain-from-custom-task
 
 val runA0 = taskKey[Unit]("Run alpha0")
-
 runA0 := {
   (Compile / runMain).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.1").value
 }
@@ -243,12 +244,12 @@ runG2 := {
   (Compile / runMain).toTask(" demo.Application -DseedPort=2551 -DseedHost=127.0.0.1 -DhttpPort=9000 -Dhost=127.0.0.22").value
 }
 
+
+//envVars works only when run / fork := true
 shard match {
   case "a" => {
     println("---- SET SHARD alpha ----")
-    //envVars in runMain := Map("NODE_TYPE" -> "master", "SHARD" -> "alpha")
-
-    //sys.env += Map("NODE_TYPE" -> "seed", "SHARD" -> "alpha", "DM" -> "config")
+    //sys.env ++ Map("NODE_TYPE" -> "seed", "SHARD" -> "alpha", "DM" -> "config")
     envVars := Map("NODE_TYPE" -> "seed", "SHARD" -> "alpha", "DM" -> "config")
   }
   case "b" => {
@@ -264,6 +265,8 @@ shard match {
     envVars := Map()
   }
 }
+
+
 
 
 

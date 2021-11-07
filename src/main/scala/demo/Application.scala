@@ -129,7 +129,7 @@ object Application extends Ops {
     // to avoid the error with top-level actor creation in streamee
     classicSystem.spawn(Guardian(cfg, address, shardName, runtimeInfo, httpPort.toInt), "guardian")
     akka.management.cluster.bootstrap.ClusterBootstrap(classicSystem).start()
-
+    // akka.management.scaladsl.AkkaManagement(classicSystem).start()
   }
 
   def Guardian(
