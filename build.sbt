@@ -2,7 +2,7 @@ import sbt._
 import sbtdocker.ImageName
 
 val scalaV = "2.13.7"
-val Akka   = "2.6.17"
+val Akka   = "2.6.18"
 val AkkaManagement = "1.1.1"
 
 val akkaHttpVersion = "10.2.7"
@@ -42,7 +42,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"       %% "akka-cluster-sharding-typed" % Akka,
   "com.typesafe.akka"       %% "akka-distributed-data"       % Akka,
   "io.moia"                 %% "streamee"                    % "5.0.0",
-  "com.github.pureconfig"   %% "pureconfig"                  % "0.17.0",
+  "com.github.pureconfig"   %% "pureconfig"                  % "0.17.1",
 
   "com.typesafe.akka"             %% "akka-discovery"                    % Akka,
   //"com.lightbend.akka.discovery"  %% "akka-discovery-kubernetes-api"     % AkkaManagement,
@@ -59,7 +59,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %% "akka-http"                % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"     % akkaHttpVersion,
 
-  "ch.qos.logback"         % "logback-classic"           % "1.2.6",
+  "ch.qos.logback"         % "logback-classic"           % "1.2.9",
 
   "com.lihaoyi" % "ammonite" % "2.4.0-31-ba6214b1" % "test" cross CrossVersion.full
 )

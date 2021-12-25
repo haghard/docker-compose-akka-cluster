@@ -3,6 +3,7 @@
 ### Ideas
 
 https://groups.google.com/forum/#!topic/akka-user/MO-4XhwhAN0
+https://ringpop.readthedocs.io/en/latest/architecture_design.html
 
 
 ## How to route requests to a given resource inside of cluster ?
