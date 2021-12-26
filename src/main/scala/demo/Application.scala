@@ -41,7 +41,7 @@ object Application extends Ops {
 
   val ipExpression = """\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}"""
 
-  def createConfig(seedHost: String, host: String, port: String, shardName: String, dm: String): Config = {
+  def createConfig(seedHost: String, host: String, port: Int, shardName: String, dm: String): Config = {
     val seeds =
       ConfigFactory.parseString(s"""akka.cluster.seed-nodes += "akka://$SystemName@$seedHost:$port"""").resolve()
     ConfigFactory
@@ -68,7 +68,8 @@ object Application extends Ops {
 
     val port = sys.props
       .get(sysPropSeedPort)
-      .fold(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))(identity)
+      .flatMap(_.toIntOption)
+      .getOrElse(throw new Exception(s"Couldn't find $sysPropsSeedHost system property"))
 
     val seedHostAddress = sys.props
       .get(sysPropsSeedHost)
@@ -76,7 +77,8 @@ object Application extends Ops {
 
     val httpPort = sys.props
       .get(sysPropsHttpPort)
-      .fold(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))(identity)
+      .flatMap(_.toIntOption)
+      .getOrElse(throw new Exception(s"Couldn't find $sysPropsHttpPort system property"))
 
     val hostAddress = sys.props.get(sysPropsHost)
 
