@@ -23,9 +23,9 @@ How to tell which node contains an entity identified by some key ?
    
 3) We could also use distributed hash tables - where our entity key is hashed and then mapped into specific node that is responsible for holding resources 
    belonging to that specific subset of key space (a range of all possible hash values). Sometimes this may mean, that we miss a node at first try because cluster 
-   state is changing, and more hops need to apply. Although `Apache Cassandra` and `ScyllaDB` is known for using this approach(at least at the moment of writing), it is a source of many errors.   
+   state is changing, and more hops need to apply. Although `Apache Cassandra` and `ScyllaDB` is known for using this approach(at least at the moment of writing), it is a source of many errors (https://www.slideshare.net/ScyllaDB/scylla-summit-2022-making-schema-changes-safe-with-raft-251141793).   
 
-In this project, although the `RingMaster` holds a distributed hash table of hashed keys, it's also deployed as cluster singleton, so it's a combination of 2 and 3.      
+In this project, although the `RingMaster` holds a distributed hash ring of hashed keys, it's also deployed as cluster singleton, so it's a combination of 2 and 3.      
 
 
 ### Implementation idea (Sharding and Replication)
