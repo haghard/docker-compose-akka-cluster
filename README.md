@@ -13,12 +13,11 @@ The state of our system usually consists of multiple addressable entities, which
 However, usually the entire state is too big to fit into any single node. For this reason, it's often partitioned all over the cluster dynamically. 
 How, to tell which node contains the entity identified by a certain key ?
 
-1) The most naive approach would be to ask a subset of nodes, in hope that at least one of them has the data we are looking for. Given we have a cluster of N nodes and entities replicated R times, we should be able to reach our resource after asking (N/R)+1 nodes.
+1) The most naive approach would be to ask a subset of nodes, hoping that at least one of them has the data we are looking for. Given we have a cluster of N nodes and entities replicated R times, we should be able to reach our resource after asking (N/R)+1 nodes.
    
-2) Another way is to keep a registry in one single place having information about current localization of every single entity in a system. Since this approach 
-   doesn't scale well in theory, in practice we group and co-locate entities together within partitions and therefore compress the registry to store information about 
-   entire partition rather than individual entity. In this case, a shard ID is a composite key of (shardID, entityID) tuple. This is how e.g. `akka-cluster-sharding` or `riak-core` works. 
-   Frequently, some subset of hot (frequently used) partitions may be cached on each node to reduce a number of reqs the central registry or even the registry itself may be a replicated store.
+2) Another way is to keep a registry about current localization of every single entity in a system in one single place. Since this approach 
+   doesn't scale well in theory, in practice we group and co-locate entities together within partitions and therefore compress the registry to store information about the entire partition rather than individual entity. In this case, a shard ID is a composite key of a (shardID, entityID) tuple. This is how e.g. `akka-cluster-sharding` or `riak-core` works.
+   Frequently, some subset of hot (frequently used) partitions may be cached on each node to reduce a number of requests to the central registry, or even the registry itself may be a replicated store.
 
 3) We could also use distributed hash tables - where our entity key is hashed and then mapped into specific node that is responsible for holding resources 
    belonging to that specific subset of key space (a range of all possible hash values). Sometimes this may mean, that we miss a node at first try because cluster 
