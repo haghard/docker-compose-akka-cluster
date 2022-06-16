@@ -9,8 +9,8 @@ https://ringpop.readthedocs.io/en/latest/architecture_design.html
 
 ## How to route a request to a given resource inside a cluster ?
 
-The state of our system usually consists of multiple addressable entities - which are replicated for higher availability and resiliency. 
-However usually the entire state is too big to fit into any single node. For this reason it's often partitioned all over the cluster dynamically. 
+The state of our system usually consists of multiple addressable entities, which are replicated for higher availability and resiliency. 
+However, usually the entire state is too big to fit into any single node. For this reason it's often partitioned all over the cluster dynamically. 
 How to tell which node contains an entity identified by some key ?
 
 
