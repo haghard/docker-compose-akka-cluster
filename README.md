@@ -27,7 +27,7 @@ In this project, although the `RingMaster` holds a distributed hash ring of hash
 
 ### Implementation idea (Sharding and Replication)
 
-`akka-cluster-sharding` enables running at most one instance of a particular actor in the cluster, acting as a consistency boundary at any point in time. That's exactly what we want. Each process knowns its name from the start i.e. (`alpha`, `betta` or `gamma`). It uses the given shard name as a cluster role and starts sharding on the nodes that belong that role. Moreover, it allocates only one instance of `DeviceDigitalTwin` per node, as we have one-to-one mapping between the shard and the entity.
+`akka-cluster-sharding` enables running at most one instance of a particular actor in the cluster, acting as a consistency boundary at any point in time. That's exactly what we want. Each process knowns its name from the start i.e. (`alpha`, `betta` or `gamma`). It uses the given shard name as a cluster role and starts sharding on the nodes that belong to that role. Moreover, it allocates only one instance of `DeviceDigitalTwin` per node, as we have one-to-one mapping between the shard and the entity.
 
 For example, on each node that belongs to `alpha` role, we allocate only one sharded entity. 
 Combination of host ip and port is used for shard/entity name, therefore it guarantees 
