@@ -20,7 +20,7 @@ How, to tell which node contains the entity identified by a certain key ?
    Frequently, some subset of hot (frequently used) partitions may be cached on each node to reduce a number of requests to the central registry, or even the registry itself may be a replicated store.
 
 3) We could also use distributed hash tables - where our entity key is hashed and then mapped into a specific node that is responsible for holding resources belonging to that specific subset of key space. Sometimes, this may mean that we miss a node on the first try because the cluster 
-   state is changing, and more hops need to be applied. Although `Apache Cassandra` and `ScyllaDB` are known for using this approach (at least at the moment of writing), the approach is a source of many errors (https://www.slideshare.net/ScyllaDB/scylla-summit-2022-making-schema-changes-safe-with-raft-251141793).
+   state is changing, and more hops need to be applied. Although `Apache Cassandra` and `ScyllaDB` are known for using this approach (at least at the moment the text was being written), the approach is a source of many errors (https://www.slideshare.net/ScyllaDB/scylla-summit-2022-making-schema-changes-safe-with-raft-251141793).
 
 In this project, although the `RingMaster` holds a distributed hash ring of hashed keys, it's also deployed as a cluster singleton, so it's a combination of points 2 and 3 from above. 
 
