@@ -12,9 +12,12 @@ import io.moia.streamee.{IntoableProcessor, Process, ProcessSinkRef}
 
 import scala.concurrent.duration._
 
-/** Starts: 1) replicator actor with specified shard name 2) A shard region with specified shard name and forwards all
-  * incoming messages to the shard region
+// format: off
+/** Starts:
+  * 1) replicator actor with specified shard name
+  * 2) A shard region with specified shard name and forwards all incoming messages to the shard region
   */
+// format: on
 object EntryPoint {
 
   sealed trait Protocol
@@ -32,7 +35,7 @@ object EntryPoint {
     shardAddress: String, // "172.20.0.3-2551"
     config: Config
   ): Behavior[EntryPoint.Protocol] =
-    Behaviors.setup[EntryPoint.Protocol] { ctx ⇒
+    Behaviors.setup[EntryPoint.Protocol] { ctx =>
       implicit val sys         = ctx.system
       implicit val to: Timeout = Timeout(config.timeout)
 
@@ -77,48 +80,48 @@ object EntryPoint {
       FlowWithContext.fromTuples(f)
        */
 
-      val mergeHub = IntoableProcessor(
+      val intoableProcessor = IntoableProcessor(
         Process[PingDevice, PingDeviceReply]
-          .mapAsync(config.parallelism)(req ⇒
+          .mapAsync(config.parallelism)(req =>
             shardRegion.ask[PingDeviceReply](DeviceDigitalTwin.PingDevice(req.deviceId, req.replica, _))
           ),
         s"$shardName-into-entrance",
         config.bufferSize
       )
 
-      mergeHub.whenDone.onComplete { _ ⇒
+      intoableProcessor.whenDone.onComplete { _ =>
         ctx.self.tell(ProcessorCompleted)
       }(ctx.system.executionContext)
 
-      active(mergeHub, shardName, shardAddress, config)(ctx)
+      active(intoableProcessor, shardName, shardAddress, config)(ctx)
     }
 
   def active(
-    processor: IntoableProcessor[PingDevice, PingDeviceReply],
+    intoableProcessor: IntoableProcessor[PingDevice, PingDeviceReply],
     shardName: String,
     shardAddress: String,
     config: Config
   )(implicit ctx: ActorContext[EntryPoint.Protocol]): Behavior[EntryPoint.Protocol] =
     Behaviors
       .receiveMessage[EntryPoint.Protocol] {
-        case EntryPoint.GetShardInfo(ringMaster) ⇒
+        case EntryPoint.GetShardInfo(ringMaster) =>
           // Example:  ShardInfo("alpha", ctx.self, "172.20.0.3-2551")
           ringMaster.tell(ShardInfo(shardName, ctx.self, shardAddress))
           Behaviors.same
 
-        case EntryPoint.GetSinkRef(replyTo) ⇒
+        case EntryPoint.GetSinkRef(replyTo) =>
           // ctx.log.info(s"${classOf[GetSinkRef].getName} for $shardName")
           // implicit val m = akka.stream.Materializer.matFromSystem(akka.actor.typed.scaladsl.adapter.TypedActorSystemOps(ctx.system).toClassic)
           implicit val s = ctx.system
-          replyTo.tell(processor.sinkRef(StreamRefAttributes.subscriptionTimeout(config.timeout)))
+          replyTo.tell(intoableProcessor.sinkRef(StreamRefAttributes.subscriptionTimeout(config.timeout)))
           Behaviors.same
 
-        case EntryPoint.ProcessorCompleted ⇒
+        case EntryPoint.ProcessorCompleted =>
           Behaviors.stopped
 
       }
-      .receiveSignal { case (ctx, PostStop) ⇒
-        processor.shutdown()
+      .receiveSignal { case (ctx, PostStop) =>
+        intoableProcessor.shutdown()
         CoordinatedShutdown(ctx.system).run(ShardEntranceOutage)
         Behaviors.same
       }

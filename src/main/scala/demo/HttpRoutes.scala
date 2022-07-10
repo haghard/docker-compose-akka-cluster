@@ -44,10 +44,10 @@ case class HttpRoutes(
       .actorRefWithBackpressure[ClusterJvmMetrics.JvmMetrics, ClusterJvmMetrics.Confirm](
         jvmMetricsSrc,
         ClusterJvmMetrics.Confirm,
-        { case ClusterJvmMetrics.Completed ⇒ CompletionStrategy.immediately },
-        { case ClusterJvmMetrics.StreamFailure(ex) ⇒ ex }
+        { case ClusterJvmMetrics.Completed => CompletionStrategy.immediately },
+        { case ClusterJvmMetrics.StreamFailure(ex) => ex }
       )
-      .collect { case ClusterJvmMetrics.ClusterMetrics(bt) ⇒ bt }
+      .collect { case ClusterJvmMetrics.ClusterMetrics(bt) => bt }
       .toMat(BroadcastHub.sink[ByteString](1 << 3))(Keep.both) // one to many
       .run()
 
@@ -61,7 +61,7 @@ case class HttpRoutes(
     d: FiniteDuration = 30.second
   ): Flow[Message, Message, akka.NotUsed] =
     Flow.fromGraph(
-      GraphDSL.create() { implicit b ⇒
+      GraphDSL.create() { implicit b =>
         import GraphDSL.Implicits._
         val heartbeats = b.add(Source.tick(d, d, hbMsg))
         val merge      = b.add(MergePreferred[Message](1, eagerComplete = true))
@@ -81,16 +81,16 @@ case class HttpRoutes(
     Flow.fromSinkAndSource[Message, Message](
       Sink.ignore,
       Source
-        .fromIterator(() ⇒
+        .fromIterator(() =>
           Iterator.range(1, 64).map(created(_, 1)) ++ Iterator.range(1, 32).filter(_ % 2 == 0).map(delete(_))
             ++ Iterator.range(1, 32).filter(_ % 2 == 0).map(created(_, 1))
         )
-        .zipWith(Source.tick(0.second, 100.millis, ()))((a, _) ⇒ a)
+        .zipWith(Source.tick(0.second, 100.millis, ()))((a, _) => a)
     )
   }
 
-  val chord = {
-    extractLog { log ⇒
+  val chord =
+    extractLog { log =>
       path("chord") {
         get {
           log.info("GET chord")
@@ -99,32 +99,32 @@ case class HttpRoutes(
       }
     } ~
       path("ring-events")(handleWebSocketMessages(ringFlow()))
-  } // http://192.168.77.10:9000/rng
+  // http://192.168.77.10:9000/rng
 
   def cropCircleRoute =
     path("view")(get(encodeResponse(getFromFile(folderName + "/" + circlePage)))) ~
       path("view1")(get(encodeResponse(getFromFile(folderName + "/" + circlePage1)))) ~
-      pathPrefix("d3" / Remaining)(file ⇒ encodeResponse(getFromFile(folderName + "/" + file))) ~
+      pathPrefix("d3" / Remaining)(file => encodeResponse(getFromFile(folderName + "/" + file))) ~
       path("events") {
         handleWebSocketMessages(
           flowWithHeartbeat()
             .flatMapConcat(
               _.asTextMessage.getStreamedText.fold("")(_ + _)
             ) // the web socket spec says that a single msg over web socket can be streamed (multiple chunks)
-            .mapAsync(1) { _ ⇒
+            .mapAsync(1) { _ =>
               ringMaster
                 .ask[HttpRoutes.CropCircleView](RingMaster.GetCropCircle(_))
-                .map(r ⇒ TextMessage.Strict(r.json))
+                .map(r => TextMessage.Strict(r.json))
             }
         )
       }
 
-  val pingRoute = extractLog { implicit log ⇒
+  val pingRoute = extractLog { implicit log =>
     aroundRequest(logLatency(log)) {
-      path("device" / LongNumber) { deviceId ⇒
+      path("device" / LongNumber) { deviceId =>
         onComplete(ringMaster.ask[RingMaster.PingDeviceReply](RingMaster.PingReq(deviceId, _))) {
-          case Failure(err) ⇒ complete(BadRequest → err)
-          case Success(_)   ⇒ complete(OK)
+          case Failure(err) => complete(BadRequest -> err)
+          case Success(_)   => complete(OK)
         }
       }
     }
@@ -139,7 +139,7 @@ case class HttpRoutes(
               .ask[ClusterShardingStats](
                 akka.cluster.sharding.typed.GetClusterShardingStats(DeviceDigitalTwin.entityKey, timeout.duration, _)
               )
-              .map(stats ⇒ shardName + "\n" + stats.regions.mkString("\n"))
+              .map(stats => shardName + "\n" + stats.regions.mkString("\n"))
           }
         }
       } ~
@@ -152,7 +152,7 @@ case class HttpRoutes(
   def queryRing: Future[HttpResponse] =
     ringMaster
       .ask[RingMaster.ClusterStateResponse](RingMaster.ClusterStateRequest(_))
-      .map { reply ⇒
+      .map { reply =>
         HttpResponse(
           status = StatusCodes.OK,
           entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(reply.state))

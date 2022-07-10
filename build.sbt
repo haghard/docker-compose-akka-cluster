@@ -1,11 +1,11 @@
 import sbt._
 import sbtdocker.ImageName
 
-val scalaV = "2.13.7"
-val Akka   = "2.6.18"
-val AkkaManagement = "1.1.1"
+val scalaV = "2.13.8"
+val Akka   = "2.6.19"
+val AkkaManagement = "1.1.3"
 
-val akkaHttpVersion = "10.2.7"
+val akkaHttpVersion = "10.2.9"
 
 val Version = "0.4"
 
@@ -15,6 +15,8 @@ version := Version
 //scalacOptions in (Compile, console) := Seq("-feature", "-Xfatal-warnings", "-deprecation", "-unchecked")
 
 val scalacOps = Seq(
+  "-Xsource:3",
+  "-target:14",
   //"-deprecation", // Emit warning and location for usages of deprecated APIs.
   "-unchecked",   // Enable additional warnings where generated code depends on assumptions.
   "-encoding", "UTF-8", // Specify character encoding used by source files.
@@ -59,9 +61,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %% "akka-http"                % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"     % akkaHttpVersion,
 
-  "ch.qos.logback"         % "logback-classic"           % "1.2.9",
+  "ch.qos.logback"         % "logback-classic"           % "1.2.11",
 
-  "com.lihaoyi" % "ammonite" % "2.4.0-31-ba6214b1" % "test" cross CrossVersion.full
+  "com.lihaoyi" % "ammonite" % "2.5.4" % "test" cross CrossVersion.full
 )
 
 //test:run
@@ -169,6 +171,9 @@ docker / dockerfile := {
     )
   }
 }
+
+addCommandAlias("c", "compile")
+addCommandAlias("r", "reload")
 
 ThisBuild / turbo := true
 

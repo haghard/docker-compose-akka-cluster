@@ -17,26 +17,26 @@ final case class CropCircle(
     copy(map = map.updated(memberId, map(memberId) + entityId))
 
   override def toString: String = {
-    val en = map.keySet.toVector.map { k ⇒
-      val entries = map(k).toVector.map { actorPath ⇒
+    val en = map.keySet.toVector.map { k =>
+      val entries = map(k).toVector.map { actorPath =>
         JsObject(
-          "name"     → JsString(actorPath),
-          "type"     → JsString(ElementType),
-          "children" → JsArray()
+          "name"     -> JsString(actorPath),
+          "type"     -> JsString(ElementType),
+          "children" -> JsArray()
         )
       }
 
       JsObject(
-        "name"     → JsString(k),
-        "type"     → JsString(GroupType),
-        "children" → JsArray(entries)
+        "name"     -> JsString(k),
+        "type"     -> JsString(GroupType),
+        "children" -> JsArray(entries)
       )
     }
 
     JsObject(
-      "name"     → JsString(name),
-      "type"     → JsString(ClusterType),
-      "children" → JsArray(en)
+      "name"     -> JsString(name),
+      "type"     -> JsString(ClusterType),
+      "children" -> JsArray(en)
     ).compactPrint
   }
 }

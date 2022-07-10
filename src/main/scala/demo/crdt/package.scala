@@ -60,18 +60,18 @@ package object crdt {
   val finished = ReplicatedJob(Finished)
    */
 
-  final case class Status(name: String)(preds: ⇒ Set[Status], succs: ⇒ Set[Status]) extends ReplicatedData {
+  final case class Status(name: String)(preds: => Set[Status], succs: => Set[Status]) extends ReplicatedData {
     type T = Status
     lazy val predecessors = preds
     lazy val successors   = succs
 
     override def merge(that: Status): Status =
       Set(this, that) match {
-        case RunningVsRejectedConflict ⇒ Rejected
-        case AbortedVsRejectedConflict ⇒ Aborted
-        case FailedVsRejectedConflict  ⇒ Failed
-        case FailedVsAbortedConflict   ⇒ Aborted
-        case _                         ⇒ mergeLoop(this, that)
+        case RunningVsRejectedConflict => Rejected
+        case AbortedVsRejectedConflict => Aborted
+        case FailedVsRejectedConflict  => Failed
+        case FailedVsAbortedConflict   => Aborted
+        case _                         => mergeLoop(this, that)
       }
 
     private def mergeLoop(left: Status, right: Status): Status = {
@@ -80,15 +80,15 @@ package object crdt {
           candidate
         else {
           val nextExclude = exclude + candidate
-          val branches    = candidate.successors.map(succ ⇒ loop(succ, nextExclude))
-          branches.reduce((l, r) ⇒ if (isSuccessor(l, r, nextExclude)) r else l)
+          val branches    = candidate.successors.map(succ => loop(succ, nextExclude))
+          branches.reduce((l, r) => if (isSuccessor(l, r, nextExclude)) r else l)
         }
 
       def isSuccessor(candidate: Status, fixed: Status, exclude: Set[Status]): Boolean =
         if (candidate == fixed) true
         else {
           val toSearch = candidate.predecessors -- exclude
-          toSearch.exists(pred ⇒ isSuccessor(pred, fixed, exclude))
+          toSearch.exists(pred => isSuccessor(pred, fixed, exclude))
         }
 
       loop(right, Set.empty)

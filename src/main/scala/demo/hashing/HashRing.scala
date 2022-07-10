@@ -29,14 +29,14 @@ final case class HashRing(private val ring: SortedMap[Long, String], start: Long
     else {
       val ringStep = nodes.size + 1
       val takeOvers = (start + (step * nodes.size) until end by (step * ringStep))
-        .map(pId ⇒ (pId, lookup(pId).head))
+        .map(pId => (pId, lookup(pId).head))
         .toSet
 
-      val updatedRing = takeOvers.foldLeft(ring) { case (ring, (pId, _)) ⇒
+      val updatedRing = takeOvers.foldLeft(ring) { case (ring, (pId, _)) =>
         ring.updated(pId, node)
       }
 
-      Some(HashRing(updatedRing, start, end, step) → takeOvers)
+      Some(HashRing(updatedRing, start, end, step) -> takeOvers)
     }
 
   /** Alias for [[remove]] method
@@ -49,15 +49,15 @@ final case class HashRing(private val ring: SortedMap[Long, String], start: Long
       None
     else {
       val updatedRing = ranges(node) match {
-        case Nil ⇒ ring
-        case h :: t ⇒
+        case Nil => ring
+        case h :: t =>
           if (t.size == 0) ring - h
           else if (t.size == 1) ring -- List(h, t.head)
           else if (t.size == 2) ring -- List(h, t.head, t.head)
           else ring -- (h :: t)
       }
 
-      Some(HashRing(updatedRing, start, end, step) → ranges(node))
+      Some(HashRing(updatedRing, start, end, step) -> ranges(node))
     }
 
   def last: Long = ring.lastKey
@@ -94,26 +94,26 @@ final case class HashRing(private val ring: SortedMap[Long, String], start: Long
   }
 
   def toCropCircle: String = {
-    val en = ranges.keySet.toVector.map { k ⇒
-      val entries = ranges(k).toVector.map { i ⇒
+    val en = ranges.keySet.toVector.map { k =>
+      val entries = ranges(k).toVector.map { i =>
         JsObject(
-          "name"     → JsNumber(i),
-          "type"     → JsString("member"),
-          "children" → JsArray()
+          "name"     -> JsNumber(i),
+          "type"     -> JsString("member"),
+          "children" -> JsArray()
         )
       }
 
       JsObject(
-        "name"     → JsString(k),
-        "type"     → JsString("shard"),
-        "children" → JsArray(entries)
+        "name"     -> JsString(k),
+        "type"     -> JsString("shard"),
+        "children" -> JsArray(entries)
       )
     }
 
     JsObject(
-      "name"     → JsString("ring"),
-      "type"     → JsString("cluster"),
-      "children" → JsArray(en)
+      "name"     -> JsString("ring"),
+      "type"     -> JsString("cluster"),
+      "children" -> JsArray(en)
     ).compactPrint
   }
 
@@ -138,7 +138,7 @@ object HashRing {
   ): HashRing =
     HashRing(
       (start until end by step)
-        .foldLeft(SortedMap[Long, String]())((acc, c) ⇒ acc + (c → name)),
+        .foldLeft(SortedMap[Long, String]())((acc, c) => acc + (c -> name)),
       start,
       end,
       step

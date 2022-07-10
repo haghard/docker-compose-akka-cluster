@@ -11,10 +11,10 @@ package object either {
 
   // Similar to `io.moia.streamee.either.tapErrors` but doesn't require a `BroadcastHub` instance
   def tapErrors[In, CtxIn, Out, CtxOut, Mat, E](
-    f: Sink[(E, CtxOut), Any] ⇒ FlowWithContext[In, CtxIn, Out, CtxOut, Mat]
+    f: Sink[(E, CtxOut), Any] => FlowWithContext[In, CtxIn, Out, CtxOut, Mat]
   ): FlowWithContext[In, CtxIn, Either[E, Out], CtxOut, Future[Mat]] = {
     val flow =
-      Flow.fromMaterializer { case (mat, attr) ⇒
+      Flow.fromMaterializer { case (mat, attr @ _) =>
         val ((errorTap, switch), errors) =
           MergeHub
             .source[(E, CtxOut)](1) // attr.get[InputBuffer].map(_.max).getOrElse(1)
@@ -29,20 +29,20 @@ package object either {
             .alsoTo(
               Flow[Any]
                 .to(Sink.onComplete {
-                  case Success(_)     ⇒ switch.shutdown()
-                  case Failure(cause) ⇒ switch.abort(cause)
+                  case Success(_)     => switch.shutdown()
+                  case Failure(cause) => switch.abort(cause)
                 })
             )
 
-        flow.merge(Source.fromPublisher(errors).map { case (e, ctxOut) ⇒ (Left(e), ctxOut) })
+        flow.merge(Source.fromPublisher(errors).map { case (e, ctxOut) => (Left(e), ctxOut) })
       }
     FlowWithContext.fromTuples(flow)
   }
 
   def tapFlowErrors[T](
-    f: Sink[(String, T), Any] ⇒ Flow[T, T, akka.NotUsed]
+    f: Sink[(String, T), Any] => Flow[T, T, akka.NotUsed]
   ): Flow[T, Either[String, T], Future[akka.NotUsed]] =
-    Flow.fromMaterializer { case (mat, attributes) ⇒
+    Flow.fromMaterializer { case (mat, attributes) =>
       val ((errorTap, switch), errors) =
         MergeHub
           .source[(String, T)](attributes.get[InputBuffer].map(_.max).getOrElse(1))
@@ -56,11 +56,11 @@ package object either {
           .alsoTo(
             Flow[Any]
               .to(Sink.onComplete {
-                case Success(_)     ⇒ switch.shutdown()
-                case Failure(cause) ⇒ switch.abort(cause)
+                case Success(_)     => switch.shutdown()
+                case Failure(cause) => switch.abort(cause)
               })
           )
 
-      flow.merge(Source.fromPublisher(errors).map { case (e, _) ⇒ Left(e) })
+      flow.merge(Source.fromPublisher(errors).map { case (e, _) => Left(e) })
     }
 }

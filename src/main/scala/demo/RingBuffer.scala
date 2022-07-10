@@ -9,13 +9,12 @@ class RingBuffer[T: scala.reflect.ClassTag] private (capacity: Int, mask: Int, b
   private var tail: Long = 0L
   private var head: Long = 0L
 
-  def this(capacity: Int) {
+  def this(capacity: Int) =
     this(
       RingBuffer.nextPowerOfTwo(capacity),
       RingBuffer.nextPowerOfTwo(capacity) - 1,
       Array.ofDim[T](RingBuffer.nextPowerOfTwo(capacity))
     )
-  }
 
   def offer(e: T): Boolean = {
     val wrapPoint = tail - capacity

@@ -44,7 +44,7 @@ object SharedDomain {
     val settings =
       ClusterShardingSettings(system)
         /*
-          Remembering entities automatically restarts entities after a rebalance or entity crash. Without remembered entities
+          Remembering entities automatically restarts entities after shard rebalancing or entity crash. Without "remember-entities"
           restarts happen on the arrival of a message. That is exactly what we want in this case.
          */
         .withRememberEntities(false)

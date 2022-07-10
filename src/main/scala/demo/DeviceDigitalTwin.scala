@@ -16,7 +16,7 @@ object DeviceDigitalTwin {
   sealed trait DeviceCommand {
     def replica: String
   }
-  case class PingDevice(id: Long, replica: String, reply: ActorRef[PingDeviceReply]) extends DeviceCommand
+  final case class PingDevice(id: Long, replica: String, reply: ActorRef[PingDeviceReply]) extends DeviceCommand
 
   val entityKey: EntityTypeKey[DeviceCommand] =
     EntityTypeKey[DeviceCommand]("devices")
@@ -26,14 +26,14 @@ object DeviceDigitalTwin {
     replicator: ActorRef[ShardReplica.Protocol],
     replicaName: String
   ): Behavior[DeviceCommand] =
-    Behaviors.setup { ctx ⇒
+    Behaviors.setup { ctx =>
       ctx.log.warn("* * *  Wake up sharded entity for replicator {}: {} * * *", replicaName, entityCtx.entityId)
       active(replicator, replicaName, entityCtx)(ctx.log) // orElse idle(ctx.log)
     }
 
   private def onSignal(
     log: org.slf4j.Logger
-  ): PartialFunction[(ActorContext[DeviceCommand], Signal), Behavior[DeviceCommand]] = { case (_, signal) ⇒
+  ): PartialFunction[(ActorContext[DeviceCommand], Signal), Behavior[DeviceCommand]] = { case (_, signal) =>
     log.warn(s"Passivate sharded entity for replicator ${signal.getClass.getName}")
     Behaviors.stopped[DeviceCommand]
   }
@@ -44,7 +44,7 @@ object DeviceDigitalTwin {
     entityCtx: EntityContext[DeviceCommand]
   )(implicit log: org.slf4j.Logger): Behavior[DeviceCommand] =
     Behaviors
-      .receiveMessage[DeviceDigitalTwin.DeviceCommand] { case DeviceDigitalTwin.PingDevice(deviceId, _, replyTo) ⇒
+      .receiveMessage[DeviceDigitalTwin.DeviceCommand] { case DeviceDigitalTwin.PingDevice(deviceId, _, replyTo) =>
         // log.warn("* * * Increment deviceId:{} thought shard [{}:{}] * * *", deviceId, replicaName, entityCtx.entityId)
         replicator.tell(ShardReplica.PingDeviceReplicator(deviceId, replyTo))
         active(replicator, replicaName, entityCtx) // orElse idle(log)

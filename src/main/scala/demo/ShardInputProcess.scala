@@ -14,7 +14,7 @@ object ShardInputProcess {
 
   final case class ProcessError(errMsg: String)
 
-  case class Config(processorTimeout: FiniteDuration, parallelism: Int, bufferSize: Int)
+  final case class Config(processorTimeout: FiniteDuration, parallelism: Int, bufferSize: Int)
 
   /** A long-running process that links this with EntryPoint
     */
@@ -38,21 +38,21 @@ object ShardInputProcess {
      */
 
     val shardingSink: ProcessSink[PingDevice, PingDeviceReply] =
-      RestartSink.withBackoff(akka.stream.RestartSettings(100.millis, 500.millis, 0.1))(() ⇒
+      RestartSink.withBackoff(akka.stream.RestartSettings(100.millis, 500.millis, 0.1))(() =>
         Sink.futureSink(getSinkRef().map(_.sink))
       )
 
-    either.tapErrors { errorTap ⇒
+    either.tapErrors { errorTap =>
       Process[PingDevice, Either[ProcessError, PingDeviceReply]]
-        .map { req ⇒
+        .map { req =>
           if (req.deviceId <= 10) Left(ProcessError("DeviceId should be more than 10")) else Right(req)
         }
         .errorTo(errorTap)
         .into(shardingSink, processorTimeout, parallelism)
         // .via(shardingFlow(shardingSink, processorTimeout))
         .map {
-          case PingDeviceReply.Error(err) ⇒ Left(ProcessError(err))
-          case PingDeviceReply.Success    ⇒ Right(PingDeviceReply.Success)
+          case PingDeviceReply.Error(err) => Left(ProcessError(err))
+          case PingDeviceReply.Success    => Right(PingDeviceReply.Success)
         }
         /*.mapConcat { replies: Seq[PingDeviceReply] =>
           replies.map {

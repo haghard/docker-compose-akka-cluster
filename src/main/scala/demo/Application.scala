@@ -127,9 +127,9 @@ object Application extends Ops {
       cfg
     ).toClassic*/
 
-    val address = Address("akka", SystemName, seedHostAddress, port.toInt)
+    val address = Address("akka", SystemName, seedHostAddress, port)
     // to avoid the error with top-level actor creation in streamee
-    classicSystem.spawn(Guardian(cfg, address, shardName, runtimeInfo, httpPort.toInt), "guardian")
+    classicSystem.spawn(Guardian(cfg, address, shardName, runtimeInfo, httpPort), "guardian")
     akka.management.cluster.bootstrap.ClusterBootstrap(classicSystem).start()
     // akka.management.scaladsl.AkkaManagement(classicSystem).start()
   }
@@ -142,8 +142,8 @@ object Application extends Ops {
     httpPort: Int
   ): Behavior[SelfUp] =
     Behaviors
-      .setup[SelfUp] { ctx ⇒
-        implicit val sys = ctx.system
+      .setup[SelfUp] { ctx =>
+        // implicit val sys = ctx.system
         // implicit val ex  = sys.executionContext
         // implicit val sch = sys.scheduler
 
@@ -151,7 +151,7 @@ object Application extends Ops {
         cluster.manager tell Join(seedAddress)
         cluster.subscriptions tell Subscribe(ctx.self, classOf[SelfUp])
 
-        Behaviors.receive[SelfUp] { case (ctx, _ @SelfUp(state)) ⇒
+        Behaviors.receive[SelfUp] { case (ctx, _ @SelfUp(state)) =>
           val clusterMembers = state.members.filter(_.status == MemberStatus.Up).map(_.address)
           ctx.log.warn(
             "★ ★ ★ {} {}:{} joined cluster with existing members:[{}] ★ ★ ★",
@@ -173,6 +173,15 @@ object Application extends Ops {
               ).withStopMessage(RingMaster.Shutdown)
             )
 
+          /*
+          Dispatchers.InternalDispatcherId
+          Dispatchers.DefaultDispatcherId
+           */
+          DispatcherSelector.default()
+          DispatcherSelector.blocking()
+          DispatcherSelector.sameAsParent()
+          DispatcherSelector.fromConfig("akka.metrics-dispatcher")
+
           val jvmMetrics = ctx
             .spawn(ClusterJvmMetrics(), "jvm-metrics", DispatcherSelector.fromConfig("akka.metrics-dispatcher"))
             .narrow[ClusterJvmMetrics.Confirm]
@@ -180,10 +189,13 @@ object Application extends Ops {
           val hostName = cluster.selfMember.address.host.get
           BootstrapHttp(shardName, ringMaster, jvmMetrics, hostName, httpPort)(ctx.system.toClassic)
 
+          // format: off
           /** https://en.wikipedia.org/wiki/Little%27s_law
             *
-            * L = λ * W L – the average number of items in a queuing system (queue size) λ – the average number of items
-            * arriving at the system per unit of time W – the average waiting time an item spends in a queuing system
+            * L = λ * W
+            * L – the average number of items in a queuing system (queue size).
+            * λ – the average number of items arriving at the system per unit of time.
+            * W – the average waiting time an item spends in a queuing system.
             *
             * Question: How many processes running in parallel we need given throughput = 100 rps and average latency =
             * 100 millis ?
@@ -193,11 +205,12 @@ object Application extends Ops {
             * Give the numbers above, the Little’s Law shows that on average, having queue size == 100, parallelism
             * factor == 10 average latency of single request == 100 millis we can keep up with throughput = 100 rps
             */
+          // format: on
           val procCfg    = EntryPoint.Config(timeout = 1.second, parallelism = 10, bufferSize = 100)
           val entryPoint = ctx.spawn(EntryPoint(shardName, hostName, procCfg), "entry-point")
           ctx.watch(entryPoint)
 
-          Behaviors.receiveSignal { case (_, Terminated(`entryPoint`)) ⇒
+          Behaviors.receiveSignal { case (_, Terminated(`entryPoint`)) =>
             ctx.log.warn(s"$entryPoint has been stopped. Shutting down...")
             CoordinatedShutdown(ctx.system.toClassic).run(EntryPointInternalError)
             Behaviors.same

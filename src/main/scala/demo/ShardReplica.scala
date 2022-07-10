@@ -77,7 +77,7 @@ object ShardReplica {
     )
 
   def apply(shardName: String, to: FiniteDuration = 1.second): Behavior[Protocol] =
-    Behaviors.setup[Protocol] { ctx ⇒
+    Behaviors.setup[Protocol] { ctx =>
       // WriteMajority(to) WriteTo(2, to)
       implicit val clusterCluster = Cluster(ctx.system.toClassic)
 
@@ -89,35 +89,35 @@ object ShardReplica {
       adapter.subscribe(Key, InternalDataUpdated.apply)
 
       def behavior: PartialFunction[Protocol, Behavior[Protocol]] = {
-        case PingDeviceReplicator(deviceId, replyTo) ⇒
+        case PingDeviceReplicator(deviceId, replyTo) =>
           ctx.log.warn(s"Write key:${Key.id} - device:$deviceId")
           adapter.askUpdate(
-            replyTo ⇒ Replicator.Update(Key, PNCounterMap.empty[Long], WriteLocal, replyTo)(_.increment(deviceId, 1)),
+            replyTo => Replicator.Update(Key, PNCounterMap.empty[Long], WriteLocal, replyTo)(_.increment(deviceId, 1)),
             InternalUpdateResponse(_, replyTo)
           )
           Behaviors.same
 
-        case InternalUpdateResponse(res, replyTo) ⇒
+        case InternalUpdateResponse(res, replyTo) =>
           res match {
-            case _: UpdateSuccess[PNCounterMap[Long]] ⇒
+            case _: UpdateSuccess[PNCounterMap[Long]] =>
               ctx.log.warn(s"UpdateSuccess: [${res.key.id}: ${res.request}]")
               // To simulate io.moia.streamee.package$ResponseTimeoutException: No response within 1 second!
               // if (ThreadLocalRandom.current().nextDouble() > .5) Thread.sleep(1100)
               replyTo.tell(RingMaster.PingDeviceReply.Success)
-            case _: UpdateTimeout[PNCounterMap[Long]] ⇒
+            case _: UpdateTimeout[PNCounterMap[Long]] =>
               ctx.log.warn(s"UpdateTimeout: [${res.key.id}: ${res.request}]")
               replyTo.tell(RingMaster.PingDeviceReply.Error(s"UpdateTimeout: [${res.key.id}]"))
-            case _: ModifyFailure[PNCounterMap[Long]]     ⇒
-            case _: StoreFailure[PNCounterMap[Long]]      ⇒
-            case _: UpdateDataDeleted[PNCounterMap[Long]] ⇒
+            case _: ModifyFailure[PNCounterMap[Long]]     =>
+            case _: StoreFailure[PNCounterMap[Long]]      =>
+            case _: UpdateDataDeleted[PNCounterMap[Long]] =>
           }
           Behaviors.same
 
-        case InternalDataUpdated(change @ Replicator.Changed(Key)) ⇒
+        case InternalDataUpdated(change @ Replicator.Changed(Key)) =>
           ctx.log.warn(s"[$shardName] - keys:[${change.get(Key).entries.mkString(",")}]")
           Behaviors.same
 
-        case other ⇒
+        case other =>
           ctx.log.warn(s"Unexpected message in ${getClass.getSimpleName}: $other")
           Behaviors.same
       }

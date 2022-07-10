@@ -27,23 +27,16 @@ In this project, although the `RingMaster` holds a distributed hash ring of hash
 
 ### Implementation idea (Sharding and Replication)
 
-`akka-cluster-sharding` enables running at most one instance of a particular actor in the cluster, acting as a consistency boundary at any point in time. That's exactly what we want. Each process knowns its name from the start (i.e. `alpha`, `betta` or `gamma`). It uses the given shard name as a cluster role and starts sharding on the nodes that belong to that role. Moreover, it allocates only one instance of `DeviceDigitalTwin` per node, as we have one-to-one mapping between the shard and the entity.
+`akka-cluster-sharding` enables running at most one instance of a particular actor in the cluster, acting as a consistency boundary at any point in time. That's exactly what we want. Each process knows its name from the start (i.e. `alpha`, `betta` or `gamma`). It uses the given shard name as a cluster role and starts sharding on the nodes that belong to that role. Moreover, it allocates only one instance of `DeviceDigitalTwin` per node, as we have one-to-one mapping between the shard and the entity.
 
-For example, on each node that belongs to `alpha` role, we allocate only one sharded entity. 
-Combination of host ip and port is used for shard/entity name, therefore it guarantees 
-that each node runs only one instance of sharded entity.
-
-Each node starts http api, therefore next q to answer being how we decide where the incoming requests should be routed? For that
-purpose we have `RingMaster` actor. As processes join the cluster, they take ownership for token ranges on a hash ring based on shard name (role).
-`RingMaster` is deployed as cluster singleton, holds the hash redirects all incoming requests to a particular shard region(role form above).
+For example, on each node that belongs to the `alpha` role, we allocate only one sharded entity. A combination of a host ip and port is used for the shard(entity) name, therefore it guarantees that each node runs only one instance of the sharded entity.
 
 
-Therefore, if we have the following set of shards: 
-`alpha`, `betta`, `gamma` then we also have 3 independently running shard regions, each of which knows nothing about each other. 
-Each shard region is being used only inside a particular shard and each sharded entity become a replica of the shard. 
-In other words, each shard becomes its own distributed system as each sharded entity inside the shard runs its own independent replicator
- 
+Each node starts an Http API, therefore the next question to answer being how we decide where the incoming requests should be routed. For that
+purpose, we have the `RingMaster` actor. As the processes join the cluster, they take ownership for(of) token ranges on a hash ring based on the shard name. `RingMaster`, deployed as a cluster singleton, holds the hash and redirects all incoming requests to a particular shard region.
 
+Therefore, if we have the following set of shard names `alpha`, `betta`, `gamma`, then we also have 3 independently running shard regions, each of which knows nothing about each other. Each shard region is used only inside a particular shard and each sharded entity becomes a replica of the shard. 
+In other words, each shard becomes its own distributed system as each sharded entity inside the shard runs its own independent replicator.
 
 ## Cluster Sharding
 
@@ -260,8 +253,8 @@ https://www.lightbend.com/blog/cpu-considerations-for-java-applications-running-
 
 Goals: lossless deployment, back-pressure throughout the whole req/res pipeline.
 
-Let's say we have 2 nodes Alice and Bob. Both host actors and accept incoming requests via rest api. When we shut down either of nodes we could lose request.
-In particular, if we shut down Bob while actors on Bob haven't yet replied to actors on Alice, the requests that have started on Alice won't be 
+Let's say we have 2 nodes `Alice` and `Bob`. Both host actors and accept incoming requests via rest api. When we shut down either of nodes we could lose request.
+In particular, if we shut down `Bob` while actors on `Bob` haven't yet replied to actors on `Alice`, the requests that have started on `Alice` won't be 
 completed. The solution being is that the leaving nodes should drain both incoming and outgoing channels. 
 Draining of incoming(local) requests channel (what CoordinatedShutdown gives you) is not enough.
 
@@ -280,11 +273,6 @@ https://manuel.bernhardt.io/2018/02/26/tour-akka-cluster-cluster-sharding/
 https://www.youtube.com/watch?v=SrPubnOKJcQ
 https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html?_ga=2.193469741.1478281344.1585435561-801666185.1515340543#external-shard-allocation
 
-### Future plans
-
-1. Instead of storing all actorRef in HashRingState I could store only one Leaseholder per a shard and interact with it.
-2. ExternalShardAllocation to control shard allocation
-3. Chord, a protocol and algorithm for a peer-to-peer distributed hash table.
 
 Examples:
 
@@ -301,3 +289,24 @@ sbt '; set javaOptions += "-Dconfig.resource=cluster-application.conf" ; run’
 sbt -J-Xms512M -J-XX:+PrintCommandLineFlags -J-XshowSettings
 
 curl -w '\n' -X PUT -H 'Content-Type: multipart/form-data' -F operation=leave http://127.0.0.1:9000/cluster/members/akka://dc@127.0.0.2:2551 
+
+
+### Future plans
+
+1. Instead of storing all actorRef in HashRingState I could store only one Leaseholder per a shard and interact with it.
+2. ExternalShardAllocation to control shard allocation
+3. Chord, a protocol and algorithm for a peer-to-peer distributed hash table.
+
+
+
+
+### TODO - Add membership checksums check
+
+Upon arrival of a proxied request at its destination, membership checksums of the sender and receiver will be compared.  
+The request will be refused if checksums differ. Mismatches are expected when nodes are entering or exiting the cluster due to deploys, added/removed capacity, or failures.
+The cluster will eventually converge on one checksum, therefore refused requests are best handled by retrying them.
+
+### How to implement in akka-cluster
+In `RingMaster` we include cluster membership or HashRing checksums, on destination we compare the checksums from the incoming message to the local checksums.
+
+
