@@ -1,9 +1,9 @@
 import sbt._
 import sbtdocker.ImageName
 
-val scalaV = "2.13.8"
-val Akka   = "2.6.19"
-val AkkaManagement = "1.1.3"
+val scalaV = "2.13.10"
+val Akka   = "2.6.20"
+val AkkaManagement = "1.1.4"
 
 val akkaHttpVersion = "10.2.9"
 
@@ -61,9 +61,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %% "akka-http"                % akkaHttpVersion,
   "com.typesafe.akka"      %% "akka-http-spray-json"     % akkaHttpVersion,
 
-  "ch.qos.logback"         % "logback-classic"           % "1.2.11",
+  "ch.qos.logback"         % "logback-classic"           % "1.4.4",
 
-  "com.lihaoyi" % "ammonite" % "2.5.4" % "test" cross CrossVersion.full
+  "com.lihaoyi" % "ammonite" % "2.5.5" % "test" cross CrossVersion.full
 )
 
 //test:run
